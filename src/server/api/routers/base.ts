@@ -63,7 +63,7 @@ export const baseRouter = createTRPCRouter({
         .where(eq(bases.id, input.id))
         .returning();
 
-      if (!base || base.userId !== ctx.session.user.id) {
+      if (!base || base?.userId !== ctx.session.user.id) {
         throw new Error("Base not found");
       }
 
