@@ -12,20 +12,19 @@ export default async function SignInPage() {
 
   return (
     <HydrateClient>
-      <div className="mx-20 grid min-h-screen grid-cols-2">
+      <div className="mx-20 grid min-h-screen lg:grid-cols-2">
         {/* left grid */}
-        <div className="flex flex-1 items-center justify-center gap-10 px-8">
-          {/* This block is centered in the column */}
-          <div className="flex flex-col items-start gap-10">
+        <div className="flex items-center justify-center px-8">
+          <div className="-mt-96 flex flex-col gap-12 lg:items-start">
             <Image
-              src="/log-in-icon.png"
+              src="/airtable-icon.png"
               alt="Login illustration"
-              width={60}
-              height={60}
+              width={38}
+              height={38}
               priority
             />
 
-            <h1 className="font-[#1d1f25] text-[32px] font-semibold">
+            <h1 className="mb-4 font-sans text-3xl font-medium text-[#1d1f25]">
               Sign in to Airtable
             </h1>
 
@@ -33,15 +32,15 @@ export default async function SignInPage() {
           </div>
         </div>
 
-        {/* right of grid */}
-        <div className="flex items-center justify-center">
+        {/* right grid */}
+        <div className="mt-12 hidden items-center justify-center lg:flex">
           <Image
             src="/log-in-image.png"
             alt="Login illustration"
-            width="400"
-            height="585"
+            width={400}
+            height={585}
             priority
-            className="object-cover transition-transform duration-300 ease-out hover:scale-103 hover:cursor-pointer"
+            className="cursor-pointer transition-transform duration-300 ease-out hover:scale-103"
           />
         </div>
       </div>
