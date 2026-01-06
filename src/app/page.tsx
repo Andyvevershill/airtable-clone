@@ -1,13 +1,16 @@
+"use server";
+
 import { getSession } from "@/server/better-auth/server";
-import { api, HydrateClient } from "@/trpc/server";
+import { HydrateClient } from "@/trpc/server";
 import Image from "next/image";
+import { redirect } from "next/navigation";
 import GoogleSignInButton from "./_components/buttons/google-sign-in-button";
 
 export default async function SignInPage() {
   const session = await getSession();
 
   if (session) {
-    void api.post.getLatest.prefetch();
+    redirect("/dashboard");
   }
 
   return (
