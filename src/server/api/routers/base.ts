@@ -1,6 +1,6 @@
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { bases, cells, columns, rows, tables } from "@/server/db/schemas/bases";
-import { desc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 const DEFAULT_BASE_CONFIG = {
@@ -110,8 +110,7 @@ export const baseRouter = createTRPCRouter({
     return await ctx.db
       .select()
       .from(bases)
-      .where(eq(bases.userId, ctx.session.user.id))
-      .orderBy(desc(bases.lastAccessedAt));
+      .where(eq(bases.userId, ctx.session.user.id));
   }),
 
   // Get a single base by ID

@@ -1,4 +1,5 @@
 import { getSession } from "@/server/better-auth/server";
+import { api } from "@/trpc/server";
 import { redirect } from "next/navigation";
 
 export default async function DashboardPage() {
@@ -7,6 +8,9 @@ export default async function DashboardPage() {
   if (!session) {
     redirect("/");
   }
+
+  const bases = await api.base.list();
+  console.log(bases);
 
   return (
     <main className="flex h-full flex-col items-center justify-center overflow-hidden bg-gray-50">
