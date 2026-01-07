@@ -1,2 +1,2 @@
-export * from "./table-schemas";
-export * from "./user-schemas";
+export * from "./bases";
+export * from "./users";
