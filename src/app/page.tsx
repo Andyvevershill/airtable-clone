@@ -4,7 +4,7 @@ import { getSession } from "@/server/better-auth/server";
 import { HydrateClient } from "@/trpc/server";
 import Image from "next/image";
 import { redirect } from "next/navigation";
-import GoogleSignInButton from "./_components/buttons/google-sign-in-button";
+import GoogleSignInButton from "../components/buttons/google-sign-in-button";
 
 export default async function SignInPage() {
   const session = await getSession();
