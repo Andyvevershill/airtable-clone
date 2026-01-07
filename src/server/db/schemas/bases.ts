@@ -8,7 +8,7 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import { user } from "./user-schemas";
+import { user } from "./users";
 
 export const bases = pgTable(
   "base",
@@ -34,6 +34,25 @@ export const bases = pgTable(
     index("base_last_accessed_idx").on(table.userId, table.lastAccessedAt),
   ],
 );
+
+// when we create a new one, we need to:
+
+// set base name to "Untitled Base"
+// set colour to a random colour
+// set user ID to whoever is in session
+/// created at + updated + lastAccessedAt at are sorted automatically
+
+// create a table
+// set baseID of table to the new base we have just created
+// set table name to "Table 1"
+/// created at + updated + lastAccessedAt at are sorted automatically
+
+// create 6 cols: 0-5
+// Name, Notes, Assignee, Status, Attachments, Attachment Summary
+
+// create 3 empty rows: 0-2
+
+// create 3*6 cells for each row
 
 export const tables = pgTable(
   "table",
