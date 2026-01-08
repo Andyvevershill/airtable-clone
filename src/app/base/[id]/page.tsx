@@ -20,7 +20,7 @@ export default async function BaseByIdPage({
   }
 
   const base = await api.base.getById({ id });
-  console.log(JSON.stringify(base));
+  // console.log(JSON.stringify(base));
 
   return (
     <main className="flex h-full flex-col items-center justify-center overflow-hidden">
