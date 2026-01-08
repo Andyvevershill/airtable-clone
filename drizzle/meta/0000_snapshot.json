@@ -1,5 +1,5 @@
 {
-  "id": "3f3498ba-1e67-43d4-9a9b-c61da77784db",
+  "id": "e9ee6124-1a13-4710-a140-8f1f1a65eb63",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -30,7 +30,7 @@
           "name": "color",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "user_id": {
           "name": "user_id",
@@ -38,11 +38,17 @@
           "primaryKey": false,
           "notNull": true
         },
+        "is_favourite": {
+          "name": "is_favourite",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
         "last_accessed_at": {
           "name": "last_accessed_at",
           "type": "timestamp",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "created_at": {
           "name": "created_at",
@@ -471,6 +477,12 @@
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
+        },
+        "is_favourite": {
+          "name": "is_favourite",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
         }
       },
       "indexes": {

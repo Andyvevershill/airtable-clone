@@ -2,9 +2,10 @@ CREATE TABLE "base" (
 	"id" text PRIMARY KEY NOT NULL,
 	"name" text NOT NULL,
 	"icon" text,
-	"color" text,
+	"color" text NOT NULL,
 	"user_id" text NOT NULL,
-	"last_accessed_at" timestamp,
+	"is_favourite" boolean NOT NULL,
+	"last_accessed_at" timestamp NOT NULL,
 	"created_at" timestamp NOT NULL,
 	"updated_at" timestamp
 );
@@ -40,7 +41,8 @@ CREATE TABLE "table" (
 	"description" text,
 	"last_accessed_at" timestamp,
 	"created_at" timestamp NOT NULL,
-	"updated_at" timestamp
+	"updated_at" timestamp,
+	"is_favourite" boolean NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "view" (
