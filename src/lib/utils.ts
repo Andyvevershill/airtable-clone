@@ -22,7 +22,7 @@ export const DEFAULT_BASE_CONFIG = {
 
 export function getRandomColor(): string {
   const colors = DEFAULT_BASE_CONFIG.colors;
-  return colors[Math.floor(Math.random() * colors.length)] || "#6D28D9";
+  return colors[Math.floor(Math.random() * colors.length)] ?? "#6D28D9";
 }
 
 export function getLastAccessed(lastAccessed: Date): string {

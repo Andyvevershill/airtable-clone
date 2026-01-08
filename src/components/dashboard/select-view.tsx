@@ -8,7 +8,7 @@ interface viewMode {
   setViewMode: (viewMode: "grid" | "list") => void;
 }
 
-export default function ({ viewMode, setViewMode }: viewMode) {
+export default function SelectView({ viewMode, setViewMode }: viewMode) {
   return (
     <div className="flex flex-row gap-1 text-gray-700">
       <button

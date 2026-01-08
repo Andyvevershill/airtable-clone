@@ -9,7 +9,7 @@ export default async function BaseByIdPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const session = await getSession();
+  const session = getSession();
   const { id } = await params;
 
   // we need to create a server action here that fetches the base by ID AND by the user ID from the session!! In real life there will be many users!
