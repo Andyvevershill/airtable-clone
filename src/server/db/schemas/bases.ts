@@ -1,6 +1,7 @@
 import { createId } from "@paralleldrive/cuid2";
 import { relations } from "drizzle-orm";
 import {
+  boolean,
   index,
   integer,
   json,
@@ -19,11 +20,16 @@ export const bases = pgTable(
       .$defaultFn(() => createId()),
     name: text("name").notNull(),
     icon: text("icon"),
-    color: text("color"),
+    color: text("color").notNull(),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    lastAccessedAt: timestamp("last_accessed_at").$defaultFn(() => new Date()),
+    isFavourite: boolean("is_favourite")
+      .$defaultFn(() => false)
+      .notNull(),
+    lastAccessedAt: timestamp("last_accessed_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
     createdAt: timestamp("created_at")
       .$defaultFn(() => new Date())
       .notNull(),
@@ -71,6 +77,9 @@ export const tables = pgTable(
       .$defaultFn(() => new Date())
       .notNull(),
     updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
+    isFavourite: boolean("is_favourite")
+      .$defaultFn(() => false)
+      .notNull(),
   },
   (table) => [
     index("table_base_idx").on(table.baseId),
