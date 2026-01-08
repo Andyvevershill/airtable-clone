@@ -4,7 +4,11 @@ import { LuLoaderPinwheel } from "react-icons/lu";
 import { VscHistory } from "react-icons/vsc";
 import { Button } from "../ui/button";
 
-export default function TopNavButtons() {
+interface Props {
+  colour: string;
+}
+
+export default function TopNavButtons({ colour }: Props) {
   const isSaving = useSavingStore((state) => state.isSaving);
 
   return (
@@ -35,7 +39,10 @@ export default function TopNavButtons() {
         <SquareArrowOutUpRight size={14} className="text-gray-600" />
         Launch
       </Button>
-      <Button className="pointer flex h-7 w-15 items-center justify-center rounded-md border border-none bg-[#048A0E] shadow-none hover:bg-[#048A0E]">
+      <Button
+        className="pointer hover:none flex h-7 w-15 items-center justify-center rounded-md border border-none shadow-none"
+        style={{ backgroundColor: colour }}
+      >
         Share
       </Button>
 

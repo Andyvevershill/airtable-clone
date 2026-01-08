@@ -11,7 +11,6 @@ export default async function DashboardPage() {
   }
 
   const bases = await api.base.getAll();
-  // console.log(bases);
 
   return <DashboardContainer bases={bases} />;
 }

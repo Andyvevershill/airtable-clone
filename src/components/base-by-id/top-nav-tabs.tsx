@@ -1,6 +1,10 @@
+interface Props {
+  colour: string;
+}
+
 const tabs = ["Data", "Automations", "Interfaces", "Forms"];
 
-export default function TopNavTabs() {
+export default function TopNavTabs({ colour }: Props) {
   return (
     <div className="relative flex h-20 w-full flex-row items-end gap-4">
       {tabs.map((tab) => (
@@ -11,7 +15,7 @@ export default function TopNavTabs() {
             tab === "Data"
               ? {
                   color: "#030712",
-                  borderBottom: "2px solid #15803D",
+                  borderBottom: `2px solid ${colour}`,
                   marginBottom: "11px",
                 }
               : {}
