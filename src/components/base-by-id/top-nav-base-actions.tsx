@@ -9,7 +9,7 @@ import {
   MenubarSeparator,
 } from "@/components/ui/menubar";
 import { api } from "@/trpc/react";
-import type { Base } from "@/types/bases";
+import type { Base } from "@/types/base";
 import { MenubarTrigger } from "@radix-ui/react-menubar";
 import { Star } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -117,8 +117,8 @@ export function TopNavBaseActions({ base }: Props) {
           >
             <div className="pointer flex flex-row items-center gap-2 leading-none">
               <div
-                className="flex h-8 w-8 items-center justify-center rounded-md"
-                style={{ backgroundColor: base.color }}
+                className="IC flex h-8 w-8 rounded-md"
+                style={{ backgroundColor: base.colour }}
               >
                 <p className="text-md flex text-white capitalize">
                   {base.name.slice(0, 2)}
@@ -153,7 +153,7 @@ export function TopNavBaseActions({ base }: Props) {
 
               {/* Favourite Star Button */}
               <div
-                className="flex h-8 flex-1 cursor-pointer items-center justify-center"
+                className="IC flex h-8 flex-1 cursor-pointer"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleFavourite();

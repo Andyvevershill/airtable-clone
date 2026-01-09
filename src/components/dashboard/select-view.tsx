@@ -13,7 +13,7 @@ export default function SelectView({ viewMode, setViewMode }: viewMode) {
     <div className="flex flex-row gap-1 text-gray-700">
       <button
         onClick={() => setViewMode("list")}
-        className={`pointer flex h-7 w-7 items-center justify-center rounded-full ${
+        className={`pointer IC flex h-7 w-7 rounded-full ${
           viewMode === "list" ? "bg-gray-200" : "bg-transparent"
         }`}
       >
@@ -22,7 +22,7 @@ export default function SelectView({ viewMode, setViewMode }: viewMode) {
 
       <button
         onClick={() => setViewMode("grid")}
-        className={`pointer flex h-7 w-7 items-center justify-center rounded-full ${
+        className={`pointer IC flex h-7 w-7 rounded-full ${
           viewMode === "grid" ? "bg-gray-200" : "bg-transparent"
         }`}
       >

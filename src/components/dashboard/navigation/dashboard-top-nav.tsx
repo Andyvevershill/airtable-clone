@@ -1,5 +1,6 @@
 "use client";
 
+import { useLoadingStore } from "@/app/stores/use-loading-store";
 import { useSavingStore } from "@/app/stores/use-saving-store";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import type { User } from "@/types/users";
@@ -17,6 +18,7 @@ export function DashboardTopNav({ user }: props) {
   const router = useRouter();
 
   const isSaving = useSavingStore((state) => state.isSaving);
+  const isLoading = useLoadingStore((state) => state.isLoading);
 
   return (
     <div className="shadow-b relative z-100 flex h-[56px] w-full items-center justify-between border-b border-gray-200 bg-white px-4 shadow-xs">
@@ -44,6 +46,12 @@ export function DashboardTopNav({ user }: props) {
           <div className="flex flex-row gap-2 text-gray-500">
             <LuLoaderPinwheel size={16} className="animate-spin" />
             <p className="text-xs">Saving...</p>
+          </div>
+        )}
+        {isLoading && (
+          <div className="flex flex-row gap-2 text-gray-500">
+            <LuLoaderPinwheel size={16} className="animate-spin" />
+            <p className="text-xs">Loading...</p>
           </div>
         )}
       </div>
@@ -75,7 +83,7 @@ export function DashboardTopNav({ user }: props) {
           </button>
         </div>
 
-        <button className="pointer mr-2 flex h-7.5 w-7.5 items-center justify-center rounded-full border border-gray-200 hover:bg-gray-100">
+        <button className="pointer IC mr-2 flex h-7.5 w-7.5 rounded-full border border-gray-200 hover:bg-gray-100">
           <Bell size={14} className="text-gray-600" />
         </button>
 

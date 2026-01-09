@@ -69,13 +69,10 @@ export function DashboardSidebar() {
         <div className="h-12" />
         <SidebarGroup>
           <SidebarGroupContent>
-            <div className="flex flex-col items-center justify-center">
+            <div className="IC flex flex-col">
               <SidebarMenu>
                 {items.map((item) => (
-                  <SidebarMenuItem
-                    key={item.title}
-                    className="pointer items-center justify-center"
-                  >
+                  <SidebarMenuItem key={item.title} className="pointer IC">
                     <SidebarMenuButton asChild>
                       <div className="h-[40px] rounded-xs">
                         <item.icon
@@ -106,7 +103,7 @@ export function DashboardSidebar() {
           <div className="w-4/5 border-t border-gray-300" />
         </div>
 
-        <div className="flex flex-col items-center justify-center p-0">
+        <div className="IC flex flex-col p-0">
           <SidebarMenu>
             {footerItems.map((item) => (
               <SidebarMenuItem

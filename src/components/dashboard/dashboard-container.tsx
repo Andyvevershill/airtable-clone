@@ -1,14 +1,13 @@
 "use client";
 
 import BaseContainer from "@/components/base/base-container";
-import NoBases from "@/components/base/no-bases";
 import DateRangeDropdownSelector from "@/components/dashboard/date-range-dropdown-selector";
-import type { Base } from "@/types/bases";
+import type { BaseWithTables } from "@/types/base";
 import { useState } from "react";
 import SelectView from "./select-view";
 
 interface Props {
-  bases: Base[];
+  bases: BaseWithTables[];
 }
 
 export default function DashboardContainer({ bases }: Props) {
@@ -26,13 +25,8 @@ export default function DashboardContainer({ bases }: Props) {
         <SelectView viewMode={viewMode} setViewMode={setViewMode} />
       </div>
       {/* SECTIONS BY LAST VIEWED */}
-      {bases.length > 0 ? (
-        <BaseContainer bases={bases} viewMode={viewMode} />
-      ) : (
-        <div className="flex w-full flex-1 items-center justify-center">
-          <NoBases />
-        </div>
-      )}
+
+      <BaseContainer bases={bases} viewMode={viewMode} />
     </main>
   );
 }
