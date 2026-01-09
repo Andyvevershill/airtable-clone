@@ -5,11 +5,45 @@ import {
   index,
   integer,
   json,
+  pgEnum,
   pgTable,
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
 import { user } from "./users";
+
+export type ColumnType = "text" | "number";
+
+export type FilterOperator =
+  | "equals"
+  | "not_equals"
+  | "contains"
+  | "not_contains"
+  | "greater_than"
+  | "less_than"
+  | "greater_than_or_equal"
+  | "less_than_or_equal";
+
+export interface ViewFilter {
+  columnId: string;
+  operator: FilterOperator;
+  value: string;
+}
+
+export interface ViewSort {
+  columnId: string;
+  direction: "asc" | "desc";
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                   Enums                                    */
+/* -------------------------------------------------------------------------- */
+
+export const columnTypeEnum = pgEnum("column_type", ["text", "number"]);
+
+/* -------------------------------------------------------------------------- */
+/*                                   Tables                                   */
+/* -------------------------------------------------------------------------- */
 
 export const bases = pgTable(
   "base",

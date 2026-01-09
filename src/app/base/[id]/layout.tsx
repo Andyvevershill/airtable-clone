@@ -1,5 +1,5 @@
-import { BaseSideRail } from "@/components/base-by-id/navigation/base-side-rail";
 import { BaseTopNav } from "@/components/base-by-id/navigation/base-top-nav";
+import { BaseSideRail } from "@/components/base/base-side-rail";
 import TabContainer from "@/components/tabs/tab-container";
 import { getSession } from "@/server/better-auth/server";
 import { api } from "@/trpc/server";

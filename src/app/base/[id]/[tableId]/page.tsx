@@ -10,7 +10,7 @@ import { useState } from "react";
 
 export default function TablePage() {
   const { tableId } = useParams<{ tableId: string }>();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const { data: tableData, isLoading } = api.table.getById.useQuery({
     tableId,

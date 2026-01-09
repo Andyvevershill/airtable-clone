@@ -1,5 +1,6 @@
 "use client";
 
+import type { Column } from "@/types/collumn";
 import type { FullTableData } from "@/types/table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { AlignLeft, CheckCircle, FileText, Info, User } from "lucide-react";
@@ -40,9 +41,9 @@ function HeaderIcon({ name }: { name: string }) {
 }
 
 export function TableContainer({ tableData }: Props) {
-  const columns: ColumnDef<any>[] = tableData.columns
-    .sort((a: any, b: any) => a.position - b.position)
-    .map((col: any) => ({
+  const columns: ColumnDef<Column>[] = tableData.columns
+    .sort((a, b) => a.position - b.position)
+    .map((col) => ({
       accessorKey: col.id,
 
       header: () => (
@@ -59,12 +60,18 @@ export function TableContainer({ tableData }: Props) {
     }));
 
   const data = tableData.rows
-    .sort((a: any, b: any) => a.position - b.position)
-    .map((row: any) => {
-      const rowData: Record<string, any> = { _rowId: row.id };
-      row.cells.forEach((cell: any) => {
+    .sort((a, b) => a.position - b.position)
+    .map((row) => {
+      const rowData: Record<string, string | null> & {
+        _rowId: string;
+      } = {
+        _rowId: row.id,
+      };
+
+      row.cells.forEach((cell) => {
         rowData[cell.columnId] = cell.value;
       });
+
       return rowData;
     });
 

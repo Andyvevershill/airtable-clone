@@ -53,7 +53,7 @@ export function getLastAccessed(lastAccessed: Date): string {
   return "more than a year ago";
 }
 
-export function lightenColour(hexColor: string, opacity: number = 0.1): string {
+export function lightenColour(hexColor: string, opacity = 0.1) {
   const hex = hexColor.replace("#", "");
   const r = parseInt(hex.substring(0, 2), 16);
   const g = parseInt(hex.substring(2, 4), 16);
@@ -61,7 +61,7 @@ export function lightenColour(hexColor: string, opacity: number = 0.1): string {
   return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 }
 
-export function darkenColour(hexColor: string, opacity: number = 0.12): string {
+export function darkenColour(hexColor: string, opacity = 0.12) {
   const hex = hexColor.replace("#", "");
   const r = parseInt(hex.substring(0, 2), 16);
   const g = parseInt(hex.substring(2, 4), 16);
