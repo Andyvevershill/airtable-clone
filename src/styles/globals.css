@@ -132,4 +132,15 @@
   .pointer {
     cursor: pointer;
   }
+  .IC {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .pointer-IC {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 }

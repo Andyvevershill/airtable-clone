@@ -7,7 +7,7 @@ export function cn(...inputs: ClassValue[]) {
 
 export const DEFAULT_BASE_CONFIG = {
   name: "Untitled Base",
-  colors: ["#B91C1C", "#1D4ED8", "#6D28D9", "#15803D", "#1F2937"],
+  colours: ["#B91C1C", "#1D4ED8", "#6D28D9", "#15803D", "#1F2937"],
   columns: [
     { name: "Name", type: "text", position: 0 },
     { name: "Notes", type: "text", position: 1 },
@@ -20,9 +20,9 @@ export const DEFAULT_BASE_CONFIG = {
   defaultRowCount: 3,
 } as const;
 
-export function getRandomColor(): string {
-  const colors = DEFAULT_BASE_CONFIG.colors;
-  return colors[Math.floor(Math.random() * colors.length)] ?? "#6D28D9";
+export function getRandomColour(): string {
+  const colours = DEFAULT_BASE_CONFIG.colours;
+  return colours[Math.floor(Math.random() * colours.length)] ?? "#6D28D9";
 }
 
 export function getLastAccessed(lastAccessed: Date): string {
@@ -51,4 +51,21 @@ export function getLastAccessed(lastAccessed: Date): string {
   }
 
   return "more than a year ago";
+}
+
+export function lightenColour(hexColor: string, opacity: number = 0.1): string {
+  const hex = hexColor.replace("#", "");
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+}
+
+export function darkenColour(hexColor: string, opacity: number = 0.12): string {
+  const hex = hexColor.replace("#", "");
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+
+  return `rgba(${r}, ${g}, ${b}, ${opacity * 0.25})`;
 }
