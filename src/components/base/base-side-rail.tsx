@@ -23,7 +23,7 @@ export function BaseSideRail({ user }: Props) {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
   function handleRedirectMouseEnter() {
-    utils.base.getAll.prefetch();
+    void utils.base.getAll.prefetch();
     setHoveredItem("home");
   }
 

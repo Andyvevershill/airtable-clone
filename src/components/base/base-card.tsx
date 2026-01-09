@@ -25,17 +25,17 @@ export default function BaseCard({ base }: props) {
   const updateLastAccessed = api.base.updateLastAccessed.useMutation();
 
   function handleRedirect() {
-    updateLastAccessed.mutate({ id: base.id });
+    void updateLastAccessed.mutate({ id: base.id });
     router.push(`/base/${base.id}`);
   }
 
   function handleHover() {
     // Prefetch base data
-    utils.base.getById.prefetch({ id: base.id });
+    void utils.base.getById.prefetch({ id: base.id });
 
     // Prefetch first table data
     if (base.tables[0]?.id) {
-      utils.table.getById.prefetch({ tableId: base.tables[0]?.id });
+      void utils.table.getById.prefetch({ tableId: base.tables[0]?.id });
     }
 
     setOnHover(true);

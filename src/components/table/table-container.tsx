@@ -1,10 +1,9 @@
 "use client";
 
-import type { Column } from "@/types/collumn";
 import type { FullTableData } from "@/types/table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { AlignLeft, CheckCircle, FileText, Info, User } from "lucide-react";
-import { DataTable } from "./table";
+import { DataTable, type TableRow } from "./table";
 
 interface Props {
   tableData: FullTableData;
@@ -41,7 +40,7 @@ function HeaderIcon({ name }: { name: string }) {
 }
 
 export function TableContainer({ tableData }: Props) {
-  const columns: ColumnDef<Column>[] = tableData.columns
+  const columns: ColumnDef<TableRow>[] = tableData.columns
     .sort((a, b) => a.position - b.position)
     .map((col) => ({
       accessorKey: col.id,
