@@ -1,6 +1,7 @@
 import { DEFAULT_BASE_CONFIG } from "@/lib/utils";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { cells, columns, rows, tables } from "@/server/db/schemas/bases";
+import { faker } from "@faker-js/faker";
 import { TRPCError } from "@trpc/server";
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
@@ -58,7 +59,7 @@ export const tableRouter = createTRPCRouter({
             cellsToCreate.push({
               rowId: row.id,
               columnId: column.id,
-              value: null,
+              value: faker.person.firstName(),
             });
           }
         }

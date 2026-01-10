@@ -1,5 +1,6 @@
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { cells, columns, rows } from "@/server/db/schemas/bases";
+import { faker } from "@faker-js/faker";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
@@ -99,7 +100,7 @@ export const rowsRouter = createTRPCRouter({
           tableColumns.map((column) => ({
             rowId: newRow.id,
             columnId: column.id,
-            value: null,
+            value: faker.location.cardinalDirection(),
           })),
         );
       }
