@@ -49,6 +49,12 @@ export function Table({
     [columns, rows],
   );
 
+  // ✅ KEYBOARD NAVIGATION STATE
+  const [focusedCell, setFocusedCell] = useState<{
+    rowIndex: number;
+    colIndex: number;
+  } | null>(null);
+
   const table = useReactTable({
     data: transformedRows,
     columns: tanstackColumns,
@@ -85,7 +91,7 @@ export function Table({
     overscan: 10,
   });
 
-  // ✅ INFINITE SCROLL (RESTORED)
+  // ✅ INFINITE SCROLL
   const fetchMoreOnBottomReached = useCallback(
     (container?: HTMLDivElement | null) => {
       if (!container || !hasNextPage || isFetchingNextPage) return;
@@ -104,6 +110,63 @@ export function Table({
   }, [fetchMoreOnBottomReached]);
 
   const { rows: tableRows } = table.getRowModel();
+
+  // ✅ KEYBOARD NAVIGATION HANDLER
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent, rowIndex: number, colIndex: number) => {
+      const totalRows = transformedRows.length;
+      const totalCols = columns.length;
+
+      let newRowIndex = rowIndex;
+      let newColIndex = colIndex;
+
+      switch (e.key) {
+        case "ArrowUp":
+          e.preventDefault();
+          newRowIndex = Math.max(0, rowIndex - 1);
+          break;
+        case "ArrowDown":
+          e.preventDefault();
+          newRowIndex = Math.min(totalRows - 1, rowIndex + 1);
+          break;
+        case "ArrowLeft":
+          e.preventDefault();
+          newColIndex = Math.max(0, colIndex - 1);
+          break;
+        case "ArrowRight":
+        case "Tab":
+          e.preventDefault();
+          newColIndex = colIndex + 1;
+          if (newColIndex >= totalCols) {
+            newColIndex = 0;
+            newRowIndex = Math.min(totalRows - 1, rowIndex + 1);
+          }
+          break;
+        case "Enter":
+          e.preventDefault();
+          // Enter moves down
+          newRowIndex = Math.min(totalRows - 1, rowIndex + 1);
+          break;
+        default:
+          return;
+      }
+
+      setFocusedCell({ rowIndex: newRowIndex, colIndex: newColIndex });
+
+      // Focus the new cell
+      setTimeout(() => {
+        const cellId = `cell-${newRowIndex}-${newColIndex}`;
+        const element = document.getElementById(cellId);
+        if (element) {
+          const input = element.querySelector("input, textarea");
+          if (input instanceof HTMLElement) {
+            input.focus();
+          }
+        }
+      }, 0);
+    },
+    [transformedRows.length, columns.length],
+  );
 
   return (
     <div className="relative flex h-full w-full flex-col bg-slate-100">
@@ -130,8 +193,8 @@ export function Table({
                         fontWeight: 500,
                       }}
                     >
-                      {/* ✅ TRUNCATE — EXACT STYLING */}
-                      <div className="w-full truncate">
+                      {/* ✅ FIXED TRUNCATE - Reserve space for resize handle */}
+                      <div className="truncate pr-2">
                         {flexRender(
                           header.column.columnDef.header,
                           header.getContext(),
@@ -174,22 +237,40 @@ export function Table({
                       height: ROW_HEIGHT,
                     }}
                   >
-                    {row.getVisibleCells().map((cell) => (
-                      <td
-                        key={cell.id}
-                        className="border border-gray-200 p-0"
-                        style={{
-                          minWidth: MIN_COL_WIDTH, // ✅ CRITICAL FIX
-                          width: cell.column.getSize(),
-                          height: ROW_HEIGHT,
-                        }}
-                      >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </td>
-                    ))}
+                    {row.getVisibleCells().map((cell, colIndex) => {
+                      const isFocused =
+                        focusedCell?.rowIndex === virtualRow.index &&
+                        focusedCell?.colIndex === colIndex;
+
+                      return (
+                        <td
+                          key={cell.id}
+                          id={`cell-${virtualRow.index}-${colIndex}`}
+                          className={`border border-gray-200 p-0 ${
+                            isFocused ? "ring-2 ring-blue-500 ring-inset" : ""
+                          }`}
+                          style={{
+                            minWidth: MIN_COL_WIDTH,
+                            width: cell.column.getSize(),
+                            height: ROW_HEIGHT,
+                          }}
+                          onKeyDown={(e) =>
+                            handleKeyDown(e, virtualRow.index, colIndex)
+                          }
+                          onClick={() =>
+                            setFocusedCell({
+                              rowIndex: virtualRow.index,
+                              colIndex,
+                            })
+                          }
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
+                        </td>
+                      );
+                    })}
                   </tr>
                 );
               })}
@@ -207,7 +288,7 @@ export function Table({
             </tfoot>
           </table>
 
-          {/* ➕ ADD COLUMN BUTTON — UNCHANGED */}
+          {/* ➕ ADD COLUMN BUTTON */}
           <div
             className="pointer absolute top-0 z-20 h-9.25 w-23.5 border-y border-r border-gray-200 bg-white p-0 hover:bg-gray-50"
             style={{ left: tableWidth }}
