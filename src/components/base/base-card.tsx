@@ -33,9 +33,12 @@ export default function BaseCard({ base }: props) {
     // Prefetch base data
     void utils.base.getById.prefetch({ id: base.id });
 
+    const tableId = base.tables[0]?.id;
+
     // Prefetch first table data
-    if (base.tables[0]?.id) {
-      void utils.table.getById.prefetch({ tableId: base.tables[0]?.id });
+    if (tableId) {
+      void utils.table.getTableWithViews.prefetch({ tableId });
+      void utils.column.getTableColumns.prefetch({ tableId });
     }
 
     setOnHover(true);
