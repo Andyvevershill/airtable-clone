@@ -1,7 +1,5 @@
+import type { View } from "@/server/db/schemas";
 import { z } from "zod";
-import type { Cell } from "./cell";
-import type { Column } from "./collumn";
-import type { Row } from "./row";
 
 const tableSchema = z.object({
   id: z.string(),
@@ -18,9 +16,4 @@ const tableSchema = z.object({
 
 export type Table = z.infer<typeof tableSchema>;
 
-export type FullTableData = Table & {
-  columns: Column[];
-  rows: (Row & {
-    cells: Cell[];
-  })[];
-};
+export type TableWithViews = Table & { views: View[] };

@@ -40,12 +40,18 @@ export default function TabContainer({ base }: Props) {
             href={`/base/${base.id}/${table.id}`}
             onMouseEnter={() => {
               if (!isActive) {
-                void utils.table.getById.prefetch({ tableId: table.id });
+                // preload the core data of chosen tab
+                void utils.table.getTableWithViews.prefetch({
+                  tableId: table.id,
+                });
+                void utils.column.getTableColumns.prefetch({
+                  tableId: table.id,
+                });
               }
             }}
             className={`flex h-[36px] items-center gap-2 border-r px-4 py-1 text-[13px] transition-colors ${
               isActive
-                ? "rounded-xs bg-white text-gray-900"
+                ? "rounded-xs bg-white font-normal"
                 : "text-gray-600 hover:bg-[var(--tab-hover-darken)]"
             }`}
           >

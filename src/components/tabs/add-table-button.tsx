@@ -62,6 +62,7 @@ export function AddTableButton({ baseId, tableNumber, setTables }: Props) {
       <MenubarMenu>
         <MenubarTrigger className="pointer flex w-full flex-row items-center justify-between rounded-sm px-2 py-1.5 text-gray-600 hover:text-gray-900">
           <Plus size={16} />
+          <p className="ml-1 text-[13px]">Add or import</p>
         </MenubarTrigger>
 
         <MenubarContent

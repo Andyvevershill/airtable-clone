@@ -1,35 +1,67 @@
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
-import { columns } from "@/server/db/schemas";
-import { eq, sql } from "drizzle-orm";
+import { cells, columns, rows } from "@/server/db/schemas";
+import { faker } from "@faker-js/faker";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 export const columnRouter = createTRPCRouter({
+  getTableColumns: protectedProcedure
+    .input(z.object({ tableId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const columnArr = await ctx.db.query.columns.findMany({
+        where: eq(columns.tableId, input.tableId),
+        orderBy: (columns, { asc }) => [asc(columns.position)],
+      });
+
+      return columnArr;
+    }),
+
   addColumn: protectedProcedure
     .input(
       z.object({
         tableId: z.string(),
         name: z.string(),
-        type: z.string(),
+        type: z.enum(["text", "number"]),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const maxPositionResult = await ctx.db
-        .select({ maxPosition: sql<number>`max(position)` })
-        .from(columns)
-        .where(eq(columns.tableId, input.tableId));
+      // Get max position for new column
+      const maxPositionResult = await ctx.db.query.columns.findFirst({
+        where: eq(columns.tableId, input.tableId),
+        orderBy: (columns, { desc }) => [desc(columns.position)],
+      });
 
-      const maxPosition = maxPositionResult[0]?.maxPosition ?? -1;
+      const newPosition = (maxPositionResult?.position ?? -1) + 1;
 
-      const [column] = await ctx.db
+      // Create the column
+      const [newColumn] = await ctx.db
         .insert(columns)
         .values({
           tableId: input.tableId,
           name: input.name,
           type: input.type,
-          position: maxPosition + 1,
+          position: newPosition,
         })
         .returning();
 
-      return column;
+      if (!newColumn) throw new Error("Failed to create column");
+
+      // Get ALL existing rows
+      const tableRows = await ctx.db.query.rows.findMany({
+        where: eq(rows.tableId, input.tableId),
+      });
+
+      // Create a cell for EACH row in the new column
+      if (tableRows.length > 0) {
+        await ctx.db.insert(cells).values(
+          tableRows.map((row) => ({
+            rowId: row.id,
+            columnId: newColumn.id,
+            value: faker.animal.crocodilia(),
+          })),
+        );
+      }
+
+      return newColumn;
     }),
 });
