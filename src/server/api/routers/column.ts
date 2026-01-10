@@ -57,7 +57,7 @@ export const columnRouter = createTRPCRouter({
           tableRows.map((row) => ({
             rowId: row.id,
             columnId: newColumn.id,
-            value: faker.animal.crocodilia(),
+            value: faker.location.cardinalDirection(),
           })),
         );
       }
