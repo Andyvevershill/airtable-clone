@@ -1,35 +1,75 @@
 "use client";
 
-import { TableSidebar } from "@/components/base-by-id/navigation/table-sidebar";
+import { useLoadingStore } from "@/app/stores/use-loading-store";
 import NoDataPage from "@/components/no-data-page";
-import { TableContainer } from "@/components/table/table-container";
-import { TableToolbar } from "@/components/table/table-toolbar";
+import TableContainer from "@/components/table/table-container";
 import { api } from "@/trpc/react";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useMemo } from "react";
 
 export default function TablePage() {
   const { tableId } = useParams<{ tableId: string }>();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const setIsLoading = useLoadingStore((state) => state.setIsLoading);
 
-  const { data: tableData, isLoading } = api.table.getById.useQuery({
-    tableId,
-  });
+  // replace this with just Views, table Id is all we need and its inside col + rows
+  const { data: tableWithViews, isLoading: tableWithViewsLoading } =
+    api.table.getTableWithViews.useQuery({ tableId });
+
+  const { data: columns, isLoading: columnsLoading } =
+    api.column.getTableColumns.useQuery({ tableId });
+
+  const { data: rowCount, isLoading: countLoading } =
+    api.row.getRowCount.useQuery({ tableId });
+
+  const {
+    data: rowsData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading: rowsLoading,
+  } = api.row.getRowsInfinite.useInfiniteQuery(
+    {
+      tableId,
+      limit: 50,
+    },
+    {
+      getNextPageParam: (lastPage) => lastPage.nextCursor,
+    },
+  );
+
+  const rowsWithCells = useMemo(
+    () => rowsData?.pages?.flatMap((page) => page.items) ?? [],
+    [rowsData],
+  );
+
+  const isLoading =
+    tableWithViewsLoading ||
+    columnsLoading ||
+    countLoading ||
+    rowsLoading ||
+    rowCount === 0;
+
+  useEffect(() => {
+    setIsLoading(isLoading);
+  }, [isLoading, setIsLoading]);
 
   if (isLoading) return null;
-  if (!tableData) return <NoDataPage missingData="tables" />;
+
+  if (!tableWithViews || !columns || !rowsWithCells) {
+    return <NoDataPage missingData="table data" />;
+  }
 
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden">
-      <TableToolbar sideBarState={[sidebarOpen, setSidebarOpen]} />
-
-      <div className="flex flex-1 overflow-hidden">
-        <TableSidebar sidebarOpen={sidebarOpen} />
-
-        <div className="flex-1 overflow-auto">
-          <TableContainer tableData={tableData} />
-        </div>
-      </div>
+    <div className="flex h-full w-full flex-col">
+      <TableContainer
+        tableId={tableWithViews.id}
+        columns={columns}
+        rowsWithCells={rowsWithCells}
+        rowCount={rowCount || 0}
+        fetchNextPage={fetchNextPage}
+        hasNextPage={hasNextPage}
+        isFetchingNextPage={isFetchingNextPage}
+      />
     </div>
   );
 }
