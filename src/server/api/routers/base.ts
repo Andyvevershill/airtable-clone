@@ -1,6 +1,7 @@
 import { DEFAULT_BASE_CONFIG, getRandomColour } from "@/lib/utils";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { bases, cells, columns, rows, tables } from "@/server/db/schemas/bases";
+import { faker } from "@faker-js/faker";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 
@@ -63,7 +64,7 @@ export const baseRouter = createTRPCRouter({
           cellsToCreate.push({
             rowId: row.id,
             columnId: column.id,
-            value: null,
+            value: faker.animal.crocodilia(),
           });
         }
       }

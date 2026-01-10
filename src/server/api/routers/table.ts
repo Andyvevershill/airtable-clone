@@ -18,8 +18,6 @@ export const tableRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const result = await ctx.db.transaction(async (tx) => {
-        // 1. Create the base with defaults
-        // 2. Create the default table
         const [table] = await tx
           .insert(tables)
           .values({
@@ -59,7 +57,7 @@ export const tableRouter = createTRPCRouter({
             cellsToCreate.push({
               rowId: row.id,
               columnId: column.id,
-              value: faker.person.firstName(),
+              value: faker.location.cardinalDirection(),
             });
           }
         }
