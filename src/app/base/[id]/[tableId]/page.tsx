@@ -16,7 +16,7 @@ export default function TablePage() {
     api.table.getTableWithViews.useQuery({ tableId });
 
   const { data: columns, isLoading: columnsLoading } =
-    api.column.getTableColumns.useQuery({ tableId });
+    api.column.getColumns.useQuery({ tableId });
 
   const { data: rowCount, isLoading: countLoading } =
     api.row.getRowCount.useQuery({ tableId });
@@ -30,7 +30,7 @@ export default function TablePage() {
   } = api.row.getRowsInfinite.useInfiniteQuery(
     {
       tableId,
-      limit: 50,
+      limit: 200,
     },
     {
       getNextPageParam: (lastPage) => lastPage.nextCursor,

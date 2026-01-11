@@ -40,7 +40,7 @@ export function TableToolbar({ sideBarState: [open, setOpen] }: Props) {
         </button>
 
         <Button variant="ghost" size="sm" className="pointer gap-2 rounded-xs">
-          <TableCellsSplit className="text-blue-600" />
+          <TableCellsSplit className="text-blue-500" />
           <span className="text-[13px]">Grid view</span>
           <ChevronDown />
         </Button>

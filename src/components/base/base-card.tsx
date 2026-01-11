@@ -38,7 +38,7 @@ export default function BaseCard({ base }: props) {
     // Prefetch first table data
     if (tableId) {
       void utils.table.getTableWithViews.prefetch({ tableId });
-      void utils.column.getTableColumns.prefetch({ tableId });
+      void utils.column.getColumns.prefetch({ tableId });
     }
 
     setOnHover(true);

@@ -6,7 +6,6 @@ import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 
 export const baseRouter = createTRPCRouter({
-  // Create a new base
   createById: protectedProcedure.mutation(async ({ ctx }) => {
     const result = await ctx.db.transaction(async (tx) => {
       // 1. Create the base with defaults

@@ -44,7 +44,7 @@ export default function TabContainer({ base }: Props) {
                 void utils.table.getTableWithViews.prefetch({
                   tableId: table.id,
                 });
-                void utils.column.getTableColumns.prefetch({
+                void utils.column.getColumns.prefetch({
                   tableId: table.id,
                 });
               }

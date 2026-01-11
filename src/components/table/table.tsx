@@ -1,4 +1,5 @@
-import { transformRowsToTanStackFormat } from "@/lib/utils";
+import { useSavingStore } from "@/app/stores/use-saving-store";
+import { api } from "@/trpc/react";
 import type { Column } from "@/types/column";
 import type { RowWithCells } from "@/types/row";
 import {
@@ -8,22 +9,24 @@ import {
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
-import AddColumnButton from "../buttons/add-column-button";
 import AddRowButton from "../buttons/add-row-button";
-import { generateColumnDefinitions } from "./generate-column-definitions";
+import { AddColumnDropdown } from "../dropdowns/add-column-menu";
+import {
+  generateColumnDefinitions,
+  transformRowsToTanStackFormat,
+} from "./generate-column-definitions";
 
 interface Props {
   tableId: string;
   columns: Column[];
   rows: RowWithCells[];
   rowCount: number;
-
   fetchNextPage: () => void;
   hasNextPage?: boolean;
   isFetchingNextPage: boolean;
 }
 
-const MIN_COL_WIDTH = 150;
+const MIN_COL_WIDTH = 175;
 const ROW_HEIGHT = 33;
 
 export function Table({
@@ -40,20 +43,30 @@ export function Table({
     [rows],
   );
 
-  const handleCellUpdate = (cellId: string, value: string | null) => {
-    console.log("Cell update:", cellId, value);
-  };
+  const setIsSaving = useSavingStore((state) => state.setIsSaving);
+  const utils = api.useUtils();
 
-  const tanstackColumns = useMemo(
-    () => generateColumnDefinitions(columns, rows, handleCellUpdate),
-    [columns, rows],
+  const updateCellMutation = api.column.updateCell.useMutation({
+    onMutate: () => setIsSaving(true),
+    onSuccess: () => {
+      void utils.column.getColumns.invalidate({ tableId });
+      void utils.row.getRowsInfinite.invalidate({ tableId });
+    },
+    onError: (error) => console.error("Failed to update cell:", error),
+    onSettled: () => setIsSaving(false),
+  });
+
+  const onCellUpdate = useCallback(
+    (cellId: string, value: string | null) => {
+      updateCellMutation.mutate({ cellId, value });
+    },
+    [updateCellMutation],
   );
 
-  // ✅ KEYBOARD NAVIGATION STATE
-  const [focusedCell, setFocusedCell] = useState<{
-    rowIndex: number;
-    colIndex: number;
-  } | null>(null);
+  const tanstackColumns = useMemo(
+    () => generateColumnDefinitions(columns, rows, onCellUpdate),
+    [columns, rows, onCellUpdate],
+  );
 
   const table = useReactTable({
     data: transformedRows,
@@ -67,38 +80,27 @@ export function Table({
   const tableRef = useRef<HTMLTableElement>(null);
   const [tableWidth, setTableWidth] = useState(0);
 
-  // Measure table width ONLY for add-column button positioning
   useLayoutEffect(() => {
     if (!tableRef.current) return;
-
-    const update = () => {
-      setTableWidth(tableRef.current!.offsetWidth);
-    };
-
+    const update = () => setTableWidth(tableRef.current!.offsetWidth);
     update();
-
     const observer = new ResizeObserver(update);
     observer.observe(tableRef.current);
-
     return () => observer.disconnect();
   }, []);
 
-  // Virtual rows
   const rowVirtualizer = useVirtualizer({
     count: transformedRows.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => ROW_HEIGHT,
-    overscan: 10,
+    overscan: 50,
   });
 
-  // ✅ INFINITE SCROLL
   const fetchMoreOnBottomReached = useCallback(
     (container?: HTMLDivElement | null) => {
       if (!container || !hasNextPage || isFetchingNextPage) return;
-
       const { scrollHeight, scrollTop, clientHeight } = container;
-
-      if (scrollHeight - scrollTop - clientHeight < 500) {
+      if (scrollHeight - scrollTop - clientHeight < 5000) {
         fetchNextPage();
       }
     },
@@ -111,81 +113,104 @@ export function Table({
 
   const { rows: tableRows } = table.getRowModel();
 
-  // ✅ KEYBOARD NAVIGATION HANDLER
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent, rowIndex: number, colIndex: number) => {
+  // Table-level keyboard navigation
+  const handleTableKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+
+      // Only handle if focused on a cell div (not input)
+      if (target.tagName === "INPUT") return;
+
+      const cell = target.closest("td");
+      if (!cell) return;
+
+      const row = cell.closest("tr");
+      if (!row) return;
+
+      const rowIndex = parseInt(row.getAttribute("data-index") ?? "0");
+      const colIndex = Array.from(row.children).indexOf(cell);
+
       const totalRows = transformedRows.length;
       const totalCols = columns.length;
 
-      let newRowIndex = rowIndex;
-      let newColIndex = colIndex;
+      let nextRow = rowIndex;
+      let nextCol = colIndex;
+      let shouldNavigate = false;
 
       switch (e.key) {
         case "ArrowUp":
           e.preventDefault();
-          newRowIndex = Math.max(0, rowIndex - 1);
+          nextRow = Math.max(0, rowIndex - 1);
+          shouldNavigate = true;
           break;
         case "ArrowDown":
           e.preventDefault();
-          newRowIndex = Math.min(totalRows - 1, rowIndex + 1);
+          nextRow = Math.min(totalRows - 1, rowIndex + 1);
+          shouldNavigate = true;
           break;
         case "ArrowLeft":
           e.preventDefault();
-          newColIndex = Math.max(0, colIndex - 1);
+          nextCol = Math.max(0, colIndex - 1);
+          shouldNavigate = true;
           break;
         case "ArrowRight":
+          e.preventDefault();
+          nextCol = Math.min(totalCols - 1, colIndex + 1);
+          shouldNavigate = true;
+          break;
         case "Tab":
           e.preventDefault();
-          newColIndex = colIndex + 1;
-          if (newColIndex >= totalCols) {
-            newColIndex = 0;
-            newRowIndex = Math.min(totalRows - 1, rowIndex + 1);
+          nextCol = colIndex + (e.shiftKey ? -1 : 1);
+          if (nextCol >= totalCols) {
+            nextCol = 0;
+            nextRow = Math.min(totalRows - 1, rowIndex + 1);
+          } else if (nextCol < 0) {
+            nextCol = totalCols - 1;
+            nextRow = Math.max(0, rowIndex - 1);
           }
+          shouldNavigate = true;
           break;
-        case "Enter":
-          e.preventDefault();
-          // Enter moves down
-          newRowIndex = Math.min(totalRows - 1, rowIndex + 1);
-          break;
-        default:
-          return;
       }
 
-      setFocusedCell({ rowIndex: newRowIndex, colIndex: newColIndex });
-
-      // Focus the new cell
-      setTimeout(() => {
-        const cellId = `cell-${newRowIndex}-${newColIndex}`;
-        const element = document.getElementById(cellId);
-        if (element) {
-          const input = element.querySelector("input, textarea");
-          if (input instanceof HTMLElement) {
-            input.focus();
-          }
-        }
-      }, 0);
+      if (shouldNavigate) {
+        setTimeout(() => {
+          const nextRowEl = tableRef.current?.querySelector(
+            `tr[data-index="${nextRow}"]`,
+          );
+          const nextCellDiv =
+            nextRowEl?.children[nextCol]?.querySelector<HTMLElement>(
+              "div[tabindex]",
+            );
+          nextCellDiv?.focus();
+        }, 0);
+      }
     },
     [transformedRows.length, columns.length],
   );
 
   return (
-    <div className="relative flex h-full w-full flex-col bg-slate-100">
-      {/* Scroll container */}
+    <div
+      className="relative flex h-full w-full flex-col bg-slate-100"
+      style={{ width: tableWidth ? `${tableWidth + 200}px` : "100%" }}
+    >
       <div
         ref={scrollRef}
         className="relative flex-1 overflow-auto"
         onScroll={(e) => fetchMoreOnBottomReached(e.currentTarget)}
       >
-        <div className="relative inline-block min-w-full align-top">
-          {/* TABLE */}
-          <table ref={tableRef} className="border-collapse bg-white">
+        <div className="relative inline-block min-w-full pr-16 align-top">
+          <table
+            ref={tableRef}
+            className="border-collapse bg-white"
+            onKeyDown={handleTableKeyDown}
+          >
             <thead className="sticky top-0 z-10">
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
                     <th
                       key={header.id}
-                      className="border border-gray-200 px-3 py-2 text-left text-[13px] font-normal text-gray-700 hover:bg-gray-50"
+                      className="border border-gray-200 bg-white px-3 py-2 text-left text-[13px] font-normal text-gray-700 hover:bg-gray-50"
                       style={{
                         minWidth: MIN_COL_WIDTH,
                         width: header.getSize(),
@@ -193,21 +218,16 @@ export function Table({
                         fontWeight: 500,
                       }}
                     >
-                      {/* ✅ FIXED TRUNCATE - Reserve space for resize handle */}
                       <div className="truncate pr-2">
                         {flexRender(
                           header.column.columnDef.header,
                           header.getContext(),
                         )}
                       </div>
-
-                      {/* Resize handle */}
                       <div
                         onMouseDown={header.getResizeHandler()}
                         onTouchStart={header.getResizeHandler()}
-                        className={`absolute top-0 right-0 h-full w-1 cursor-col-resize touch-none select-none hover:bg-blue-500 ${
-                          header.column.getIsResizing() ? "bg-blue-500" : ""
-                        }`}
+                        className="absolute top-0 right-0 h-full w-1 cursor-col-resize touch-none select-none hover:bg-blue-500"
                       />
                     </th>
                   ))}
@@ -229,48 +249,34 @@ export function Table({
                   <tr
                     key={row.id}
                     ref={(node) => rowVirtualizer.measureElement(node)}
-                    className="hover:bg-gray-50"
+                    data-index={virtualRow.index}
+                    className="w-full hover:bg-gray-50"
                     style={{
                       position: "absolute",
                       transform: `translateY(${virtualRow.start}px)`,
-                      width: "100%",
                       height: ROW_HEIGHT,
                     }}
                   >
-                    {row.getVisibleCells().map((cell, colIndex) => {
-                      const isFocused =
-                        focusedCell?.rowIndex === virtualRow.index &&
-                        focusedCell?.colIndex === colIndex;
-
-                      return (
-                        <td
-                          key={cell.id}
-                          id={`cell-${virtualRow.index}-${colIndex}`}
-                          className={`border border-gray-200 p-0 ${
-                            isFocused ? "ring-2 ring-blue-500 ring-inset" : ""
-                          }`}
-                          style={{
-                            minWidth: MIN_COL_WIDTH,
-                            width: cell.column.getSize(),
-                            height: ROW_HEIGHT,
-                          }}
-                          onKeyDown={(e) =>
-                            handleKeyDown(e, virtualRow.index, colIndex)
-                          }
-                          onClick={() =>
-                            setFocusedCell({
-                              rowIndex: virtualRow.index,
-                              colIndex,
-                            })
-                          }
-                        >
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
-                          )}
-                        </td>
-                      );
-                    })}
+                    {row.getVisibleCells().map((cell) => (
+                      <td
+                        key={cell.id}
+                        className="overflow-hidden border border-gray-200 p-0"
+                        style={{
+                          minWidth: MIN_COL_WIDTH,
+                          width: cell.column.getSize(),
+                          height: ROW_HEIGHT,
+                          maxWidth: cell.column.getSize(),
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
+                      </td>
+                    ))}
                   </tr>
                 );
               })}
@@ -280,7 +286,7 @@ export function Table({
               <tr>
                 <td
                   colSpan={columns.length}
-                  className="pointer border border-gray-200 bg-white p-0"
+                  className="pointer h-8 border border-gray-200 bg-white p-0"
                 >
                   <AddRowButton tableId={tableId} />
                 </td>
@@ -288,20 +294,18 @@ export function Table({
             </tfoot>
           </table>
 
-          {/* ➕ ADD COLUMN BUTTON */}
           <div
             className="pointer absolute top-0 z-20 h-9.25 w-23.5 border-y border-r border-gray-200 bg-white p-0 hover:bg-gray-50"
             style={{ left: tableWidth }}
           >
-            <AddColumnButton tableId={tableId} />
+            <AddColumnDropdown tableId={tableId} />
           </div>
         </div>
       </div>
 
-      {/* Footer */}
       <div className="border-t border-gray-300 bg-white px-3 py-2">
         <div className="text-xs text-gray-600">
-          {rows.length} of {rowCount} {rowCount === 1 ? "record" : "records"}
+          {rowCount} {rowCount === 1 ? "record" : "records"}
           {isFetchingNextPage && " – Loading more…"}
         </div>
       </div>

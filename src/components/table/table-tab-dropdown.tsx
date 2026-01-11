@@ -10,7 +10,8 @@ import {
 } from "@/components/ui/menubar";
 import type { BaseWithTables } from "@/types/base";
 import { Check } from "lucide-react";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { HiMagnifyingGlass } from "react-icons/hi2";
 import { RiArrowDownSLine } from "react-icons/ri";
 import { Input } from "../ui/input";
@@ -25,26 +26,48 @@ interface Props {
 }
 
 export function TableTabDropdown({ base, activeTab, setTables }: Props) {
-  const [searchWord, setSearchWord] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filteredTables, setFilteredTables] = useState(base.tables);
+
+  const router = useRouter();
 
   function handleSearch() {
-    console.log(searchWord);
-    setSearchWord("");
+    console.log(searchQuery);
+    setSearchQuery("");
   }
+
+  useEffect(() => {
+    const query = searchQuery.toLowerCase().trim();
+
+    if (!query) {
+      setFilteredTables(base.tables);
+      return;
+    }
+
+    const remainingTables = filteredTables.filter((field) =>
+      field.name.toLowerCase().includes(query),
+    );
+
+    setFilteredTables(remainingTables);
+  }, [searchQuery]);
 
   return (
     <div className="flex flex-row gap-1">
-      <div className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+      <div className="h-8 w-8">
         <Menubar className="h-8 w-8 border-0 bg-transparent p-0">
           <MenubarMenu>
-            <MenubarTrigger className="pointer-IC h-8 w-8 p-0">
+            <MenubarTrigger
+              className="pointer-IC h-8 w-8 p-0"
+              onClick={() => setIsOpen(!isOpen)}
+            >
               <RiArrowDownSLine
                 size={16}
                 className="text-gray-600 hover:text-gray-900"
               />
             </MenubarTrigger>
             <MenubarContent
-              className="rounded-xs p-4 text-sm md:w-100"
+              className="rounded-xs p-4 text-sm md:w-110"
               align="start"
             >
               {/* Search */}
@@ -55,8 +78,8 @@ export function TableTabDropdown({ base, activeTab, setTables }: Props) {
                 <HiMagnifyingGlass size={16} className="text-gray-600" />
                 <Input
                   type="text"
-                  value={searchWord}
-                  onChange={(e) => setSearchWord(e.target.value)}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       handleSearch();
@@ -73,11 +96,11 @@ export function TableTabDropdown({ base, activeTab, setTables }: Props) {
               <MenubarSeparator className="my-2 w-full" />
 
               {/* Table list */}
-              {base.tables.map((table) => (
+              {filteredTables.map((table) => (
                 <MenubarItem
                   key={table.id}
                   className="flex cursor-pointer flex-row items-center gap-2 rounded-sm px-2 py-1.5 hover:bg-gray-100"
-                  onClick={() => console.log("switch to", table.id)}
+                  onClick={() => router.push(`/base/${base.id}/${table.id}`)}
                 >
                   <div className="w-4">
                     {activeTab === table.id && <Check size={16} />}
@@ -86,13 +109,23 @@ export function TableTabDropdown({ base, activeTab, setTables }: Props) {
                 </MenubarItem>
               ))}
 
+              {/* no results */}
+              {filteredTables.length === 0 && (
+                <div className="h-12 py-4 text-center">
+                  <p className="mb-4 text-[13px] text-gray-600">
+                    No matching tables
+                  </p>
+                </div>
+              )}
+
               <MenubarSeparator className="my-2 w-full" />
 
-              {/* Nested submenu for adding table */}
+              {/* Add table submenu */}
               <AddTableSubmenu
                 baseId={base.id}
                 tableNumber={base.tables.length + 1}
                 setTables={setTables}
+                onTableCreated={() => setIsOpen(false)}
               />
             </MenubarContent>
           </MenubarMenu>
