@@ -53,8 +53,6 @@ export default function EditableCell<TData extends { _rowId: string }, TValue>({
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
       inputRef.current.select();
-    } else if (!isEditing && cellRef.current) {
-      cellRef.current.focus();
     }
   }, [isEditing]);
 
