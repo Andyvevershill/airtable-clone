@@ -1,17 +1,17 @@
 import { useLoadingStore } from "@/app/stores/use-loading-store";
 import { api } from "@/trpc/react";
-import { AiOutlinePlus } from "react-icons/ai";
+import { Button } from "../ui/button";
 
 interface Props {
   tableId: string;
 }
 
-export default function AddRowButton({ tableId }: Props) {
+export default function Add100kRowButton({ tableId }: Props) {
   const setIsLoading = useLoadingStore((state) => state.setIsLoading);
 
   const utils = api.useUtils();
 
-  const addRow = api.row.addRow.useMutation({
+  const addRow = api.row.addBulkRows.useMutation({
     onMutate: () => {
       setIsLoading(true);
     },
@@ -36,16 +36,18 @@ export default function AddRowButton({ tableId }: Props) {
   const handleAddRow = () => {
     addRow.mutate({
       tableId,
+      count: 100000,
     });
   };
 
   return (
-    <button
-      className="pointer flex h-full w-full items-center justify-start pl-2"
-      title="Add row"
+    <Button
+      className="pointer flex items-center justify-center text-[13px]"
+      variant="outline"
+      title="Add 100k rows"
       onClick={handleAddRow}
     >
-      <AiOutlinePlus size={16} className="text-gray-600" />
-    </button>
+      Add 100k rows
+    </Button>
   );
 }

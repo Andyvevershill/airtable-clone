@@ -1,32 +1,23 @@
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
-import { columns } from "@/server/db/schemas";
+import { cells } from "@/server/db/schemas";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
-export const callRouter = createTRPCRouter({
-  UPDATE: protectedProcedure
+export const cellRouter = createTRPCRouter({
+  updateCell: protectedProcedure
     .input(
       z.object({
-        tableId: z.string(),
-        name: z.string(),
-        type: z.enum(["text", "number"]),
+        cellId: z.string(),
+        value: z.string() || z.number(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       // Get current max position
-      const maxPosition = await ctx.db.query.columns.findFirst({
-        where: eq(columns.tableId, input.tableId),
-        orderBy: (columns, { desc }) => [desc(columns.position)],
-      });
+      const updatedCell = await ctx.db
+        .update(cells)
+        .set({ value: input.value })
+        .where(eq(cells.id, input.cellId));
 
-      const newColumn = await ctx.db.insert(columns).values({
-        tableId: input.tableId,
-        name: input.name,
-        type: input.type,
-        position: (maxPosition?.position ?? -1) + 1,
-        createdAt: new Date(),
-      });
-
-      return newColumn;
+      return updatedCell;
     }),
 });

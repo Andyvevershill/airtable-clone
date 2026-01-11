@@ -31,7 +31,7 @@ export const rowsRouter = createTRPCRouter({
     .input(
       z.object({
         tableId: z.string(),
-        limit: z.number().min(1).max(100).default(50),
+        limit: z.number().min(1).max(1000).default(750),
         cursor: z.number().nullish(),
       }),
     )
@@ -108,71 +108,96 @@ export const rowsRouter = createTRPCRouter({
       return newRow;
     }),
 
-  // addBulkRows: protectedProcedure
-  //   .input(
-  //     z.object({
-  //       tableId: z.string(),
-  //       count: z.number().max(100000),
-  //     }),
-  //   )
-  //   .mutation(async ({ ctx, input }) => {
+  addBulkRows: protectedProcedure
+    .input(
+      z.object({
+        tableId: z.string(),
+        count: z.number().max(100000),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      console.log(
+        `[addBulkRows] Starting bulk insert of 100k rows for table ${input.tableId}`,
+      );
 
-  //     // Get columns to know what cells to create
-  //     const tableColumns = await ctx.db.query.columns.findMany({
-  //       where: eq(columns.tableId, input.tableId),
-  //       orderBy: (columns, { asc }) => [asc(columns.position)],
-  //     });
+      // Get columns to know what cells to create
+      const tableColumns = await ctx.db.query.columns.findMany({
+        where: eq(columns.tableId, input.tableId),
+        orderBy: (columns, { asc }) => [asc(columns.position)],
+      });
 
-  //     // Get current max row position
-  //     const maxRowPosition = await ctx.db.query.rows.findFirst({
-  //       where: eq(rows.tableId, input.tableId),
-  //       orderBy: (rows, { desc }) => [desc(rows.position)],
-  //     });
+      console.log(`[addBulkRows] Found ${tableColumns.length} columns`);
 
-  //     const startPosition = (maxRowPosition?.position ?? -1) + 1;
+      const maxRowPosition = await ctx.db.query.rows.findFirst({
+        where: eq(rows.tableId, input.tableId),
+        orderBy: (rows, { desc }) => [desc(rows.position)],
+      });
 
-  //     // Create rows in batches (1000 at a time for performance)
-  //     const batchSize = 1000;
-  //     const batches = Math.ceil(input.count / batchSize);
+      const startPosition = (maxRowPosition?.position ?? -1) + 1;
+      console.log(`[addBulkRows] Starting position: ${startPosition}`);
 
-  //     for (let batch = 0; batch < batches; batch++) {
-  //       const batchStart = batch * batchSize;
-  //       const batchEnd = Math.min((batch + 1) * batchSize, input.count);
+      const totalRows = 100000;
 
-  //       const rowsToInsert = [];
-  //       const cellsToInsert = [];
+      const batchSize = 1000;
+      const batches = Math.ceil(totalRows / batchSize);
 
-  //       for (let i = batchStart; i < batchEnd; i++) {
-  //         rowsToInsert.push({
-  //           tableId: input.tableId,
-  //           position: startPosition + i,
-  //           createdAt: new Date(),
-  //           updatedAt: null,
-  //         });
+      console.log(`[addBulkRows] Processing ${batches} batch(es)`);
 
-  //         // Create cells for each column
-  //         tableColumns.forEach((column) => {
-  //           let value: string;
+      for (let batch = 0; batch < batches; batch++) {
+        const batchStart = batch * batchSize;
+        const batchEnd = Math.min((batch + 1) * batchSize, totalRows);
 
-  //           if (column.type === "number") {
-  //             value = faker.number.int({ min: 1, max: 10000 });
-  //           } else {
-  //             value = faker.person.fullName();
-  //           }
+        console.log(
+          `[addBulkRows] Batch ${batch + 1}/${batches}: Inserting rows ${batchStart} to ${batchEnd - 1}`,
+        );
 
-  //           cellsToInsert.push({
-  //             columnId: column.id,
-  //             value: value,
-  //             updatedAt: null,
-  //           });
-  //         });
-  //       }
+        const rowsToInsert = [];
 
-  //       // Batch insert
-  //       await ctx.db.insert(rows).values(rowsToInsert);
-  //       await ctx.db.insert(cells).values(cellsToInsert);
-  //     }
+        for (let i = batchStart; i < batchEnd; i++) {
+          rowsToInsert.push({
+            tableId: input.tableId,
+            position: startPosition + i,
+            createdAt: new Date(),
+            updatedAt: null,
+          });
+        }
 
-  //     return { inserted: input.count };
-  //   }),
+        // Insert rows and get their IDs back
+        const insertedRows = await ctx.db
+          .insert(rows)
+          .values(rowsToInsert)
+          .returning();
+        console.log(`[addBulkRows] Inserted ${insertedRows.length} rows`);
+
+        // Now create cells for each inserted row
+        const cellsToInsert = [];
+
+        for (const row of insertedRows) {
+          for (const column of tableColumns) {
+            const value = faker.person.fullName();
+
+            cellsToInsert.push({
+              rowId: row.id, // Use the actual row ID from the inserted row
+              columnId: column.id,
+              value: value,
+              updatedAt: null,
+            });
+          }
+        }
+
+        console.log(
+          `[addBulkRows] Inserting ${cellsToInsert.length} cells (${tableColumns.length} columns × ${insertedRows.length} rows)`,
+        );
+
+        // Batch insert cells
+        await ctx.db.insert(cells).values(cellsToInsert);
+        console.log(`[addBulkRows] Batch ${batch + 1} complete`);
+      }
+
+      console.log(
+        `[addBulkRows] Successfully inserted ${totalRows} rows with their cells`,
+      );
+
+      return { inserted: totalRows };
+    }),
 });
