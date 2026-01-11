@@ -1,10 +1,10 @@
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { cells, columns, rows } from "@/server/db/schemas";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 export const columnRouter = createTRPCRouter({
-  getTableColumns: protectedProcedure
+  getColumns: protectedProcedure
     .input(z.object({ tableId: z.string() }))
     .query(async ({ ctx, input }) => {
       const columnArr = await ctx.db.query.columns.findMany({
@@ -62,5 +62,92 @@ export const columnRouter = createTRPCRouter({
       }
 
       return newColumn;
+    }),
+
+  addColumnBatched: protectedProcedure
+    .input(
+      z.object({
+        tableId: z.string(),
+        name: z.string(),
+        type: z.enum(["text", "number"]),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Get max position for new column
+      const maxPositionResult = await ctx.db.query.columns.findFirst({
+        where: eq(columns.tableId, input.tableId),
+        orderBy: (columns, { desc }) => [desc(columns.position)],
+      });
+
+      const newPosition = (maxPositionResult?.position ?? -1) + 1;
+
+      // Create the column
+      const [newColumn] = await ctx.db
+        .insert(columns)
+        .values({
+          tableId: input.tableId,
+          name: input.name,
+          type: input.type,
+          position: newPosition,
+        })
+        .returning();
+
+      if (!newColumn) throw new Error("Failed to create column");
+
+      // Get the total row count first
+      const countResult = await ctx.db
+        .select({ count: sql<number>`count(*)` })
+        .from(rows)
+        .where(eq(rows.tableId, input.tableId));
+
+      const totalRows = countResult[0]?.count ?? 0;
+
+      if (totalRows === 0) {
+        return newColumn;
+      }
+
+      const batchSize = 1000;
+      const batches = Math.ceil(totalRows / batchSize);
+
+      for (let batch = 0; batch < batches; batch++) {
+        const offset = batch * batchSize;
+
+        // Fetch rows in batches
+        const tableRows = await ctx.db.query.rows.findMany({
+          where: eq(rows.tableId, input.tableId),
+          orderBy: (rows, { asc }) => [asc(rows.position)],
+          limit: batchSize,
+          offset: offset,
+        });
+
+        // Create cells for this batch
+        const cellsToInsert = tableRows.map((row) => ({
+          rowId: row.id,
+          columnId: newColumn.id,
+          value: null,
+          updatedAt: null,
+        }));
+
+        await ctx.db.insert(cells).values(cellsToInsert);
+      }
+
+      return newColumn;
+    }),
+
+  updateCell: protectedProcedure
+    .input(
+      z.object({
+        cellId: z.string(),
+        value: z.string().nullable() || z.number().nullable(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Get current max position
+      const updatedCell = await ctx.db
+        .update(cells)
+        .set({ value: input.value })
+        .where(eq(cells.id, input.cellId));
+
+      return updatedCell;
     }),
 });

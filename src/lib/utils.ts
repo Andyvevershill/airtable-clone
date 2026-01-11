@@ -1,4 +1,3 @@
-import type { RowWithCells, TransformedRow } from "@/types";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -69,23 +68,4 @@ export function darkenColour(hexColor: string, opacity = 0.12) {
   const b = parseInt(hex.substring(4, 6), 16);
 
   return `rgba(${r}, ${g}, ${b}, ${opacity * 0.25})`;
-}
-
-export function transformRowsToTanStackFormat(
-  rows: RowWithCells[],
-): TransformedRow[] {
-  return rows.map((row) => {
-    // Start with row metadata
-    const transformedRow: TransformedRow = {
-      _rowId: row.id,
-      _position: row.position,
-    };
-
-    // Add each cell value using columnId as the key
-    row.cells.forEach((cell) => {
-      transformedRow[cell.columnId] = cell.value;
-    });
-
-    return transformedRow;
-  });
 }

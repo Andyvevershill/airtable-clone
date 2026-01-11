@@ -1,9 +1,8 @@
 import type { Column } from "@/types/column";
 import type { RowWithCells } from "@/types/row";
-
 import { useState } from "react";
-import { TableSidebar } from "../base-by-id/navigation/table-sidebar";
 import { Table } from "./table";
+import { TableSidebar } from "./table-sidebar";
 import { TableToolbar } from "./table-toolbar";
 
 interface Props {
@@ -15,7 +14,7 @@ interface Props {
   hasNextPage?: boolean;
   isFetchingNextPage: boolean;
 }
-// table-container.tsx
+
 export default function TableContainer({
   tableId,
   columns,
@@ -28,19 +27,17 @@ export default function TableContainer({
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden">
+    <div className="flex h-full w-full flex-col overflow-hidden bg-slate-100">
       <TableToolbar sideBarState={[sidebarOpen, setSidebarOpen]} />
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar - fixed width, no scroll */}
         {sidebarOpen && (
-          <div className="flex-shrink-0">
-            <TableSidebar sidebarOpen={sidebarOpen} />
+          <div className="shrink-0">
+            <TableSidebar sidebarOpen={sidebarOpen} tableId={tableId} />
           </div>
         )}
 
-        {/* Table - takes remaining space, scrolls independently */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-x-scroll">
           <Table
             tableId={tableId}
             columns={columns}
