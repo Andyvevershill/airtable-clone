@@ -77,7 +77,7 @@ export default function HideFieldsDropdown<TData>({
         </button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-[320px]">
+      <DropdownMenuContent align="end" className="w-[320px] rounded-xs">
         <div className="px-3 pt-2">
           <input
             type="text"
@@ -118,7 +118,7 @@ export default function HideFieldsDropdown<TData>({
         })}
 
         {!filteredColumns.length ? (
-          <div className="mt-2 ml-2 flex h-30 flex-row items-baseline gap-4">
+          <div className="mt-2 ml-2 flex h-25 flex-row items-baseline gap-4">
             <p className="text-[13px] text-gray-400">No results.</p>
             <p
               onClick={() => {
