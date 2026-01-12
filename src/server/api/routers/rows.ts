@@ -1,7 +1,7 @@
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { cells, columns, rows } from "@/server/db/schemas/bases";
 import { faker } from "@faker-js/faker";
-import { eq, sql } from "drizzle-orm";
+import { asc, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 export const rowsRouter = createTRPCRouter({
@@ -31,25 +31,77 @@ export const rowsRouter = createTRPCRouter({
     .input(
       z.object({
         tableId: z.string(),
-        limit: z.number().min(1).max(1000).default(750),
+        limit: z.number().min(1).max(1000).default(200),
         cursor: z.number().nullish(),
+        sort: z
+          .object({
+            columnId: z.string(),
+            direction: z.enum(["asc", "desc"]),
+            type: z.enum(["string", "number"]).default("string"),
+          })
+          .optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
       const offset = input.cursor ?? 0;
+      const { sort } = input;
 
-      const tableRows = await ctx.db.query.rows.findMany({
-        where: eq(rows.tableId, input.tableId),
-        orderBy: (rows, { asc }) => [asc(rows.position)],
-        limit: input.limit,
-        offset: offset,
-        with: {
-          cells: true,
-        },
-      });
+      const cellValueSubquery = sort
+        ? sort.type === "number"
+          ? sql`
+        (
+          SELECT CAST(cell.value AS NUMERIC)
+          FROM cell
+          WHERE cell.row_id = row.id
+            AND cell.column_id = ${sort.columnId}
+          LIMIT 1
+        )
+      `
+          : sql`
+        (
+          SELECT cell.value
+          FROM cell
+          WHERE cell.row_id = row.id
+            AND cell.column_id = ${sort.columnId}
+          LIMIT 1
+        )
+      `
+        : null;
+
+      const orderBy = sort
+        ? [
+            sort.direction === "desc"
+              ? desc(cellValueSubquery!)
+              : asc(cellValueSubquery!),
+            asc(rows.position), // stable fallback
+          ]
+        : [asc(rows.position)];
+
+      const tableRows = await ctx.db
+        .select()
+        .from(rows)
+        .where(eq(rows.tableId, input.tableId))
+        .orderBy(...orderBy)
+        .limit(input.limit)
+        .offset(offset);
+
+      // fetch cells separately (important for performance & correctness)
+      const rowIds = tableRows.map((r) => r.id);
+
+      const rowCells = rowIds.length
+        ? await ctx.db
+            .select()
+            .from(cells)
+            .where(sql`${cells.rowId} IN ${rowIds}`)
+        : [];
+
+      const rowsWithCells = tableRows.map((row) => ({
+        ...row,
+        cells: rowCells.filter((c) => c.rowId === row.id),
+      }));
 
       return {
-        items: tableRows,
+        items: rowsWithCells,
         nextCursor:
           tableRows.length === input.limit ? offset + input.limit : undefined,
       };
