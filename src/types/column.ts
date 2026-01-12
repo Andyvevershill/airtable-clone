@@ -12,4 +12,4 @@ const columnSchema = z.object({
   updatedAt: z.date().nullable(),
 });
 
-export type Column = z.infer<typeof columnSchema>;
+export type ColumnType = z.infer<typeof columnSchema>;

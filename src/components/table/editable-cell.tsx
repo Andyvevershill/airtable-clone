@@ -29,7 +29,6 @@ export default function EditableCell<TData extends { _rowId: string }, TValue>({
   const originalRow = rows.find((r) => r.id === row.original._rowId);
   const cell = originalRow?.cells.find((c) => c.columnId === columnId);
 
-  // Only sync when NOT editing to avoid overwriting user input
   useEffect(() => {
     if (!isEditing) {
       setValue(initialValue);
@@ -121,7 +120,7 @@ export default function EditableCell<TData extends { _rowId: string }, TValue>({
         />
       ) : (
         <div className="flex h-full w-full items-center px-3 text-[13px]">
-          {value || "\u00A0"}
+          {value ?? ""}
         </div>
       )}
     </div>

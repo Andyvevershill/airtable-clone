@@ -2,14 +2,21 @@
 
 import { useLoadingStore } from "@/app/stores/use-loading-store";
 import NoDataPage from "@/components/no-data-page";
-import TableContainer from "@/components/table/table-container";
 import { api } from "@/trpc/react";
 import { useParams } from "next/navigation";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import TableContainer from "./table-container";
+
+export type SortingState = {
+  columnId: string;
+  direction: "asc" | "desc";
+  type: "string" | "number";
+} | null;
 
 export default function TablePage() {
   const { tableId } = useParams<{ tableId: string }>();
   const setIsLoading = useLoadingStore((state) => state.setIsLoading);
+  const [sorting, setSorting] = useState<SortingState>(null);
 
   // replace this with just Views, table Id is all we need and its inside col + rows
   const { data: tableWithViews, isLoading: tableWithViewsLoading } =
@@ -31,6 +38,7 @@ export default function TablePage() {
     {
       tableId,
       limit: 200,
+      sort: sorting ?? undefined,
     },
     {
       getNextPageParam: (lastPage) => lastPage.nextCursor,
@@ -69,6 +77,8 @@ export default function TablePage() {
         fetchNextPage={fetchNextPage}
         hasNextPage={hasNextPage}
         isFetchingNextPage={isFetchingNextPage}
+        sorting={sorting}
+        onSortingChange={setSorting}
       />
     </div>
   );

@@ -1,6 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import type { TransformedRow } from "@/types";
+import type { Table } from "@tanstack/react-table";
 import {
   ChevronDown,
   PaintBucket,
@@ -8,16 +10,17 @@ import {
   Search,
   TableCellsSplit,
 } from "lucide-react";
-import { BiHide, BiSortAlt2 } from "react-icons/bi";
+import { BiSortAlt2 } from "react-icons/bi";
 import { BsFilter } from "react-icons/bs";
 import { CiMenuBurger, CiShare1 } from "react-icons/ci";
+import HideFieldsDropdown from "../dropdowns/hide-field-dropdown";
 
 interface Props {
+  table: Table<TransformedRow>;
   sideBarState: [open: boolean, setOpen: (v: boolean) => void];
 }
 
 const items = [
-  { text: "Hide fields", icon: <BiHide /> },
   { text: "Filter", icon: <BsFilter /> },
   { text: "Group", icon: <PanelsTopLeft /> },
   { text: "Sort", icon: <BiSortAlt2 /> },
@@ -25,17 +28,12 @@ const items = [
   { text: "Share and sync", icon: <CiShare1 /> },
 ];
 
-export function TableToolbar({ sideBarState: [open, setOpen] }: Props) {
+export function TableToolbar({ table, sideBarState: [open, setOpen] }: Props) {
   return (
     <div className="flex h-12 items-center justify-between border-b border-gray-200 bg-white px-3">
       {/* Left */}
       <div className="flex items-center gap-2">
-        <button
-          onClick={() => setOpen(!open)}
-          // onMouseEnter={handleMouseEntry}
-          // onMouseLeave={handleMouseLeave}
-          className="pointer"
-        >
+        <button onClick={() => setOpen(!open)} className="pointer">
           <CiMenuBurger />
         </button>
 
@@ -48,6 +46,8 @@ export function TableToolbar({ sideBarState: [open, setOpen] }: Props) {
 
       {/* Right */}
       <div className="flex items-center gap-2 text-gray-500">
+        <HideFieldsDropdown table={table} />
+
         {items.map((item) => (
           <Button
             key={item.text}

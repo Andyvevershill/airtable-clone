@@ -39,7 +39,7 @@ export const baseRouter = createTRPCRouter({
           DEFAULT_BASE_CONFIG.columns.map((col) => ({
             tableId: table.id,
             name: col.name,
-            type: col.type,
+            type: "string",
             position: col.position,
           })),
         )

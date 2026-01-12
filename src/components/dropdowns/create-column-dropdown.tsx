@@ -203,7 +203,7 @@ export function CreateColumnDropdown({ tableId }: Props) {
                       }}
                       className="text-grey-500 cursor-pointer text-xs hover:text-gray-400"
                     >
-                      clear
+                      Clear
                     </p>
                   </div>
                 )}

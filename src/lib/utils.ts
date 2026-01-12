@@ -9,12 +9,12 @@ export const DEFAULT_BASE_CONFIG = {
   name: "Untitled Base",
   colours: ["#B91C1C", "#1D4ED8", "#6D28D9", "#15803D", "#1F2937"],
   columns: [
-    { name: "Name", type: "text", position: 0 },
-    { name: "Notes", type: "text", position: 1 },
-    { name: "Assignee", type: "text", position: 2 },
-    { name: "Status", type: "text", position: 3 },
-    { name: "Attachments", type: "text", position: 4 },
-    { name: "Attachment Summary", type: "text", position: 5 },
+    { name: "Name", position: 0 },
+    { name: "Notes", position: 1 },
+    { name: "Assignee", position: 2 },
+    { name: "Status", position: 3 },
+    { name: "Attachments", position: 4 },
+    { name: "Attachment Summary", position: 5 },
   ],
   defaultTableName: "Table 1",
   defaultRowCount: 3,
@@ -34,7 +34,7 @@ export function getLastAccessed(lastAccessed: Date): string {
   const daysAgo = Math.floor(hoursAgo / 24);
   const weeksAgo = Math.floor(daysAgo / 7);
 
-  if (minutesAgo < 5) {
+  if (minutesAgo < 2) {
     return "just now";
   }
   if (minutesAgo < 60) {

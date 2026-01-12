@@ -48,7 +48,7 @@ export function CreateColumnSubmenu({
     console.log("Creating column:", {
       tableId,
       dataType: selectedField,
-      columnName,
+      columnName: columnName ?? "Untitled column",
     });
 
     addColumn.mutate({

@@ -1,26 +1,18 @@
-import { useSavingStore } from "@/app/stores/use-saving-store";
-import { api } from "@/trpc/react";
-import type { Column } from "@/types/column";
-import type { RowWithCells } from "@/types/row";
-import {
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
+import type { ColumnType } from "@/types/column";
+import type { TransformedRow } from "@/types/row";
+import { flexRender, type Table } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
-import AddRowButton from "../buttons/add-row-button";
-import {
-  generateColumnDefinitions,
-  transformRowsToTanStackFormat,
-} from "../columns/generate-column-definitions";
-import { CreateColumnDropdown } from "../dropdowns/create-column-dropdown";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import AddRowButton from "../../../../components/buttons/add-row-button";
+import { CreateColumnDropdown } from "../../../../components/dropdowns/create-column-dropdown";
 
 interface Props {
+  table: Table<TransformedRow>;
   tableId: string;
-  columns: Column[];
-  rows: RowWithCells[];
+  columns: ColumnType[];
   rowCount: number;
+  transformedRows: TransformedRow[];
+
   fetchNextPage: () => void;
   hasNextPage?: boolean;
   isFetchingNextPage: boolean;
@@ -30,52 +22,16 @@ const MIN_COL_WIDTH = 175;
 const ROW_HEIGHT = 33;
 
 export function Table({
+  table,
   tableId,
   columns,
-  rows,
   rowCount,
+  transformedRows,
+
   fetchNextPage,
   hasNextPage,
   isFetchingNextPage,
 }: Props) {
-  const transformedRows = useMemo(
-    () => transformRowsToTanStackFormat(rows),
-    [rows],
-  );
-
-  const setIsSaving = useSavingStore((state) => state.setIsSaving);
-  const utils = api.useUtils();
-
-  const updateCellMutation = api.column.updateCell.useMutation({
-    onMutate: () => setIsSaving(true),
-    onSuccess: () => {
-      void utils.column.getColumns.invalidate({ tableId });
-      void utils.row.getRowsInfinite.invalidate({ tableId });
-    },
-    onError: (error) => console.error("Failed to update cell:", error),
-    onSettled: () => setIsSaving(false),
-  });
-
-  const onCellUpdate = useCallback(
-    (cellId: string, value: string | null) => {
-      updateCellMutation.mutate({ cellId, value });
-    },
-    [updateCellMutation],
-  );
-
-  const tanstackColumns = useMemo(
-    () => generateColumnDefinitions(columns, rows, onCellUpdate),
-    [columns, rows, onCellUpdate],
-  );
-
-  const table = useReactTable({
-    data: transformedRows,
-    columns: tanstackColumns,
-    getCoreRowModel: getCoreRowModel(),
-    enableColumnResizing: true,
-    columnResizeMode: "onChange",
-  });
-
   const scrollRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLTableElement>(null);
   const [tableWidth, setTableWidth] = useState(0);
@@ -204,26 +160,28 @@ export function Table({
             className="border-collapse bg-white"
             onKeyDown={handleTableKeyDown}
           >
-            <thead className="sticky top-0 z-10">
+            <thead className="class sticky top-0 z-10">
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
                     <th
                       key={header.id}
-                      className="border border-gray-200 bg-white px-3 py-2 text-left text-[13px] font-normal text-gray-700 hover:bg-gray-50"
+                      className="overflow-hidden border border-gray-200 bg-white px-3 py-2 text-left text-[13px] font-normal text-gray-700 hover:bg-gray-50"
                       style={{
                         minWidth: MIN_COL_WIDTH,
                         width: header.getSize(),
                         position: "relative",
                         fontWeight: 500,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
                       }}
                     >
-                      <div className="truncate pr-2">
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                      </div>
+                      {flexRender(
+                        header.column.columnDef.header,
+                        header.getContext(),
+                      )}
+
                       <div
                         onMouseDown={header.getResizeHandler()}
                         onTouchStart={header.getResizeHandler()}
