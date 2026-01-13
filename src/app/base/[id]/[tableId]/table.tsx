@@ -192,11 +192,7 @@ export function Table({
                         header.getContext(),
                       )}
 
-                      <div
-                        onMouseDown={header.getResizeHandler()}
-                        onTouchStart={header.getResizeHandler()}
-                        className="absolute top-0 right-0 h-full w-1 cursor-col-resize touch-none select-none hover:bg-blue-500"
-                      />
+                      <div className="select-non absolute top-0 right-0 h-full w-1 touch-none" />
                     </th>
                   ))}
                 </tr>
