@@ -7,7 +7,7 @@ import {
 } from "@/components/columns/generate-column-definitions";
 import { TableSidebar } from "@/components/table/table-sidebar";
 import { TableToolbar } from "@/components/table/table-toolbar";
-import { api } from "@/trpc/react";
+import { useOptimisticCellUpdate } from "@/hooks/use-optimistic-cell-update";
 import type { RowWithCells, TransformedRow } from "@/types";
 import type { ColumnType } from "@/types/column";
 import {
@@ -15,7 +15,7 @@ import {
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Table } from "./table";
 
 interface Props {
@@ -93,34 +93,11 @@ export default function TableContainer({
     }
   }, [rowsWithCells]);
 
-  const updateCellMutation = api.column.updateCell.useMutation({
-    onSuccess: () => {
-      console.log("Cell updated successfully");
-    },
-    onError: (error) => {
-      console.error("Failed to update cell:", error);
-    },
+  const { onCellUpdate } = useOptimisticCellUpdate({
+    tableId,
+    localRows,
+    setLocalRows,
   });
-
-  const onCellUpdate = useCallback(
-    (rowId: string, columnId: string, value: string | null) => {
-      setLocalRows((prev) =>
-        prev.map((row) =>
-          row._rowId === rowId
-            ? { ...row, _cells: { ...row._cells, [columnId]: value } }
-            : row,
-        ),
-      );
-
-      const cellId = localRows.find((r) => r._rowId === rowId)?._cellMap[
-        columnId
-      ];
-      if (!cellId) return;
-
-      updateCellMutation.mutate({ cellId, value });
-    },
-    [localRows, updateCellMutation],
-  );
 
   const tanstackColumns = useMemo(
     () => generateColumnDefinitions(localColumns, onCellUpdate),

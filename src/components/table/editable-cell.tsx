@@ -1,14 +1,16 @@
+"use client";
+
 import type { TransformedRow } from "@/types/row";
 import type { CellContext } from "@tanstack/react-table";
-import { memo, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface Props extends CellContext<TransformedRow, unknown> {
   columnId: string;
   onCellUpdate: (rowId: string, columnId: string, value: string | null) => void;
-  dataType: string;
+  dataType: string; // "text" | "number"
 }
 
-function EditableCell({
+export default function EditableCell({
   getValue,
   row,
   columnId,
@@ -21,36 +23,74 @@ function EditableCell({
     (getValue() as string | null) ?? "",
   );
 
-  const [value, setValue] = useState<string | null>(initialValueRef.current);
+  const liveValueRef = useRef<string | null>(initialValueRef.current);
   const [isEditing, setIsEditing] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Sync external updates (sorting, refetch, visibility changes)
+  useEffect(() => {
+    console.log("MOUNT", row.original._rowId, columnId);
+    return () => {
+      console.log("UNMOUNT", row.original._rowId, columnId);
+    };
+  }, []);
+
   useEffect(() => {
     if (!isEditing) {
       const next = (getValue() as string | null) ?? "";
       initialValueRef.current = next;
-      setValue(next);
+      liveValueRef.current = next;
     }
   }, [getValue, isEditing]);
 
   const commit = () => {
     if (!isEditing) return;
 
-    const trimmed = value?.trim() || null;
+    const next = liveValueRef.current?.trim() || null;
 
-    if (trimmed !== initialValueRef.current && cellId) {
-      onCellUpdate(row.original._rowId, columnId, trimmed);
-      initialValueRef.current = trimmed;
+    if (next !== initialValueRef.current && cellId) {
+      onCellUpdate(row.original._rowId, columnId, next);
+      initialValueRef.current = next;
     }
 
     setIsEditing(false);
   };
 
   const cancel = () => {
-    setValue(initialValueRef.current);
+    liveValueRef.current = initialValueRef.current;
     setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (dataType !== "number") return;
+
+    const allowedKeys = [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      ".",
+      "-",
+      "Backspace",
+      "Delete",
+      "ArrowLeft",
+      "ArrowRight",
+      "ArrowUp",
+      "ArrowDown",
+      "Tab",
+      "Enter",
+      "Escape",
+    ];
+
+    if (!allowedKeys.includes(e.key)) {
+      e.preventDefault();
+    }
   };
 
   useEffect(() => {
@@ -62,6 +102,8 @@ function EditableCell({
 
   if (!cellId) return null;
 
+  const isNumber = dataType === "number";
+
   return (
     <div
       tabIndex={0}
@@ -71,30 +113,38 @@ function EditableCell({
       {isEditing ? (
         <input
           ref={inputRef}
-          type={dataType}
-          value={value ?? ""}
-          onChange={(e) => setValue(e.target.value)}
-          onBlur={commit}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") commit();
-            if (e.key === "Escape") cancel();
+          type="text"
+          inputMode={isNumber ? "numeric" : "text"}
+          pattern={isNumber ? "[0-9]*" : undefined}
+          defaultValue={initialValueRef.current ?? ""}
+          onChange={(e) => {
+            liveValueRef.current = e.target.value;
           }}
-          className="h-full w-full border-2 border-blue-500 bg-white px-3 text-[13px] outline-none"
+          onBlur={commit}
+          onKeyDown={handleKeyDown}
+          onKeyDownCapture={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              commit();
+            }
+            if (e.key === "Escape") {
+              e.preventDefault();
+              cancel();
+            }
+          }}
+          className={`h-full w-full border-2 ${
+            isNumber ? "text-right" : ""
+          } border-blue-500 bg-white px-3 text-[13px] outline-none`}
         />
       ) : (
-        <div className="flex h-full w-full items-center px-3 text-[13px]">
-          {value ?? ""}
+        <div
+          className={`flex h-full w-full items-center px-3 text-[13px] ${
+            isNumber ? "justify-end" : ""
+          }`}
+        >
+          {initialValueRef.current ?? ""}
         </div>
       )}
     </div>
   );
 }
-
-export default memo(
-  EditableCell,
-  (prev, next) =>
-    prev.row.original._rowId === next.row.original._rowId &&
-    prev.columnId === next.columnId &&
-    Object.is(prev.getValue(), next.getValue()) &&
-    prev.dataType === next.dataType,
-);

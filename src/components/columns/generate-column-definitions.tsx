@@ -4,9 +4,23 @@ import type { RowWithCells, TransformedRow } from "@/types/row";
 import type { ColumnDef } from "@tanstack/react-table";
 import EditableCell from "../table/editable-cell";
 
+function EditableCellRenderer(props: any) {
+  const { column } = props;
+  const meta = column.columnDef.meta;
+
+  return (
+    <EditableCell
+      {...props}
+      columnId={column.id}
+      dataType={meta?.dataType}
+      onCellUpdate={meta?.onCellUpdate}
+    />
+  );
+}
+
 export function generateColumnDefinitions(
   dbColumns: ColumnType[],
-  onCellEdit: (cellId: string, columnId: string, value: string | null) => void,
+  onCellEdit: (rowId: string, columnId: string, value: string | null) => void,
 ): ColumnDef<TransformedRow>[] {
   return dbColumns.map((col) => ({
     id: col.id,
@@ -15,6 +29,7 @@ export function generateColumnDefinitions(
     meta: {
       label: col.name,
       dataType: col.type,
+      onCellUpdate: onCellEdit,
     },
 
     enableSorting: true,
@@ -29,14 +44,7 @@ export function generateColumnDefinitions(
       />
     ),
 
-    cell: (props) => (
-      <EditableCell
-        {...props}
-        columnId={col.id}
-        onCellUpdate={onCellEdit}
-        dataType={col.type}
-      />
-    ),
+    cell: EditableCellRenderer,
   }));
 }
 
