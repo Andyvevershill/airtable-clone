@@ -1,3 +1,5 @@
+import AddRowButton from "@/components/buttons/add-row-button";
+import { CreateColumnDropdown } from "@/components/dropdowns/create-column-dropdown";
 import type { ColumnType } from "@/types/column";
 import type { TransformedRow } from "@/types/row";
 import { flexRender, type Table } from "@tanstack/react-table";
@@ -9,8 +11,6 @@ import {
   useRef,
   useState,
 } from "react";
-import AddRowButton from "../../../../components/buttons/add-row-button";
-import { CreateColumnDropdown } from "../../../../components/dropdowns/create-column-dropdown";
 
 interface Props {
   table: Table<TransformedRow>;

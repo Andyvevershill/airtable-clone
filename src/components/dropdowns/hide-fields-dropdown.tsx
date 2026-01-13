@@ -21,8 +21,6 @@ interface DataTableViewOptionsProps<TData> {
 export default function HideFieldsDropdown<TData>({
   columns,
 }: DataTableViewOptionsProps<TData>) {
-  console.log("🚀 HideFieldsDropdown RENDERED");
-
   const [search, setSearch] = useState("");
 
   const numberOfHiddenCols = columns.filter(
@@ -34,18 +32,11 @@ export default function HideFieldsDropdown<TData>({
     return label.includes(search.toLowerCase());
   });
 
-  console.log("📊 State:", {
-    numberOfHiddenCols,
-    filteredColumnsCount: filteredColumns.length,
-  });
-
   const hideAllColumns = () => {
-    console.log("🙈 Hide all clicked");
     columns.forEach((column) => column.toggleVisibility(false));
   };
 
   const showAllColumns = () => {
-    console.log("👁️ Show all clicked");
     columns.forEach((column) => column.toggleVisibility(true));
   };
 

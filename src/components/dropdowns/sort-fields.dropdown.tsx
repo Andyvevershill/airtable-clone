@@ -9,7 +9,7 @@ import type { TransformedRow } from "@/types";
 import { DropdownMenuTrigger } from "@radix-ui/react-dropdown-menu";
 import type { Column } from "@tanstack/react-table";
 import { HelpCircle } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FaA } from "react-icons/fa6";
 import { HiMagnifyingGlass } from "react-icons/hi2";
 import { IoFilterOutline } from "react-icons/io5";
@@ -24,28 +24,32 @@ export default function SortFieldsDropdown<TData>({
   columns,
 }: DataTableViewOptionsProps<TData>) {
   const [search, setSearch] = useState("");
-  const [isSubmenuOpen, setIsSubmenuOpen] = useState(false);
   const [selectedField, setSelectedField] = useState<Column<
     TransformedRow,
     unknown
   > | null>(null);
-
   const [menuKey, setMenuKey] = useState(0);
 
   const currentlySortedColumns = columns.filter((col) => col.getIsSorted());
+
+  useEffect(() => {
+    if (currentlySortedColumns.length > 0 && !selectedField) {
+      setSelectedField(currentlySortedColumns[0] ?? null);
+    }
+  }, [currentlySortedColumns, selectedField]);
 
   const filteredColumns = columns.filter((column) => {
     const label = (column.columnDef.meta?.label ?? column.id).toLowerCase();
     return label.includes(search.toLowerCase());
   });
 
-  // ✅ Reset everything when closing
   const handleResetAll = () => {
-    setIsSubmenuOpen(false);
     setSelectedField(null);
     setSearch("");
     setMenuKey((prev) => prev + 1);
   };
+
+  const showForm = selectedField !== null;
 
   return (
     <DropdownMenu key={menuKey}>
@@ -53,7 +57,7 @@ export default function SortFieldsDropdown<TData>({
         <button
           className={`pointer flex h-7 flex-row items-center gap-1 rounded-xs border border-transparent p-2 text-[13px] ${
             currentlySortedColumns.length > 0
-              ? "bg-[#FFE0CC] text-gray-900 hover:border-2 hover:border-[#FFE0CC]"
+              ? "bg-[#FFE0CC] text-gray-900 hover:border-2 hover:border-[#efd5c4]"
               : "text-gray-500 hover:bg-gray-100"
           }`}
         >
@@ -69,8 +73,8 @@ export default function SortFieldsDropdown<TData>({
         </button>
       </DropdownMenuTrigger>
 
-      {!isSubmenuOpen ? (
-        // ✅ MAIN MENU - Column Selection
+      {!showForm ? (
+        // Column Selection Menu
         <DropdownMenuContent
           align="end"
           className="mb-2 w-[320px] rounded-xs"
@@ -105,10 +109,7 @@ export default function SortFieldsDropdown<TData>({
                 <div
                   key={column.id}
                   className="flex h-7 cursor-pointer flex-row rounded-xs px-3 py-1 hover:bg-gray-100"
-                  onClick={() => {
-                    setSelectedField(column);
-                    setIsSubmenuOpen(true);
-                  }}
+                  onClick={() => setSelectedField(column)}
                 >
                   <div className="ml-1 flex flex-row items-center gap-2">
                     {dataType === "number" ? (
@@ -130,7 +131,7 @@ export default function SortFieldsDropdown<TData>({
           )}
         </DropdownMenuContent>
       ) : (
-        // ✅ SUBMENU - Sort Options Form
+        // Sort Form
         <DropdownMenuContent
           align="end"
           className="w-[450px] rounded-xs p-0"
@@ -140,8 +141,8 @@ export default function SortFieldsDropdown<TData>({
           onCloseAutoFocus={handleResetAll}
         >
           <SortFieldsForm
+            selectedFieldState={[selectedField, setSelectedField]}
             columns={columns}
-            selectedField={selectedField}
             onClose={handleResetAll}
           />
         </DropdownMenuContent>
