@@ -4,12 +4,11 @@ import type { TransformedRow } from "@/types/row";
 import type { CellContext } from "@tanstack/react-table";
 import { useEffect, useRef, useState } from "react";
 
-interface Props extends CellContext<TransformedRow, unknown> {
+export type Props = CellContext<TransformedRow, unknown> & {
   columnId: string;
+  dataType: string;
   onCellUpdate: (rowId: string, columnId: string, value: string | null) => void;
-  dataType: string; // "text" | "number"
-}
-
+};
 export default function EditableCell({
   getValue,
   row,
@@ -46,7 +45,7 @@ export default function EditableCell({
   const commit = () => {
     if (!isEditing) return;
 
-    const next = liveValueRef.current?.trim() || null;
+    const next = liveValueRef.current?.trim() ?? null;
 
     if (next !== initialValueRef.current && cellId) {
       onCellUpdate(row.original._rowId, columnId, next);

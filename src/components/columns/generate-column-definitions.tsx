@@ -1,19 +1,19 @@
 import { DataTableColumnHeader } from "@/app/base/[id]/[tableId]/data-table-column-header";
 import type { ColumnType } from "@/types/column";
 import type { RowWithCells, TransformedRow } from "@/types/row";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { CellContext, ColumnDef } from "@tanstack/react-table";
 import EditableCell from "../table/editable-cell";
 
-function EditableCellRenderer(props: any) {
+function EditableCellRenderer(props: CellContext<TransformedRow, unknown>) {
   const { column } = props;
-  const meta = column.columnDef.meta;
+  const meta = column.columnDef.meta!;
 
   return (
     <EditableCell
       {...props}
       columnId={column.id}
-      dataType={meta?.dataType}
-      onCellUpdate={meta?.onCellUpdate}
+      dataType={meta.dataType}
+      onCellUpdate={meta.onCellUpdate}
     />
   );
 }
