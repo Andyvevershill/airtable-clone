@@ -20,24 +20,91 @@ export function CreateColumnSubmenu({
   selectedField,
 }: Props) {
   const [columnName, setColumnName] = useState("");
-
   const setIsSaving = useSavingStore((state) => state.setIsSaving);
-
   const utils = api.useUtils();
 
   const addColumn = api.column.addColumn.useMutation({
-    onMutate: () => {
+    onMutate: async (newColumn) => {
+      console.log(newColumn);
+
       setIsSaving(true);
+
+      //  Cancel outgoing refetches
+      await utils.column.getColumns.cancel({ tableId });
+
+      //  Snapshot previous value
+      const previousColumns = utils.column.getColumns.getData({ tableId });
+
+      //  Optimistically add new column
+      utils.column.getColumns.setData({ tableId }, (old) => {
+        if (!old) return old;
+
+        const tempColumn = {
+          id: `temp-${Date.now()}`,
+          tableId,
+          name: newColumn.name || "Untitled column",
+          type: newColumn.type,
+          position: old.length,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        return [...old, tempColumn];
+      });
+
+      const previousRows = utils.row.getRowsInfinite.getInfiniteData({
+        tableId,
+        limit: 250,
+      });
+
+      utils.row.getRowsInfinite.setInfiniteData(
+        { tableId, limit: 250 },
+        (old) => {
+          if (!old) return old;
+
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              items: page.items.map((row) => ({
+                ...row,
+                cells: [
+                  ...row.cells,
+                  {
+                    id: `temp-cell-${Date.now()}-${row.id}`,
+                    rowId: row.id,
+                    columnId: `temp-${Date.now()}`,
+                    value: null,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                  },
+                ],
+              })),
+            })),
+          };
+        },
+      );
+
+      return { previousColumns, previousRows };
+    },
+    onError: (err, variables, context) => {
+      // ✅ Rollback on error
+      if (context?.previousColumns) {
+        utils.column.getColumns.setData({ tableId }, context.previousColumns);
+      }
+      if (context?.previousRows) {
+        utils.row.getRowsInfinite.setInfiniteData(
+          { tableId, limit: 250 },
+          context.previousRows,
+        );
+      }
+      console.error("Failed to add column:", err);
+      setIsSaving(false);
     },
     onSuccess: () => {
-      // Invalidate columns query to refetch
       void utils.column.getColumns.invalidate({ tableId });
-
-      // Invalidate rows query to get cells for new column
       void utils.row.getRowsInfinite.invalidate({ tableId });
-    },
-    onError: (error) => {
-      console.error("Failed to add column:", error);
+      setIsSaving(false);
     },
     onSettled: () => {
       setIsSaving(false);
@@ -45,16 +112,10 @@ export function CreateColumnSubmenu({
   });
 
   function handleCreateColumn() {
-    console.log("Creating column:", {
-      tableId,
-      dataType: selectedField,
-      columnName: columnName ?? "Untitled column",
-    });
-
     addColumn.mutate({
       tableId,
       type: selectedField,
-      name: columnName,
+      name: columnName || "Untitled column",
     });
 
     setColumnName("");
@@ -72,6 +133,11 @@ export function CreateColumnSubmenu({
             type="text"
             value={columnName}
             onChange={(e) => setColumnName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleCreateColumn();
+              }
+            }}
             placeholder="Field name (optional)"
             className="p-x-2 h-8 w-full rounded-sm border-gray-300 bg-white py-3 text-sm text-[13px] shadow-xs focus:ring-[#166ee1] focus-visible:ring-2"
             autoFocus
@@ -81,7 +147,6 @@ export function CreateColumnSubmenu({
 
       <MenubarSeparator className="my-3" />
 
-      {/* Action buttons */}
       <div className="flex justify-end gap-2">
         <button
           onClick={(e) => {
@@ -97,9 +162,10 @@ export function CreateColumnSubmenu({
             e.stopPropagation();
             handleCreateColumn();
           }}
-          className="pointer h-[32px] rounded-md bg-[#166ee1] px-3 py-1.5 text-xs text-white"
+          disabled={addColumn.isPending}
+          className="pointer h-[32px] rounded-md bg-[#166ee1] px-3 py-1.5 text-xs text-white disabled:opacity-50"
         >
-          Create field
+          {addColumn.isPending ? "Creating..." : "Create field"}
         </button>
       </div>
     </>

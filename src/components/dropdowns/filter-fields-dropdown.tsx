@@ -5,73 +5,53 @@ import {
   DropdownMenuContent,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import type { TransformedRow } from "@/types";
 import { DropdownMenuTrigger } from "@radix-ui/react-dropdown-menu";
-import type { Table } from "@tanstack/react-table";
+import type { Column } from "@tanstack/react-table";
 import { useState } from "react";
-import { BiHide } from "react-icons/bi";
 import { FaA } from "react-icons/fa6";
+import { IoFilterOutline } from "react-icons/io5";
 import { PiHashStraightLight } from "react-icons/pi";
 import Toggle from "../ui/toggle";
 
 interface DataTableViewOptionsProps<TData> {
-  table: Table<TData>;
+  columns: Column<TransformedRow, unknown>[];
 }
 
-export default function HideFieldsDropdown<TData>({
-  table,
+export default function FilerFieldsDropdown<TData>({
+  columns,
 }: DataTableViewOptionsProps<TData>) {
   const [search, setSearch] = useState("");
 
-  // change button text if hidden cols exist
-  const numberOfHiddenCols = table
-    .getAllColumns()
-    .filter((col) => !col.getIsVisible()).length;
+  const currentlyFilteredColumns = columns.filter((col) => col.getIsFiltered());
 
-  const hideableColumns = table
-    .getAllColumns()
-    .filter(
-      (column) =>
-        typeof column.accessorFn !== "undefined" && column.getCanHide(),
-    );
-
-  const filteredColumns = hideableColumns.filter((column) => {
+  const filteredColumnLabels = currentlyFilteredColumns.map(
+    (col) => col.columnDef.meta?.label,
+  );
+  const filteredColumns = columns.filter((column) => {
     const label = (column.columnDef.meta?.label ?? column.id).toLowerCase();
     return label.includes(search.toLowerCase());
   });
-
-  const hideAllColumns = () => {
-    hideableColumns.forEach((column) => {
-      if (column.getIsVisible()) {
-        column.toggleVisibility(false);
-      }
-    });
-  };
-
-  const showAllColumns = () => {
-    hideableColumns.forEach((column) => {
-      if (!column.getIsVisible()) {
-        column.toggleVisibility(true);
-      }
-    });
-  };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
           className={`pointer flex h-7 flex-row items-center gap-1 rounded-xs border border-transparent p-2 text-[13px] text-gray-700 ${
-            numberOfHiddenCols > 0
-              ? "bg-[#C4ECFF] text-gray-900 hover:border-2 hover:border-[#7FAFC4] hover:bg-[#C4ECFF]"
-              : "text-gray-700 hover:bg-gray-100"
+            currentlyFilteredColumns.length > 0
+              ? "bg-[#cff5d1] text-gray-900 hover:border-2 hover:border-[#7FAFC4] hover:bg-[#cff5d1]"
+              : "text-gray-500 hover:bg-gray-100"
           } `}
         >
-          <BiHide />
+          <IoFilterOutline />
 
-          {numberOfHiddenCols === 0 ? (
-            <span className="text-[13px]">Hide fields</span>
+          {currentlyFilteredColumns.length === 0 ? (
+            <span className="text-[13px] text-gray-500">Filter</span>
           ) : (
             <span className="text-[13px]">
-              {numberOfHiddenCols} hidden field{numberOfHiddenCols > 1 && "s"}
+              Filtered by {filteredColumnLabels.slice(0, 2).join(", ")}
+              {filteredColumnLabels.length > 2 &&
+                ` +${filteredColumnLabels.length - 2}`}
             </span>
           )}
         </button>
@@ -117,37 +97,9 @@ export default function HideFieldsDropdown<TData>({
           );
         })}
 
-        {!filteredColumns.length ? (
+        {!filteredColumns.length && (
           <div className="mt-2 ml-2 flex h-25 flex-row items-baseline gap-4">
             <p className="text-[13px] text-gray-400">No results.</p>
-            <p
-              onClick={() => {
-                setSearch("");
-              }}
-              className="cursor-pointer text-xs text-gray-400 hover:text-gray-300"
-            >
-              Clear
-            </p>
-          </div>
-        ) : (
-          <div className="mx-3 mr-2 mb-4 flex flex-row items-center justify-between gap-4">
-            <button
-              className="pointer h-6 w-full rounded-xs bg-gray-100 hover:bg-gray-200"
-              onClick={hideAllColumns}
-            >
-              <span className="items-center text-[12px] text-gray-700 hover:text-gray-800">
-                Hide all
-              </span>
-            </button>
-
-            <button
-              className="pointer h-6 w-full rounded-xs bg-gray-100 hover:bg-gray-200"
-              onClick={showAllColumns}
-            >
-              <span className="items-center text-[12px] text-gray-700 hover:text-gray-800">
-                Show all
-              </span>
-            </button>
           </div>
         )}
       </DropdownMenuContent>

@@ -1,5 +1,6 @@
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { cells, columns, rows } from "@/server/db/schemas";
+import { TRPCError } from "@trpc/server";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
@@ -142,12 +143,41 @@ export const columnRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Get current max position
       const updatedCell = await ctx.db
         .update(cells)
         .set({ value: input.value })
         .where(eq(cells.id, input.cellId));
 
       return updatedCell;
+    }),
+
+  // In your column router
+  deleteColumn: protectedProcedure
+    .input(
+      z.object({
+        columnId: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Get the column first to know which table it belongs to
+      const column = await ctx.db.query.columns.findFirst({
+        where: eq(columns.id, input.columnId),
+      });
+
+      if (!column) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Column not found",
+        });
+      }
+
+      // Delete the column
+      await ctx.db.delete(columns).where(eq(columns.id, input.columnId));
+
+      // ✅ Return the tableId so the client can invalidate queries
+      return {
+        success: true,
+        tableId: column.tableId,
+      };
     }),
 });

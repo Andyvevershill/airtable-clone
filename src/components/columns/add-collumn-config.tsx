@@ -64,7 +64,7 @@ export const standardFields = [
   { icon: CiPhone, name: "Phone number", value: "number" },
   { icon: MdOutlineMail, name: "Email" },
   { icon: IoIosLink, name: "URL" },
-  { icon: PiHashStraightLight, name: "Number", value: "string" },
+  { icon: PiHashStraightLight, name: "Number", value: "number" },
   { icon: PiCurrencyDollar, name: "Currency" },
   { icon: FiPercent, name: "Percent" },
   { icon: CiClock2, name: "Duration" },
@@ -77,7 +77,7 @@ export const standardFields = [
   { icon: TbCalendarBolt, name: "Last modified time" },
   { icon: TbUserBolt, name: "Created by" },
   { icon: TbUserBolt, name: "Last modified by" },
-  { icon: PiListNumbersLight, name: "Autonumber", value: "string" },
+  { icon: PiListNumbersLight, name: "Autonumber", value: "number" },
   { icon: CiBarcode, name: "Barcode" },
   { icon: PiCursor, name: "Button" },
 ];

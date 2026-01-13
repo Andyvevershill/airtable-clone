@@ -8,42 +8,71 @@ interface Props {
 
 export default function AddRowButton({ tableId }: Props) {
   const setIsLoading = useLoadingStore((state) => state.setIsLoading);
-
   const utils = api.useUtils();
 
   const addRow = api.row.addRow.useMutation({
-    onMutate: () => {
+    onMutate: async () => {
       setIsLoading(true);
+      await utils.row.getRowsInfinite.cancel({ tableId });
+
+      const previousData = utils.row.getRowsInfinite.getInfiniteData({
+        tableId,
+        limit: 250,
+      });
+
+      utils.row.getRowsInfinite.setInfiniteData(
+        { tableId, limit: 250 },
+        (old) => {
+          if (!old) return old;
+
+          const tempRowId = `temp-${Date.now()}`;
+          const newRow = {
+            id: tempRowId,
+            tableId,
+            position: old.pages[0]?.items.length ?? 0,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            cells: [],
+          };
+
+          return {
+            ...old,
+            pages: old.pages.map((page, index) =>
+              index === 0 ? { ...page, items: [...page.items, newRow] } : page,
+            ),
+          };
+        },
+      );
+
+      return { previousData };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousData) {
+        utils.row.getRowsInfinite.setInfiniteData(
+          { tableId, limit: 250 },
+          context.previousData,
+        );
+      }
+
+      console.error("Failed to add row:", err);
     },
     onSuccess: () => {
-      // Invalidate columns query to refetch
-      void utils.column.getColumns.invalidate({ tableId });
-
-      // Invalidate rows query to get cells for new column
       void utils.row.getRowsInfinite.invalidate({ tableId });
-
-      // invadlide row count
       void utils.row.getRowCount.invalidate({ tableId });
-    },
-    onError: (error) => {
-      console.error("Failed to add column:", error);
-    },
-    onSettled: () => {
       setIsLoading(false);
     },
   });
 
   const handleAddRow = () => {
-    addRow.mutate({
-      tableId,
-    });
+    addRow.mutate({ tableId });
   };
 
   return (
     <button
-      className="pointer flex h-full w-full items-center justify-start pl-2"
+      className="pointer flex h-full w-full items-center justify-start pl-2 hover:bg-gray-50"
       title="Add row"
       onClick={handleAddRow}
+      disabled={addRow.isPending}
     >
       <AiOutlinePlus size={16} className="text-gray-600" />
     </button>

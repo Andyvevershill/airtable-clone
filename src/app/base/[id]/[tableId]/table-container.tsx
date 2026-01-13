@@ -1,23 +1,28 @@
+"use client";
+
 import type { SortingState } from "@/app/base/[id]/[tableId]/page";
-import { useSavingStore } from "@/app/stores/use-saving-store";
 import {
   generateColumnDefinitions,
   transformRowsToTanStackFormat,
 } from "@/components/columns/generate-column-definitions";
 import { TableSidebar } from "@/components/table/table-sidebar";
 import { TableToolbar } from "@/components/table/table-toolbar";
-import { api } from "@/trpc/react";
+import { useOptimisticCellUpdate } from "@/hooks/use-optimistic-cell-update";
+import type { RowWithCells, TransformedRow } from "@/types";
 import type { ColumnType } from "@/types/column";
-import type { RowWithCells } from "@/types/row";
-import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import { useCallback, useMemo, useState } from "react";
+import {
+  getCoreRowModel,
+  useReactTable,
+  type VisibilityState,
+} from "@tanstack/react-table";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Table } from "./table";
 
 interface Props {
   tableId: string;
   columns: ColumnType[];
-  rowsWithCells: RowWithCells[];
   rowCount: number;
+  rowsWithCells: RowWithCells[];
 
   fetchNextPage: () => void;
   hasNextPage?: boolean;
@@ -26,11 +31,12 @@ interface Props {
   sorting: SortingState;
   onSortingChange: (sort: Props["sorting"]) => void;
 }
+
 export default function TableContainer({
   tableId,
   columns,
-  rowsWithCells,
   rowCount,
+  rowsWithCells,
   fetchNextPage,
   hasNextPage,
   isFetchingNextPage,
@@ -38,47 +44,81 @@ export default function TableContainer({
   onSortingChange,
 }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const setIsSaving = useSavingStore((state) => state.setIsSaving);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
-  const utils = api.useUtils();
+  const editingCellRef = useRef<{
+    rowId: string;
+    columnId: string;
+  } | null>(null);
 
-  const updateCellMutation = api.column.updateCell.useMutation({
-    onMutate: () => setIsSaving(true),
-    onSuccess: () => {
-      void utils.column.getColumns.invalidate({ tableId });
-      void utils.row.getRowsInfinite.invalidate({ tableId });
-    },
-    onError: (error) => console.error("Failed to update cell:", error),
-    onSettled: () => setIsSaving(false),
+  const [localColumns, setLocalColumns] = useState<ColumnType[]>(columns);
+  const [localRows, setLocalRows] = useState(
+    transformRowsToTanStackFormat(rowsWithCells),
+  );
+
+  useEffect(() => {
+    setLocalColumns(columns);
+  }, [columns]);
+
+  useEffect(() => {
+    const transformed = transformRowsToTanStackFormat(rowsWithCells);
+
+    if (!editingCellRef.current) {
+      setLocalRows(transformed);
+    } else {
+      const { rowId: editingRowId, columnId: editingColumnId } =
+        editingCellRef.current;
+
+      setLocalRows((prevRows) =>
+        transformed.map((newRow): TransformedRow => {
+          if (newRow._rowId === editingRowId) {
+            const prevRow = prevRows.find((r) => r._rowId === newRow._rowId);
+
+            if (prevRow) {
+              const preservedValue = prevRow._cells[editingColumnId];
+
+              return {
+                ...newRow,
+                _cells: {
+                  ...newRow._cells,
+                  [editingColumnId]: preservedValue ?? null,
+                },
+              };
+            }
+          }
+
+          return newRow;
+        }),
+      );
+    }
+  }, [rowsWithCells]);
+
+  const { onCellUpdate } = useOptimisticCellUpdate({
+    tableId,
+    localRows,
+    setLocalRows,
   });
 
-  const onCellUpdate = useCallback(
-    (cellId: string, value: string | null) => {
-      updateCellMutation.mutate({ cellId, value });
-    },
-    [updateCellMutation],
-  );
-
   const tanstackColumns = useMemo(
-    () => generateColumnDefinitions(columns, rowsWithCells, onCellUpdate),
-    [columns, rowsWithCells, onCellUpdate],
-  );
-
-  const transformedRows = useMemo(
-    () => transformRowsToTanStackFormat(rowsWithCells),
-    [rowsWithCells],
+    () => generateColumnDefinitions(localColumns, onCellUpdate),
+    [localColumns, onCellUpdate],
   );
 
   const table = useReactTable({
-    data: transformedRows,
+    data: localRows,
     columns: tanstackColumns,
     getCoreRowModel: getCoreRowModel(),
     manualSorting: true,
+
     state: {
       sorting: sorting
         ? [{ id: sorting.columnId, desc: sorting.direction === "desc" }]
         : [],
+      columnVisibility,
     },
+
+    onColumnVisibilityChange: setColumnVisibility,
+
     onSortingChange: (updater) => {
       const next =
         typeof updater === "function"
@@ -86,7 +126,6 @@ export default function TableContainer({
           : updater;
 
       const [sort] = next;
-
       if (!sort) {
         onSortingChange(null);
         return;
@@ -103,12 +142,14 @@ export default function TableContainer({
     },
   });
 
+  const sidebarState: [boolean, (v: boolean) => void] = useMemo(
+    () => [sidebarOpen, setSidebarOpen],
+    [sidebarOpen],
+  );
+
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-slate-100">
-      <TableToolbar
-        sideBarState={[sidebarOpen, setSidebarOpen]}
-        table={table}
-      />
+      <TableToolbar sideBarState={sidebarState} table={table} />
 
       <div className="flex flex-1 overflow-hidden">
         {sidebarOpen && (
@@ -122,8 +163,8 @@ export default function TableContainer({
             table={table}
             tableId={tableId}
             rowCount={rowCount}
-            transformedRows={transformedRows}
-            columns={columns}
+            transformedRows={localRows}
+            columns={localColumns}
             fetchNextPage={fetchNextPage}
             hasNextPage={hasNextPage}
             isFetchingNextPage={isFetchingNextPage}

@@ -31,7 +31,7 @@ export const rowsRouter = createTRPCRouter({
     .input(
       z.object({
         tableId: z.string(),
-        limit: z.number().min(1).max(1000).default(200),
+        limit: z.number().min(1).max(500).default(300),
         cursor: z.number().nullish(),
         sort: z
           .object({
@@ -152,7 +152,7 @@ export const rowsRouter = createTRPCRouter({
           tableColumns.map((column) => ({
             rowId: newRow.id,
             columnId: column.id,
-            value: faker.location.cardinalDirection(),
+            value: null,
           })),
         );
       }

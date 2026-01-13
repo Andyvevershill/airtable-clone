@@ -18,7 +18,6 @@ export default function TablePage() {
   const setIsLoading = useLoadingStore((state) => state.setIsLoading);
   const [sorting, setSorting] = useState<SortingState>(null);
 
-  // replace this with just Views, table Id is all we need and its inside col + rows
   const { data: tableWithViews, isLoading: tableWithViewsLoading } =
     api.table.getTableWithViews.useQuery({ tableId });
 
@@ -37,11 +36,12 @@ export default function TablePage() {
   } = api.row.getRowsInfinite.useInfiniteQuery(
     {
       tableId,
-      limit: 200,
+      limit: 250,
       sort: sorting ?? undefined,
     },
     {
       getNextPageParam: (lastPage) => lastPage.nextCursor,
+      placeholderData: (previousData) => previousData,
     },
   );
 
@@ -72,8 +72,8 @@ export default function TablePage() {
       <TableContainer
         tableId={tableWithViews.id}
         columns={columns}
-        rowsWithCells={rowsWithCells}
         rowCount={rowCount ?? 0}
+        rowsWithCells={rowsWithCells}
         fetchNextPage={fetchNextPage}
         hasNextPage={hasNextPage}
         isFetchingNextPage={isFetchingNextPage}

@@ -15,9 +15,9 @@ export type Row = z.infer<typeof rowSchema>;
 
 export type RowWithCells = Row & { cells: Cell[] };
 
-// type we transform RowsWithCells into
 export type TransformedRow = {
   _rowId: string;
   _position: number;
-  [columnId: string]: string | null | number;
+  _cells: Record<string, string | number | null>;
+  _cellMap: Record<string, string>;
 };

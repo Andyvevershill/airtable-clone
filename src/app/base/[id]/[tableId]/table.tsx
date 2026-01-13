@@ -1,10 +1,16 @@
+import AddRowButton from "@/components/buttons/add-row-button";
+import { CreateColumnDropdown } from "@/components/dropdowns/create-column-dropdown";
 import type { ColumnType } from "@/types/column";
 import type { TransformedRow } from "@/types/row";
 import { flexRender, type Table } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
-import AddRowButton from "../../../../components/buttons/add-row-button";
-import { CreateColumnDropdown } from "../../../../components/dropdowns/create-column-dropdown";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 
 interface Props {
   table: Table<TransformedRow>;
@@ -49,32 +55,40 @@ export function Table({
     count: transformedRows.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => ROW_HEIGHT,
-    overscan: 50,
+    overscan: 30,
   });
 
-  const fetchMoreOnBottomReached = useCallback(
-    (container?: HTMLDivElement | null) => {
-      if (!container || !hasNextPage || isFetchingNextPage) return;
-      const { scrollHeight, scrollTop, clientHeight } = container;
-      if (scrollHeight - scrollTop - clientHeight < 5000) {
-        fetchNextPage();
-      }
-    },
-    [fetchNextPage, hasNextPage, isFetchingNextPage],
-  );
+  const lastFetchedIndex = useRef<number>(-1);
 
-  useLayoutEffect(() => {
-    fetchMoreOnBottomReached(scrollRef.current);
-  }, [fetchMoreOnBottomReached]);
+  useEffect(() => {
+    if (!hasNextPage || isFetchingNextPage) return;
+
+    const virtualItems = rowVirtualizer.getVirtualItems();
+    if (virtualItems.length === 0) return;
+
+    const lastItem = virtualItems[virtualItems.length - 1];
+
+    if (!lastItem) return;
+
+    if (
+      lastItem.index >= transformedRows.length - 20 &&
+      lastItem.index !== lastFetchedIndex.current
+    ) {
+      lastFetchedIndex.current = lastItem.index;
+      fetchNextPage();
+    }
+  });
+
+  useEffect(() => {
+    lastFetchedIndex.current = -1;
+  }, [transformedRows.length]);
 
   const { rows: tableRows } = table.getRowModel();
 
-  // Table-level keyboard navigation
   const handleTableKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       const target = e.target as HTMLElement;
 
-      // Only handle if focused on a cell div (not input)
       if (target.tagName === "INPUT") return;
 
       const cell = target.closest("td");
@@ -149,11 +163,7 @@ export function Table({
       className="relative flex h-full w-full flex-col bg-slate-100"
       style={{ width: tableWidth ? `${tableWidth + 200}px` : "100%" }}
     >
-      <div
-        ref={scrollRef}
-        className="relative flex-1 overflow-auto"
-        onScroll={(e) => fetchMoreOnBottomReached(e.currentTarget)}
-      >
+      <div ref={scrollRef} className="relative flex-1 overflow-auto">
         <div className="relative inline-block min-w-full pr-16 align-top">
           <table
             ref={tableRef}

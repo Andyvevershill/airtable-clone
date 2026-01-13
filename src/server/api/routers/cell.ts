@@ -13,11 +13,11 @@ export const cellRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       // Get current max position
-      const updatedCell = await ctx.db
+      await ctx.db
         .update(cells)
         .set({ value: input.value })
         .where(eq(cells.id, input.cellId));
 
-      return updatedCell;
+      return;
     }),
 });

@@ -10,10 +10,10 @@ import {
   Search,
   TableCellsSplit,
 } from "lucide-react";
-import { BiSortAlt2 } from "react-icons/bi";
-import { BsFilter } from "react-icons/bs";
 import { CiMenuBurger, CiShare1 } from "react-icons/ci";
-import HideFieldsDropdown from "../dropdowns/hide-field-dropdown";
+import { IoFilterOutline } from "react-icons/io5";
+import HideFieldsDropdown from "../dropdowns/hide-fields-dropdown";
+import SortFieldsDropdown from "../dropdowns/sort-fields.dropdown";
 
 interface Props {
   table: Table<TransformedRow>;
@@ -21,14 +21,13 @@ interface Props {
 }
 
 const items = [
-  { text: "Filter", icon: <BsFilter /> },
-  { text: "Group", icon: <PanelsTopLeft /> },
-  { text: "Sort", icon: <BiSortAlt2 /> },
   { text: "Colour", icon: <PaintBucket /> },
   { text: "Share and sync", icon: <CiShare1 /> },
 ];
 
 export function TableToolbar({ table, sideBarState: [open, setOpen] }: Props) {
+  const columns = table.getAllColumns();
+
   return (
     <div className="flex h-12 items-center justify-between border-b border-gray-200 bg-white px-3">
       {/* Left */}
@@ -46,7 +45,29 @@ export function TableToolbar({ table, sideBarState: [open, setOpen] }: Props) {
 
       {/* Right */}
       <div className="flex items-center gap-2 text-gray-500">
-        <HideFieldsDropdown table={table} />
+        <HideFieldsDropdown columns={columns} />
+
+        <Button
+          variant="ghost"
+          size="sm"
+          className="pointer gap-1 rounded-xs"
+          style={{ fontWeight: 350 }}
+        >
+          <IoFilterOutline />
+          <span className="text-[13px]">Filter</span>
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          className="pointer gap-1 rounded-xs"
+          style={{ fontWeight: 350 }}
+        >
+          <PanelsTopLeft />
+          <span className="text-[13px]">Group</span>
+        </Button>
+
+        <SortFieldsDropdown columns={columns} />
 
         {items.map((item) => (
           <Button

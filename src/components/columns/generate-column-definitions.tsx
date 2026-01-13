@@ -1,20 +1,35 @@
 import { DataTableColumnHeader } from "@/app/base/[id]/[tableId]/data-table-column-header";
 import type { ColumnType } from "@/types/column";
 import type { RowWithCells, TransformedRow } from "@/types/row";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { CellContext, ColumnDef } from "@tanstack/react-table";
 import EditableCell from "../table/editable-cell";
+
+function EditableCellRenderer(props: CellContext<TransformedRow, unknown>) {
+  const { column } = props;
+  const meta = column.columnDef.meta!;
+
+  return (
+    <EditableCell
+      {...props}
+      columnId={column.id}
+      dataType={meta.dataType}
+      onCellUpdate={meta.onCellUpdate}
+    />
+  );
+}
 
 export function generateColumnDefinitions(
   dbColumns: ColumnType[],
-  rows: RowWithCells[],
-  onCellUpdate: (cellId: string, value: string | null) => void,
+  onCellEdit: (rowId: string, columnId: string, value: string | null) => void,
 ): ColumnDef<TransformedRow>[] {
   return dbColumns.map((col) => ({
-    accessorKey: col.id,
-    size: 175,
+    id: col.id,
+    accessorFn: (row) => row._cells[col.id],
+
     meta: {
       label: col.name,
       dataType: col.type,
+      onCellUpdate: onCellEdit,
     },
 
     enableSorting: true,
@@ -29,15 +44,7 @@ export function generateColumnDefinitions(
       />
     ),
 
-    cell: (props) => (
-      <EditableCell
-        {...props}
-        rows={rows}
-        columnId={col.id}
-        onCellUpdate={onCellUpdate}
-        dataType={col.type}
-      />
-    ),
+    cell: EditableCellRenderer,
   }));
 }
 
@@ -48,11 +55,13 @@ export function transformRowsToTanStackFormat(
     const transformedRow: TransformedRow = {
       _rowId: row.id,
       _position: row.position,
+      _cells: {},
+      _cellMap: {},
     };
 
-    // Add each cell value using columnId as the key
     row.cells.forEach((cell) => {
-      transformedRow[cell.columnId] = cell.value;
+      transformedRow._cells[cell.columnId] = cell.value;
+      transformedRow._cellMap[cell.columnId] = cell.id;
     });
 
     return transformedRow;
