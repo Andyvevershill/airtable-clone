@@ -6,14 +6,12 @@ import type { TransformedRow } from "@/types/row";
 import { useRef } from "react";
 
 interface Params {
-  tableId: string;
   localRows: TransformedRow[];
   setLocalRows: React.Dispatch<React.SetStateAction<TransformedRow[]>>;
 }
 
-export function useCellCommitter({ tableId, localRows, setLocalRows }: Params) {
+export function useCellCommitter({ localRows, setLocalRows }: Params) {
   const setIsSaving = useSavingStore((s) => s.setIsSaving);
-  const utils = api.useUtils();
 
   // protects against out-of-order mutation responses
   const inflightVersions = useRef<Record<string, number>>({});

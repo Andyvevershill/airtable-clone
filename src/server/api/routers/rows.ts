@@ -1,7 +1,22 @@
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { cells, columns, rows } from "@/server/db/schemas/bases";
+import { getRowsInfiniteInput } from "@/types/view";
 import { faker } from "@faker-js/faker";
-import { asc, desc, eq, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gt,
+  ilike,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  not,
+  SQL,
+  sql,
+} from "drizzle-orm";
 import { z } from "zod";
 
 export const rowsRouter = createTRPCRouter({
@@ -28,71 +43,97 @@ export const rowsRouter = createTRPCRouter({
     }),
 
   getRowsInfinite: protectedProcedure
-    .input(
-      z.object({
-        tableId: z.string(),
-        limit: z.number().min(1).max(5000).default(2500),
-        cursor: z.number().nullish(),
-        sort: z
-          .object({
-            columnId: z.string(),
-            direction: z.enum(["asc", "desc"]),
-            type: z.enum(["string", "number"]).default("string"),
-          })
-          .optional(),
-      }),
-    )
+    .input(getRowsInfiniteInput)
     .query(async ({ ctx, input }) => {
       const offset = input.cursor ?? 0;
-      const { sort } = input;
+      const { sorting, filters, globalSearch } = input;
 
-      const cellValueSubquery = sort
-        ? sort.type === "number"
-          ? sql`
-        (
-          SELECT CAST(cell.value AS NUMERIC)
-          FROM cell
-          WHERE cell.row_id = row.id
-            AND cell.column_id = ${sort.columnId}
-          LIMIT 1
-        )
-      `
-          : sql`
-        (
-          SELECT cell.value
-          FROM cell
-          WHERE cell.row_id = row.id
-            AND cell.column_id = ${sort.columnId}
-          LIMIT 1
-        )
-      `
-        : null;
+      // ── 1. Build ORDER BY ────────────────────────────────────────────────
+      const orderByClauses: SQL[] = [];
 
-      const orderBy = sort
-        ? [
-            sort.direction === "desc"
-              ? desc(cellValueSubquery!)
-              : asc(cellValueSubquery!),
-            asc(rows.position),
-          ]
-        : [asc(rows.position)];
+      for (const sort of sorting) {
+        const cellValueSubquery =
+          sort.type === "number"
+            ? sql`CAST((SELECT value FROM cell WHERE row_id = row.id AND column_id = ${sort.columnId} LIMIT 1) AS NUMERIC)`
+            : sql`(SELECT value FROM cell WHERE row_id = row.id AND column_id = ${sort.columnId} LIMIT 1)`;
 
+        orderByClauses.push(
+          sort.direction === "desc"
+            ? desc(cellValueSubquery)
+            : asc(cellValueSubquery),
+        );
+      }
+
+      // Stable sort — very important for infinite loading
+      orderByClauses.push(asc(rows.position));
+
+      // ── 2. Build WHERE conditions ────────────────────────────────────────
+      const whereConditions: SQL[] = [eq(rows.tableId, input.tableId)];
+
+      // Column filters
+      for (const f of filters) {
+        const colId = f.columnId;
+
+        const valueSubquery = sql`
+        (SELECT value FROM cell 
+         WHERE row_id = row.id AND column_id = ${colId} LIMIT 1)
+      `;
+
+        let condition: SQL;
+
+        switch (f.operator) {
+          case "equals":
+            condition = eq(valueSubquery, f.value);
+            break;
+          case "contains":
+            condition = ilike(valueSubquery, `%${f.value}%`);
+            break;
+          case "notContains":
+            condition = not(ilike(valueSubquery, `%${f.value}%`));
+            break;
+          case "greaterThan":
+            condition = gt(sql`CAST(${valueSubquery} AS NUMERIC)`, f.value);
+            break;
+          case "lessThan":
+            condition = lt(sql`CAST(${valueSubquery} AS NUMERIC)`, f.value);
+            break;
+          case "isEmpty":
+            condition = isNull(valueSubquery);
+            break;
+          case "isNotEmpty":
+            condition = isNotNull(valueSubquery);
+            break;
+          default:
+            continue;
+        }
+
+        whereConditions.push(condition);
+      }
+
+      // Optional global search (across all text columns — you can optimize later)
+      if (globalSearch?.trim()) {
+        // Very rough example — in real app you'd probably have a separate text-searchable column or full-text index
+        whereConditions
+          .push
+          // or exists (select from cell where ... ilike ...)
+          ();
+      }
+
+      const finalWhere = and(...whereConditions);
+
+      // ── 3. Execute ────────────────────────────────────────────────────────
       const tableRows = await ctx.db
         .select()
         .from(rows)
-        .where(eq(rows.tableId, input.tableId))
-        .orderBy(...orderBy)
+        .where(finalWhere)
+        .orderBy(...orderByClauses)
         .limit(input.limit)
         .offset(offset);
 
-      // fetch cells separately (important for performance & correctness)
+      // Your existing cells fetch (very good pattern!)
       const rowIds = tableRows.map((r) => r.id);
-
       const rowCells = rowIds.length
-        ? await ctx.db
-            .select()
-            .from(cells)
-            .where(sql`${cells.rowId} IN ${rowIds}`)
+        ? await ctx.db.select().from(cells).where(inArray(cells.rowId, rowIds))
         : [];
 
       const rowsWithCells = tableRows.map((row) => ({

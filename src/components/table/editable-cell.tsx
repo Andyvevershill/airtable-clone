@@ -4,11 +4,9 @@ import { useEditableCell } from "@/hooks/use-editable-cell";
 import type { TransformedRow } from "@/types/row";
 import type { CellContext } from "@tanstack/react-table";
 
-export type CellDataType = "string" | "number";
-
 export type Props = CellContext<TransformedRow, unknown> & {
   columnId: string;
-  dataType: CellDataType;
+  dataType: string;
   onCellUpdate: (
     rowId: string,
     columnId: string,
