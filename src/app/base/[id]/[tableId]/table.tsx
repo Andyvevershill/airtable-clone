@@ -15,12 +15,12 @@ import {
   useState,
 } from "react";
 
-function throttle<T extends (...args: any[]) => any>(
+function throttle<T extends (...args: Parameters<T>) => ReturnType<T>>(
   func: T,
   limit: number,
 ): (...args: Parameters<T>) => void {
   let inThrottle: boolean;
-  return function (this: any, ...args: Parameters<T>) {
+  return function (this: ThisParameterType<T>, ...args: Parameters<T>) {
     if (!inThrottle) {
       func.apply(this, args);
       inThrottle = true;

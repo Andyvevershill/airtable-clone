@@ -67,7 +67,7 @@ export function useEditableCell({
   const commit = () => {
     if (!isEditing) return;
 
-    let next = liveRef.current?.trim() ?? null;
+    const next = liveRef.current?.trim() ?? null;
 
     // numeric hard guard
     if (isNumber && next !== null && !isValidNumber(next)) {

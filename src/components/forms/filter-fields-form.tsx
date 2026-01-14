@@ -27,10 +27,8 @@ type Filter = {
 };
 
 export default function FilterFieldsForm({ columns, onClose }: Props) {
-  if (!columns.length) return;
   const [searchColumn, setSearchColumn] = useState("");
   const [searchConditions, setSearchConditions] = useState("");
-
   const [filters, setFilters] = useState<Filter[]>([
     {
       id: crypto.randomUUID(),
@@ -51,6 +49,8 @@ export default function FilterFieldsForm({ columns, onClose }: Props) {
       },
     ]);
   }
+
+  if (!columns.length) return;
 
   function removeFilter(id: string) {
     setFilters((prev) => prev.filter((filter) => filter.id !== id));
