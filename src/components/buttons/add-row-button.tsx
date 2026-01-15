@@ -4,10 +4,9 @@ import { AiOutlinePlus } from "react-icons/ai";
 
 interface Props {
   tableId: string;
-  sorting?: any; // ✅ Add sorting prop (match the type from your table page)
 }
 
-export default function AddRowButton({ tableId, sorting }: Props) {
+export default function AddRowButton({ tableId }: Props) {
   const setIsLoading = useLoadingStore((state) => state.setIsLoading);
   const utils = api.useUtils();
 
@@ -22,7 +21,6 @@ export default function AddRowButton({ tableId, sorting }: Props) {
       const queryKey = {
         tableId,
         limit: 5000,
-        sorting: sorting ? [sorting] : [],
       };
 
       console.log(`📋 [${traceId}] Query key:`, queryKey);

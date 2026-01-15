@@ -62,6 +62,7 @@ export function Table({
     setIsLoading(isFetchingNextPage);
   }, [isFetchingNextPage, setIsLoading]);
 
+  // for sticking the add col buttion to the side of the table
   useLayoutEffect(() => {
     if (!tableRef.current) return;
     const update = () => setTableWidth(tableRef.current!.offsetWidth);
@@ -71,8 +72,11 @@ export function Table({
     return () => observer.disconnect();
   }, []);
 
+  const isFiltering = table.getState().columnFilters.length > 0;
+  const effectiveRowCount = isFiltering ? transformedRows.length : rowCount;
+
   const rowVirtualizer = useVirtualizer({
-    count: rowCount,
+    count: effectiveRowCount,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => ROW_HEIGHT,
     overscan: 80,
@@ -154,8 +158,12 @@ export function Table({
                     <th
                       key={header.id}
                       className={cn(
-                        "relative overflow-hidden border-r border-gray-200 bg-white px-3 py-2 text-left text-[13px] font-medium text-gray-700 shadow-[inset_0_-1px_0_0_rgb(229,231,235)]",
+                        "relative overflow-hidden border-r border-gray-200 bg-white px-3 py-2 text-left text-[13px] font-medium text-gray-700 shadow-[inset_0_-1px_0_0_rgb(229,231,235)] hover:bg-gray-50",
+
+                        header.column.getIsFiltered() &&
+                          "bg-[#F6FBF7] font-semibold",
                         header.column.getIsSorted() &&
+                          !header.column.getIsFiltered() &&
                           "bg-[#FAF5F2] font-semibold",
                       )}
                       style={{
@@ -192,8 +200,7 @@ export function Table({
 
                 const isBeyondLoadedRows = virtualRow.index >= rows.length;
 
-                // 1️⃣ Unloaded page → skeleton
-                if (!tanstackRow && isBeyondLoadedRows) {
+                if (!tanstackRow && isBeyondLoadedRows && isFetchingNextPage) {
                   const visibleColumns = table.getVisibleFlatColumns();
 
                   return (
@@ -250,8 +257,10 @@ export function Table({
                         key={cell.id}
                         className={cn(
                           "overflow-hidden border border-gray-200 p-0 transition-colors",
+                          cell.column.getIsFiltered() && "bg-[#ebfbec]",
                           cell.column.getIsSorted() &&
-                            "bg-[#FFF2EA] dark:bg-sky-950/30",
+                            !cell.column.getIsFiltered() &&
+                            "bg-[#FFF2EA]",
                         )}
                         style={{
                           minWidth: MIN_COL_WIDTH,
@@ -288,7 +297,8 @@ export function Table({
         </div>
       </div>
 
-      <div className="border-t border-gray-300 bg-white px-3 py-2">
+      {/* records bar */}
+      <div className="sticky bottom-0 z-20 w-full border-t border-gray-300 bg-white px-3 py-2">
         <div className="text-xs text-gray-600">
           {rowCount} {rowCount === 1 ? "record" : "records"}
           {isFetchingNextPage && " – Loading more…"}

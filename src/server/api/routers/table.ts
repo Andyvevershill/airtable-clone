@@ -1,6 +1,6 @@
 import { DEFAULT_BASE_CONFIG } from "@/lib/utils";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
-import { cells, columns, rows, tables } from "@/server/db/schemas/bases";
+import { cells, columns, rows, tables, views } from "@/server/db/schemas/bases";
 import { faker } from "@faker-js/faker";
 import { TRPCError } from "@trpc/server";
 import { desc, eq } from "drizzle-orm";
@@ -28,6 +28,11 @@ export const tableRouter = createTRPCRouter({
           .returning();
 
         if (!table) throw new Error("Failed to create base");
+
+        // create active base
+        await tx
+          .insert(views)
+          .values({ tableId: table.id, name: "Grid view", isActive: true });
 
         // 3. Create the columns
         const createdColumns = await tx

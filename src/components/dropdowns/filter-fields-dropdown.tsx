@@ -6,39 +6,37 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { TransformedRow } from "@/types";
 import { DropdownMenuTrigger } from "@radix-ui/react-dropdown-menu";
-import type { Column } from "@tanstack/react-table";
-import { useEffect, useState } from "react";
+import type { Table } from "@tanstack/react-table";
+import { useState } from "react";
 import { IoFilterOutline } from "react-icons/io5";
 import FilterFieldsForm from "../forms/filter-fields-form";
 
 interface DataTableViewOptionsProps<TData> {
-  columns: Column<TransformedRow, unknown>[];
+  table: Table<TransformedRow>;
 }
 
 export default function FilterFieldsDropdown<TData>({
-  columns,
+  table,
 }: DataTableViewOptionsProps<TData>) {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedField, setSelectedField] = useState<Column<
-    TransformedRow,
-    unknown
-  > | null>(null);
 
+  const columns = table.getAllColumns();
   const currentlyFilteredColumns = columns.filter((col) => col.getIsFiltered());
 
   const filteredColumnsNameArr = currentlyFilteredColumns.map(
     (col) => col.columnDef.meta?.label ?? "Untitled ",
   );
 
-  useEffect(() => {
-    if (currentlyFilteredColumns.length > 0 && !selectedField) {
-      setSelectedField(currentlyFilteredColumns[0] ?? null);
-    }
-  }, [currentlyFilteredColumns, selectedField]);
-
   function handleClose() {
     setIsOpen(false);
   }
+
+  const formatFilteredColumns = (names: string[]) => {
+    if (names.length <= 2) return names.join(", ");
+
+    const remaining = names.length - 2;
+    return `${names[0]}, ${names[1]} and ${remaining} more`;
+  };
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
@@ -55,14 +53,21 @@ export default function FilterFieldsDropdown<TData>({
             <span className="text-[13px]">Filter</span>
           ) : (
             <span className="text-[13px]">
-              Filtered by {filteredColumnsNameArr}
+              Filtered by {formatFilteredColumns(filteredColumnsNameArr)}
             </span>
           )}
         </button>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-[590px] rounded-xs">
-        <FilterFieldsForm columns={columns} onClose={handleClose} />
+        <FilterFieldsForm
+          columns={columns}
+          currentFilters={table.getState().columnFilters}
+          onApply={(filters) => {
+            table.setColumnFilters(filters);
+          }}
+          onClose={handleClose}
+        />
       </DropdownMenuContent>
     </DropdownMenu>
   );

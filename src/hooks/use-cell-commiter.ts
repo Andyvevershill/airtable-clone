@@ -3,7 +3,6 @@
 import { useSavingStore } from "@/app/stores/use-saving-store";
 import { api } from "@/trpc/react";
 import type { TransformedRow } from "@/types/row";
-import { useRef } from "react";
 
 interface Params {
   localRows: TransformedRow[];
@@ -13,16 +12,11 @@ interface Params {
 export function useCellCommitter({ localRows, setLocalRows }: Params) {
   const setIsSaving = useSavingStore((s) => s.setIsSaving);
 
-  // protects against out-of-order mutation responses
-  const inflightVersions = useRef<Record<string, number>>({});
-
   const mutation = api.column.updateCell.useMutation({
     onMutate: () => {
       setIsSaving(true);
     },
-    onError: () => {
-      setIsSaving(false);
-    },
+    onError: () => {},
     onSettled: () => {
       setIsSaving(false);
     },
@@ -32,7 +26,6 @@ export function useCellCommitter({ localRows, setLocalRows }: Params) {
     rowId: string,
     columnId: string,
     value: string | null,
-    onSettled?: () => void,
   ) => {
     const row = localRows.find((r) => r._rowId === rowId);
     const cellId = row?._cellMap[columnId];
@@ -42,7 +35,6 @@ export function useCellCommitter({ localRows, setLocalRows }: Params) {
       return;
     }
 
-    // 1️⃣ optimistic UI update (source of truth while editing)
     setLocalRows((prev) =>
       prev.map((r) =>
         r._rowId === rowId
@@ -51,25 +43,7 @@ export function useCellCommitter({ localRows, setLocalRows }: Params) {
       ),
     );
 
-    // 2️⃣ mutation versioning (race safety)
-    const version = (inflightVersions.current[cellId] ?? 0) + 1;
-    inflightVersions.current[cellId] = version;
-
-    mutation.mutate(
-      { cellId, value },
-      {
-        onSuccess: () => {
-          // ignore stale responses
-          if (inflightVersions.current[cellId] !== version) return;
-
-          // OPTIONAL: background sync only (non-destructive)
-          // utils.row.getRowsInfinite.invalidate({ tableId });
-        },
-        onSettled: () => {
-          onSettled?.();
-        },
-      },
-    );
+    mutation.mutate({ cellId, value });
   };
 
   return { commitCell };

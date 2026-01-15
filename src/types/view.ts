@@ -17,26 +17,27 @@ const filterOperator = z.enum([
 const filterRuleSchema = z.object({
   columnId: z.string(),
   operator: filterOperator,
-  value: z.any().optional(), // string | number | null depending on op
-  type: z.enum(["string", "number"]).default("string"),
+  value: z.any().optional(),
+  type: z.enum(["string", "number"]),
 });
+
+export type FilterState = z.infer<typeof filterRuleSchema>;
+
+const sortRuleSchema = z.object({
+  columnId: z.string(),
+  direction: z.enum(["asc", "desc"]),
+  type: z.enum(["string", "number"]),
+});
+
+export type SortRule = z.infer<typeof sortRuleSchema>;
 
 export const getRowsInfiniteInput = z.object({
   tableId: z.string(),
   limit: z.number().min(1).max(5000).default(2500),
   cursor: z.number().nullish(),
 
-  // Sorting - allow multiple for future-proofing (most tables support it)
-  sorting: z
-    .array(
-      z.object({
-        columnId: z.string(),
-        direction: z.enum(["asc", "desc"]),
-        type: z.enum(["string", "number"]).default("string"),
-      }),
-    )
-    .optional()
-    .default([]),
+  // Sorting - allow multiple for future-proofing
+  sorting: z.array(sortRuleSchema).optional().default([]),
 
   // Filters - array = multiple conditions (AND between them)
   filters: z.array(filterRuleSchema).optional().default([]),
@@ -45,10 +46,12 @@ export const getRowsInfiniteInput = z.object({
   globalSearch: z.string().optional(),
 });
 
-export type SortingRule = {
-  columnId: string;
-  direction: "asc" | "desc";
-  type: "string" | "number";
-} | null;
+export const viewInputSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  filters: z.array(filterRuleSchema).optional().default([]),
+  sorting: z.array(sortRuleSchema).optional().default([]),
+  hidden: z.array(z.string()).optional().default([]),
+});
 
-export type SortingState = SortingRule;
+export type ViewInput = z.infer<typeof viewInputSchema>;

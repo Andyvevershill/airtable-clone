@@ -7,19 +7,21 @@ import {
 import { TableSidebar } from "@/components/table/table-sidebar";
 import { TableToolbar } from "@/components/table/table-toolbar";
 import { useCellCommitter } from "@/hooks/use-cell-commiter";
-import type { RowWithCells, TransformedRow } from "@/types";
+import type { RowWithCells, TableWithViews, TransformedRow } from "@/types";
 import type { ColumnType } from "@/types/column";
-import type { SortingState } from "@/types/view";
 import {
   getCoreRowModel,
   useReactTable,
+  type ColumnFiltersState,
+  type OnChangeFn,
+  type SortingState,
   type VisibilityState,
 } from "@tanstack/react-table";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Table } from "./table";
 
 interface Props {
-  tableId: string;
+  tableWithViews: TableWithViews;
   columns: ColumnType[];
   rowCount: number;
   rowsWithCells: RowWithCells[];
@@ -29,19 +31,25 @@ interface Props {
   isFetchingNextPage: boolean;
 
   sorting: SortingState;
-  onSortingChange: (sort: Props["sorting"]) => void;
+  onSortingChange: OnChangeFn<SortingState>;
+  columnFilters: ColumnFiltersState;
+  onColumnFiltersChange: OnChangeFn<ColumnFiltersState>;
 }
 
 export default function TableContainer({
-  tableId,
+  tableWithViews,
   columns,
   rowCount,
   rowsWithCells,
+
   fetchNextPage,
   hasNextPage,
   isFetchingNextPage,
+
   sorting,
   onSortingChange,
+  columnFilters,
+  onColumnFiltersChange,
 }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -106,38 +114,18 @@ export default function TableContainer({
     data: localRows,
     columns: tanstackColumns,
     getCoreRowModel: getCoreRowModel(),
-    manualSorting: true,
-    autoResetAll: false,
-
-    state: {
-      sorting: sorting
-        ? [{ id: sorting.columnId, desc: sorting.direction === "desc" }]
-        : [],
-      columnVisibility,
-    },
-
     onColumnVisibilityChange: setColumnVisibility,
 
-    onSortingChange: (updater) => {
-      const next =
-        typeof updater === "function"
-          ? updater(table.getState().sorting)
-          : updater;
+    manualSorting: true,
+    manualFiltering: true,
 
-      const [sort] = next;
-      if (!sort) {
-        onSortingChange(null);
-        return;
-      }
+    onSortingChange,
+    onColumnFiltersChange,
 
-      const column = table.getColumn(sort.id);
-      const dataType = column?.columnDef.meta?.dataType ?? "string";
-
-      onSortingChange({
-        columnId: sort.id,
-        direction: sort.desc ? "desc" : "asc",
-        type: dataType === "number" ? "number" : "string",
-      });
+    state: {
+      sorting,
+      columnFilters,
+      columnVisibility,
     },
   });
 
@@ -153,14 +141,17 @@ export default function TableContainer({
       <div className="flex flex-1 overflow-hidden">
         {sidebarOpen && (
           <div className="shrink-0">
-            <TableSidebar sidebarOpen={sidebarOpen} tableId={tableId} />
+            <TableSidebar
+              sidebarOpen={sidebarOpen}
+              tableWithViews={tableWithViews}
+            />
           </div>
         )}
 
         <div className="flex-1 overflow-x-scroll">
           <Table
             table={table}
-            tableId={tableId}
+            tableId={tableWithViews.id}
             rowCount={rowCount}
             transformedRows={localRows}
             columns={localColumns}

@@ -2,9 +2,13 @@
 
 import { useLoadingStore } from "@/app/stores/use-loading-store";
 import NoDataPage from "@/components/no-data-page";
+import {
+  translateFiltersState,
+  translateSortingState,
+} from "@/lib/helper-functions";
 import { api } from "@/trpc/react";
-import type { SortingState } from "@/types/view";
 import { keepPreviousData } from "@tanstack/react-query";
+import type { ColumnFiltersState, SortingState } from "@tanstack/react-table";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import TableContainer from "./table-container";
@@ -12,7 +16,8 @@ import TableContainer from "./table-container";
 export default function TablePage() {
   const { tableId } = useParams<{ tableId: string }>();
   const setIsLoading = useLoadingStore((state) => state.setIsLoading);
-  const [sorting, setSorting] = useState<SortingState>(null);
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [filters, setFilters] = useState<ColumnFiltersState>([]);
 
   const { data: tableWithViews, isLoading: tableWithViewsLoading } =
     api.table.getTableWithViews.useQuery({ tableId });
@@ -27,13 +32,15 @@ export default function TablePage() {
     data: rowsData,
     fetchNextPage,
     hasNextPage,
+    isFetching,
     isFetchingNextPage,
     isLoading: rowsLoading,
   } = api.row.getRowsInfinite.useInfiniteQuery(
     {
       tableId,
       limit: 5000,
-      sorting: sorting ? [sorting] : [],
+      sorting: translateSortingState(sorting, columns ?? []),
+      filters: translateFiltersState(filters, columns ?? []),
     },
     {
       getNextPageParam: (lastPage) => lastPage.nextCursor,
@@ -54,8 +61,8 @@ export default function TablePage() {
     rowCount === 0;
 
   useEffect(() => {
-    setIsLoading(isLoading);
-  }, [isLoading, setIsLoading]);
+    setIsLoading(isFetching || isLoading);
+  }, [isLoading, setIsLoading, isFetching]);
 
   if (isLoading) return null;
 
@@ -66,7 +73,7 @@ export default function TablePage() {
   return (
     <div className="flex h-full w-full flex-col">
       <TableContainer
-        tableId={tableWithViews.id}
+        tableWithViews={tableWithViews}
         columns={columns}
         rowCount={rowCount ?? 0}
         rowsWithCells={rowsWithCells}
@@ -75,6 +82,8 @@ export default function TablePage() {
         isFetchingNextPage={isFetchingNextPage}
         sorting={sorting}
         onSortingChange={setSorting}
+        columnFilters={filters}
+        onColumnFiltersChange={setFilters}
       />
     </div>
   );

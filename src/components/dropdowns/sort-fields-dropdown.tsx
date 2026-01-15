@@ -7,36 +7,26 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { TransformedRow } from "@/types";
 import { DropdownMenuTrigger } from "@radix-ui/react-dropdown-menu";
-import type { Column } from "@tanstack/react-table";
+import type { Table } from "@tanstack/react-table";
 import { HelpCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { BiSortAlt2 } from "react-icons/bi";
 import { FaA } from "react-icons/fa6";
 import { HiMagnifyingGlass } from "react-icons/hi2";
 import { PiHashStraightLight } from "react-icons/pi";
 import SortFieldsForm from "../forms/sort-fields-form";
 
-interface DataTableViewOptionsProps<TData> {
-  columns: Column<TransformedRow, unknown>[];
+interface Props {
+  table: Table<TransformedRow>;
 }
 
-export default function SortFieldsDropdown<TData>({
-  columns,
-}: DataTableViewOptionsProps<TData>) {
+export default function SortFieldsDropdown({ table }: Props) {
   const [search, setSearch] = useState("");
-  const [selectedField, setSelectedField] = useState<Column<
-    TransformedRow,
-    unknown
-  > | null>(null);
+  const [initialColumnId, setInitialColumnId] = useState<string | null>(null);
   const [menuKey, setMenuKey] = useState(0);
 
+  const columns = table.getAllColumns();
   const currentlySortedColumns = columns.filter((col) => col.getIsSorted());
-
-  useEffect(() => {
-    if (currentlySortedColumns.length > 0 && !selectedField) {
-      setSelectedField(currentlySortedColumns[0] ?? null);
-    }
-  }, [currentlySortedColumns, selectedField]);
 
   const filteredColumns = columns.filter((column) => {
     const label = (column.columnDef.meta?.label ?? column.id).toLowerCase();
@@ -44,12 +34,13 @@ export default function SortFieldsDropdown<TData>({
   });
 
   const handleResetAll = () => {
-    setSelectedField(null);
+    setInitialColumnId(null);
     setSearch("");
     setMenuKey((prev) => prev + 1);
   };
 
-  const showForm = selectedField !== null;
+  const showForm =
+    initialColumnId !== null || currentlySortedColumns.length > 0;
 
   return (
     <DropdownMenu key={menuKey}>
@@ -74,7 +65,7 @@ export default function SortFieldsDropdown<TData>({
       </DropdownMenuTrigger>
 
       {!showForm ? (
-        // Column Selection Menu
+        // Picker: only when nothing sorted
         <DropdownMenuContent
           align="end"
           className="mb-2 w-[320px] rounded-xs"
@@ -109,7 +100,7 @@ export default function SortFieldsDropdown<TData>({
                 <div
                   key={column.id}
                   className="flex h-7 cursor-pointer flex-row rounded-xs px-3 py-1 hover:bg-gray-100"
-                  onClick={() => setSelectedField(column)}
+                  onClick={() => setInitialColumnId(column.id)}
                 >
                   <div className="ml-1 flex flex-row items-center gap-2">
                     {dataType === "number" ? (
@@ -131,7 +122,7 @@ export default function SortFieldsDropdown<TData>({
           )}
         </DropdownMenuContent>
       ) : (
-        // Sort Form
+        // Form: shown when we have initial click or existing sorts
         <DropdownMenuContent
           align="end"
           className="w-[450px] rounded-xs p-0"
@@ -141,9 +132,13 @@ export default function SortFieldsDropdown<TData>({
           onCloseAutoFocus={handleResetAll}
         >
           <SortFieldsForm
-            selectedFieldState={[selectedField, setSelectedField]}
             columns={columns}
+            currentSorting={table.getState().sorting}
+            initialSelectedColumnId={initialColumnId ?? undefined}
             onClose={handleResetAll}
+            onApply={(newSorting) => {
+              table.setSorting(newSorting);
+            }}
           />
         </DropdownMenuContent>
       )}

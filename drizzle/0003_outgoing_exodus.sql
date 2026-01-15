@@ -1,0 +1,1 @@
+ALTER TABLE "view" ADD COLUMN "is_favourite" boolean DEFAULT false NOT NULL;

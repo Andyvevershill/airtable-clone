@@ -13,7 +13,7 @@ import {
 import { CiMenuBurger, CiShare1 } from "react-icons/ci";
 import FilterFieldsDropdown from "../dropdowns/filter-fields-dropdown";
 import HideFieldsDropdown from "../dropdowns/hide-fields-dropdown";
-import SortFieldsDropdown from "../dropdowns/sort-fields.dropdown";
+import SortFieldsDropdown from "../dropdowns/sort-fields-dropdown";
 
 interface Props {
   table: Table<TransformedRow>;
@@ -26,8 +26,6 @@ const items = [
 ];
 
 export function TableToolbar({ table, sideBarState: [open, setOpen] }: Props) {
-  const columns = table.getAllColumns();
-
   return (
     <div className="flex h-12 items-center justify-between border-b border-gray-200 bg-white px-3">
       {/* Left */}
@@ -45,9 +43,9 @@ export function TableToolbar({ table, sideBarState: [open, setOpen] }: Props) {
 
       {/* Right */}
       <div className="flex items-center gap-2 text-gray-500">
-        <HideFieldsDropdown columns={columns} />
+        <HideFieldsDropdown columns={table.getAllColumns()} />
 
-        <FilterFieldsDropdown columns={columns} />
+        <FilterFieldsDropdown table={table} />
 
         <Button
           variant="ghost"
@@ -59,7 +57,7 @@ export function TableToolbar({ table, sideBarState: [open, setOpen] }: Props) {
           <span className="text-[13px]">Group</span>
         </Button>
 
-        <SortFieldsDropdown columns={columns} />
+        <SortFieldsDropdown table={table} />
 
         {items.map((item) => (
           <Button

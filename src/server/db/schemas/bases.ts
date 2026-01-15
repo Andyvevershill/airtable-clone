@@ -1,5 +1,5 @@
 import { createId } from "@paralleldrive/cuid2";
-import { relations, type InferSelectModel } from "drizzle-orm";
+import { relations, sql, type InferSelectModel } from "drizzle-orm";
 import {
   boolean,
   index,
@@ -159,29 +159,52 @@ export const views = pgTable(
       .notNull()
       .primaryKey()
       .$defaultFn(() => createId()),
+
     tableId: text("table_id")
       .notNull()
       .references(() => tables.id, { onDelete: "cascade" }),
+
     name: text("name").notNull(),
+
+    isActive: boolean("is_active").notNull().default(false),
+    isFavourite: boolean("is_favourite").notNull().default(false),
+
     filters: json("filters").$type<
       {
-        columnId: number;
-        operator: string;
-        value: string;
+        columnId: string;
+        operator:
+          | "greaterThan"
+          | "lessThan"
+          | "contains"
+          | "notContains"
+          | "equals"
+          | "isEmpty"
+          | "isNotEmpty";
+        value?: string | number | null;
+        type: "string" | "number";
       }[]
     >(),
-    sorts: json("sorts").$type<
+
+    sorting: json("sorts").$type<
       {
-        columnId: number;
+        columnId: string;
         direction: "asc" | "desc";
+        type: "string" | "number";
       }[]
     >(),
-    hiddenColumns: json("hidden_columns").$type<number[]>(),
+
+    hidden: json("hidden_columns").$type<string[]>(),
+
     createdAt: timestamp("created_at")
       .$defaultFn(() => new Date())
       .notNull(),
   },
-  (table) => [index("view_table_idx").on(table.tableId)],
+  (table) => [
+    index("view_table_idx").on(table.tableId),
+    index("view_active_unique_idx")
+      .on(table.tableId)
+      .where(sql`is_active = true`),
+  ],
 );
 
 export type View = InferSelectModel<typeof views>;
