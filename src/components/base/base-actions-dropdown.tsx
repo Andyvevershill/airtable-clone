@@ -62,9 +62,7 @@ export function BaseActionsDropdown({
   });
 
   const handleDelete = () => {
-    if (confirm(`Delete "${base.name}"?`)) {
-      deleteBase.mutate({ id: base.id });
-    }
+    deleteBase.mutate({ id: base.id });
   };
 
   const handleFavourite = () => {
