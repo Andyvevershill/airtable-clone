@@ -82,7 +82,10 @@ export function BaseActionsDropdown({
         <Menubar className="h-8 w-8 border-0 bg-transparent p-0">
           <MenubarMenu>
             <MenubarTrigger asChild>
-              <div className="IC flex h-8 w-8 cursor-pointer rounded-md transition-transform hover:border-gray-400 hover:bg-gray-100 active:scale-95">
+              <div
+                onClick={handleFavourite}
+                className="IC flex h-8 w-8 cursor-pointer rounded-md transition-transform hover:border-gray-400 hover:bg-gray-100 active:scale-95"
+              >
                 <Star
                   size={16}
                   className={
@@ -90,7 +93,6 @@ export function BaseActionsDropdown({
                       ? "fill-yellow-500 text-yellow-500"
                       : "text-gray-400"
                   }
-                  onClick={handleFavourite}
                 />
               </div>
             </MenubarTrigger>

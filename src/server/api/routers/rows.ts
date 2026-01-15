@@ -20,28 +20,6 @@ import {
 import { z } from "zod";
 
 export const rowsRouter = createTRPCRouter({
-  getRowsWindow: protectedProcedure
-    .input(
-      z.object({
-        tableId: z.string(),
-        offset: z.number().default(0),
-        limit: z.number().default(50),
-      }),
-    )
-    .query(async ({ ctx, input }) => {
-      const tableRows = await ctx.db.query.rows.findMany({
-        where: eq(rows.tableId, input.tableId),
-        orderBy: (rows, { asc }) => [asc(rows.position)],
-        limit: input.limit,
-        offset: input.offset,
-        with: {
-          cells: true,
-        },
-      });
-
-      return tableRows;
-    }),
-
   getRowsInfinite: protectedProcedure
     .input(getRowsInfiniteInput)
     .query(async ({ ctx, input }) => {
@@ -162,43 +140,36 @@ export const rowsRouter = createTRPCRouter({
   addRow: protectedProcedure
     .input(z.object({ tableId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      // Get max position for new row
-      const maxPositionResult = await ctx.db
-        .select({ maxPosition: sql<number>`max(position)` })
-        .from(rows)
-        .where(eq(rows.tableId, input.tableId));
+      return await ctx.db.transaction(async (tx) => {
+        // Get all columns for this table
+        const tableColumns = await tx.query.columns.findMany({
+          where: eq(columns.tableId, input.tableId),
+          orderBy: (columns, { asc }) => [asc(columns.position)],
+        });
 
-      const maxPosition = maxPositionResult[0]?.maxPosition ?? -1;
+        // Create the row
+        const [newRow] = await tx
+          .insert(rows)
+          .values({
+            tableId: input.tableId,
+          })
+          .returning();
 
-      // Get all columns for this table
-      const tableColumns = await ctx.db.query.columns.findMany({
-        where: eq(columns.tableId, input.tableId),
-        orderBy: (columns, { asc }) => [asc(columns.position)],
+        if (!newRow) throw new Error("Failed to create row");
+
+        // Create cells in batch
+        if (tableColumns.length > 0) {
+          await tx.insert(cells).values(
+            tableColumns.map((column) => ({
+              rowId: newRow.id,
+              columnId: column.id,
+              value: null,
+            })),
+          );
+        }
+
+        return newRow;
       });
-
-      // Create the row
-      const [newRow] = await ctx.db
-        .insert(rows)
-        .values({
-          tableId: input.tableId,
-          position: maxPosition + 1,
-        })
-        .returning();
-
-      if (!newRow) throw new Error("Failed to create row");
-
-      // Create a cell for EACH column with null/empty value
-      if (tableColumns.length > 0) {
-        await ctx.db.insert(cells).values(
-          tableColumns.map((column) => ({
-            rowId: newRow.id,
-            columnId: column.id,
-            value: null,
-          })),
-        );
-      }
-
-      return newRow;
     }),
 
   addBulkRows: protectedProcedure

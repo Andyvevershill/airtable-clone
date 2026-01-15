@@ -1,6 +1,6 @@
 {
-  "id": "ae20bfce-31f0-41b5-80a9-efc1151b2e5d",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "742978d3-0eee-42be-a99b-6828b3b6d8c2",
+  "prevId": "ae20bfce-31f0-41b5-80a9-efc1151b2e5d",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -368,7 +368,7 @@
         },
         "position": {
           "name": "position",
-          "type": "bigint",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "identity": {
@@ -378,7 +378,7 @@
             "increment": "1",
             "startWith": "1",
             "minValue": "1",
-            "maxValue": "9223372036854775807",
+            "maxValue": "2147483647",
             "cache": "1",
             "cycle": false
           }

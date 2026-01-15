@@ -98,16 +98,16 @@ export default function TableContainer({
     setLocalRows,
   });
 
-  const tanstackColumns = useMemo(
-    () => generateColumnDefinitions(localColumns, commitCell),
-    [localColumns, commitCell],
-  );
+  const tanstackColumns = useMemo(() => {
+    return generateColumnDefinitions(localColumns, commitCell);
+  }, [localColumns, commitCell]);
 
   const table = useReactTable({
     data: localRows,
     columns: tanstackColumns,
     getCoreRowModel: getCoreRowModel(),
     manualSorting: true,
+    autoResetAll: false,
 
     state: {
       sorting: sorting

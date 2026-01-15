@@ -45,12 +45,11 @@ export const baseRouter = createTRPCRouter({
         )
         .returning();
 
-      // 4. Create the rows
+      // 4. Create the rows (position will auto-increment via serial)
       const rowValues = Array.from(
         { length: DEFAULT_BASE_CONFIG.defaultRowCount },
-        (_, i) => ({
+        () => ({
           tableId: table.id,
-          position: i,
         }),
       );
 

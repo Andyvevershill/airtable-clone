@@ -42,10 +42,10 @@ export const tableRouter = createTRPCRouter({
           )
           .returning();
 
-        // 4. Create the rows
+        // 4. Create the rows (position will auto-increment via serial)
         const rowValues = Array.from(
           { length: DEFAULT_BASE_CONFIG.defaultRowCount },
-          (_, position) => ({ tableId: table.id, position }),
+          () => ({ tableId: table.id }),
         );
 
         const createdRows = await tx.insert(rows).values(rowValues).returning();

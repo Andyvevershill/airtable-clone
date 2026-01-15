@@ -42,7 +42,7 @@ export default function Add100kRowButton({ tableId }: Props) {
 
   return (
     <Button
-      className="pointer flex items-center justify-center text-[13px]"
+      className="pointer flex items-center justify-center rounded-xs text-[13px]"
       variant="outline"
       title="Add 100k rows"
       onClick={handleAddRow}

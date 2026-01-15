@@ -109,7 +109,7 @@ export const rows = pgTable(
       .notNull()
       .references(() => tables.id, { onDelete: "cascade" }),
 
-    position: integer("position").notNull(),
+    position: integer("position").generatedAlwaysAsIdentity().notNull(),
 
     createdAt: timestamp("created_at")
       .$defaultFn(() => new Date())

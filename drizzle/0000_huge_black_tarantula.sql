@@ -31,7 +31,7 @@ CREATE TABLE "column" (
 CREATE TABLE "row" (
 	"id" text PRIMARY KEY NOT NULL,
 	"table_id" text NOT NULL,
-	"position" integer NOT NULL,
+	"position" bigint GENERATED ALWAYS AS IDENTITY (sequence name "row_position_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
 	"created_at" timestamp NOT NULL,
 	"updated_at" timestamp
 );

@@ -2,18 +2,13 @@ import { useLoadingStore } from "@/app/stores/use-loading-store";
 import AddRowButton from "@/components/buttons/add-row-button";
 import { CreateColumnDropdown } from "@/components/dropdowns/create-column-dropdown";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTableKeyboardNavigation } from "@/hooks/use-table-keyboard-nav";
 import { cn } from "@/lib/utils";
 import type { ColumnType } from "@/types/column";
 import type { TransformedRow } from "@/types/row";
 import { flexRender, type Table } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 function throttle<T extends (...args: Parameters<T>) => ReturnType<T>>(
   func: T,
@@ -125,77 +120,11 @@ export function Table({
     lastFetchedIndex.current = -1;
   }, [transformedRows.length]);
 
-  const handleTableKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.tagName === "INPUT") return;
-
-      const cell = target.closest("td");
-      if (!cell) return;
-
-      const row = cell.closest("tr");
-      if (!row) return;
-
-      const rowIndex = parseInt(row.getAttribute("data-index") ?? "0");
-      const colIndex = Array.from(row.children).indexOf(cell);
-
-      const totalRows = transformedRows.length;
-      const totalCols = columns.length;
-
-      let nextRow = rowIndex;
-      let nextCol = colIndex;
-      let shouldNavigate = false;
-
-      switch (e.key) {
-        case "ArrowUp":
-          e.preventDefault();
-          nextRow = Math.max(0, rowIndex - 1);
-          shouldNavigate = true;
-          break;
-        case "ArrowDown":
-          e.preventDefault();
-          nextRow = Math.min(totalRows - 1, rowIndex + 1);
-          shouldNavigate = true;
-          break;
-        case "ArrowLeft":
-          e.preventDefault();
-          nextCol = Math.max(0, colIndex - 1);
-          shouldNavigate = true;
-          break;
-        case "ArrowRight":
-          e.preventDefault();
-          nextCol = Math.min(totalCols - 1, colIndex + 1);
-          shouldNavigate = true;
-          break;
-        case "Tab":
-          e.preventDefault();
-          nextCol = colIndex + (e.shiftKey ? -1 : 1);
-          if (nextCol >= totalCols) {
-            nextCol = 0;
-            nextRow = Math.min(totalRows - 1, rowIndex + 1);
-          } else if (nextCol < 0) {
-            nextCol = totalCols - 1;
-            nextRow = Math.max(0, rowIndex - 1);
-          }
-          shouldNavigate = true;
-          break;
-      }
-
-      if (shouldNavigate) {
-        setTimeout(() => {
-          const nextRowEl = tableRef.current?.querySelector(
-            `tr[data-index="${nextRow}"]`,
-          );
-          const nextCellDiv =
-            nextRowEl?.children[nextCol]?.querySelector<HTMLElement>(
-              "div[tabindex]",
-            );
-          nextCellDiv?.focus();
-        }, 0);
-      }
-    },
-    [transformedRows.length, columns.length],
-  );
+  const { handleTableKeyDown } = useTableKeyboardNavigation({
+    tableRef,
+    totalRows: transformedRows.length,
+    totalCols: columns.length,
+  });
 
   return (
     <div
