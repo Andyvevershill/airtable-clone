@@ -103,7 +103,7 @@ export function applyViewToTableState(
       value: {
         operator: filter.operator,
         value: filter.value,
-      },
+      } as unknown,
     })) ?? [];
 
   callbacks.onColumnFiltersChange(filtersState);
