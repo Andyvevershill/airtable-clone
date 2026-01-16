@@ -25,8 +25,6 @@ export function CreateColumnSubmenu({
 
   const addColumn = api.column.addColumn.useMutation({
     onMutate: async (newColumn) => {
-      console.log(newColumn);
-
       setIsSaving(true);
 
       //  Cancel outgoing refetches

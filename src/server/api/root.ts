@@ -1,6 +1,7 @@
 import { createCallerFactory, createTRPCRouter } from "@/server/api/trpc";
 import {
   baseRouter,
+  cellRouter,
   columnRouter,
   rowsRouter,
   tableRouter,
@@ -17,6 +18,7 @@ export const appRouter = createTRPCRouter({
   table: tableRouter,
   column: columnRouter,
   row: rowsRouter,
+  cell: cellRouter,
   view: viewRouter,
 });
 

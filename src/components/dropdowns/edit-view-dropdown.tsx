@@ -8,12 +8,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 import type { View } from "@/server/db/schemas";
 import { api } from "@/trpc/react";
 import { Star } from "lucide-react";
 import { GoPencil } from "react-icons/go";
 import { HiOutlineDotsHorizontal, HiOutlineDuplicate } from "react-icons/hi";
 import { RiDeleteBinLine } from "react-icons/ri";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 interface Props {
   view: View;
@@ -47,7 +49,20 @@ export function EditViewDropdown({
   const deleteView = api.view.deleteById.useMutation({
     onMutate: () => {
       setIsSaving(true);
-      setViews((prev) => prev.filter((v) => v.id !== view.id));
+
+      setViews((prev) => {
+        const remaining = prev.filter((v) => v.id !== view.id);
+
+        // If the deleted view was active, activate the first remaining one
+        if (view.isActive && remaining.length > 0) {
+          return remaining.map((v, index) => ({
+            ...v,
+            isActive: index === 0,
+          }));
+        }
+
+        return remaining;
+      });
     },
     onSettled: () => setIsSaving(false),
   });
@@ -62,6 +77,7 @@ export function EditViewDropdown({
           id: newId,
           name,
           isFavourite: false,
+          isActive: false,
         },
       ]);
     },
@@ -75,11 +91,11 @@ export function EditViewDropdown({
       </DropdownMenuTrigger>
 
       <DropdownMenuContent
-        className="flex w-75 flex-col gap-1 p-2.5 text-[13px]"
+        className="flex w-72 flex-col gap-1 p-2.5 text-[13px]"
         align="start"
       >
         <DropdownMenuItem
-          className="pointer flex gap-2 text-[13px]"
+          className="pointer flex gap-2"
           onClick={() =>
             toggleFavourite.mutate({
               id: view.id,
@@ -99,13 +115,13 @@ export function EditViewDropdown({
 
         <DropdownMenuSeparator />
 
-        <DropdownMenuItem className="pointer text-[13px]" onClick={onRename}>
+        <DropdownMenuItem className="pointer" onClick={onRename}>
           <GoPencil className="mr-1 h-3.5 w-3.5" />
           Rename view
         </DropdownMenuItem>
 
         <DropdownMenuItem
-          className="pointer text-[13px]"
+          className="pointer"
           onClick={() =>
             duplicate.mutate({
               id: view.id,
@@ -118,15 +134,34 @@ export function EditViewDropdown({
           Duplicate view
         </DropdownMenuItem>
 
-        <DropdownMenuItem className="gap-2 text-[13px]">
-          <button
-            onClick={() => deleteView.mutate({ id: view.id })}
-            disabled={deleteDisabled}
-            className="flex w-full flex-row gap-2 text-[13px] disabled:cursor-not-allowed"
-          >
-            <RiDeleteBinLine className="mr-1 h-3.5 w-3.5" />
-            Delete view
-          </button>
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem
+          className={cn(deleteDisabled && "opacity-50")}
+          disabled={deleteDisabled}
+        >
+          {deleteDisabled ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="pointer flex gap-2 text-[#B10F41]">
+                  <RiDeleteBinLine className="h-3.5 w-3.5" />
+                  Delete view
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                You can&apos;t delete a view when it&apos; the only grid view
+                left in the table
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <button
+              onClick={() => deleteView.mutate({ id: view.id })}
+              className="pointer flex w-full gap-2 text-[#B10F41]"
+            >
+              <RiDeleteBinLine className="h-3.5 w-3.5" />
+              Delete view
+            </button>
+          )}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

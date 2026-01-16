@@ -6,7 +6,13 @@ import { useTableKeyboardNavigation } from "@/hooks/use-table-keyboard-nav";
 import { cn } from "@/lib/utils";
 import type { ColumnType } from "@/types/column";
 import type { TransformedRow } from "@/types/row";
-import { flexRender, type Table } from "@tanstack/react-table";
+import type { GlobalSearchMatches } from "@/types/view";
+import {
+  flexRender,
+  type ColumnFiltersState,
+  type SortingState,
+  type Table,
+} from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
@@ -34,6 +40,10 @@ interface Props {
   fetchNextPage: () => void;
   hasNextPage?: boolean;
   isFetchingNextPage: boolean;
+
+  sorting: SortingState;
+  filters: ColumnFiltersState;
+  globalSearchMatches: GlobalSearchMatches;
 }
 
 const MIN_COL_WIDTH = 175;
@@ -49,6 +59,10 @@ export function Table({
   fetchNextPage,
   hasNextPage,
   isFetchingNextPage,
+
+  sorting,
+  filters,
+  globalSearchMatches,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLTableElement>(null);
@@ -135,7 +149,7 @@ export function Table({
       className="relative flex h-full w-full flex-col bg-slate-100"
       style={{ width: tableWidth ? `${tableWidth + 200}px` : "100%" }}
     >
-      <div ref={scrollRef} className="relative flex-1 overflow-auto">
+      <div ref={scrollRef} className="relative flex-1">
         <div className="relative inline-block min-w-full pr-16 align-top">
           <div className="pointer-events-none sticky top-0 z-40">
             <div
@@ -165,6 +179,8 @@ export function Table({
                         header.column.getIsSorted() &&
                           !header.column.getIsFiltered() &&
                           "bg-[#FAF5F2] font-semibold",
+                        globalSearchMatches.columnIds.includes(header.id) &&
+                          "bg-[#FFF3D3] font-semibold",
                       )}
                       style={{
                         minWidth: MIN_COL_WIDTH,
@@ -234,12 +250,12 @@ export function Table({
                   );
                 }
 
-                // 2️⃣ Optimistic gap or invalid index → render nothing
+                // Optimistic gap or invalid index → render nothing
                 if (!tanstackRow) {
                   return null;
                 }
 
-                // 3️⃣ Real row (TS now knows tanstackRow is defined)
+                // Real row (TS now knows tanstackRow is defined)
                 return (
                   <tr
                     key={tanstackRow.id}
@@ -289,19 +305,16 @@ export function Table({
                   colSpan={columns.length}
                   className="pointer h-8 border border-gray-200 bg-white p-0"
                 >
-                  <AddRowButton tableId={tableId} />
+                  <AddRowButton
+                    tableId={tableId}
+                    sorting={sorting}
+                    filters={filters}
+                    columns={columns}
+                  />
                 </td>
               </tr>
             </tfoot>
           </table>
-        </div>
-      </div>
-
-      {/* records bar */}
-      <div className="sticky bottom-0 z-20 w-full border-t border-gray-300 bg-white px-3 py-2">
-        <div className="text-xs text-gray-600">
-          {rowCount} {rowCount === 1 ? "record" : "records"}
-          {isFetchingNextPage && " – Loading more…"}
         </div>
       </div>
     </div>

@@ -135,23 +135,6 @@ export const columnRouter = createTRPCRouter({
       return newColumn;
     }),
 
-  updateCell: protectedProcedure
-    .input(
-      z.object({
-        cellId: z.string(),
-        value: z.string().nullable() || z.number().nullable(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const updatedCell = await ctx.db
-        .update(cells)
-        .set({ value: input.value })
-        .where(eq(cells.id, input.cellId));
-
-      return updatedCell;
-    }),
-
-  // In your column router
   deleteColumn: protectedProcedure
     .input(
       z.object({
@@ -174,7 +157,7 @@ export const columnRouter = createTRPCRouter({
       // Delete the column
       await ctx.db.delete(columns).where(eq(columns.id, input.columnId));
 
-      // ✅ Return the tableId so the client can invalidate queries
+      //  Return the tableId so the client can invalidate queries
       return {
         success: true,
         tableId: column.tableId,

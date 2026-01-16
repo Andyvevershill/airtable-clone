@@ -16,9 +16,6 @@ export default function Add100kRowButton({ tableId }: Props) {
       setIsLoading(true);
     },
     onSuccess: () => {
-      // Invalidate columns query to refetch
-      void utils.column.getColumns.invalidate({ tableId });
-
       // Invalidate rows query to get cells for new column
       void utils.row.getRowsInfinite.invalidate({ tableId });
 
@@ -26,7 +23,7 @@ export default function Add100kRowButton({ tableId }: Props) {
       void utils.row.getRowCount.invalidate({ tableId });
     },
     onError: (error) => {
-      console.error("Failed to add column:", error);
+      console.error("Failed to add columns:", error);
     },
     onSettled: () => {
       setIsLoading(false);

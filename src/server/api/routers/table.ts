@@ -116,7 +116,9 @@ export const tableRouter = createTRPCRouter({
       const table = await ctx.db.query.tables.findFirst({
         where: eq(tables.id, input.tableId),
         with: {
-          views: true,
+          views: {
+            orderBy: (views, { asc }) => [asc(views.createdAt)],
+          },
         },
       });
 

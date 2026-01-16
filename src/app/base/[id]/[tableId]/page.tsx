@@ -1,6 +1,7 @@
 "use client";
 
 import { useLoadingStore } from "@/app/stores/use-loading-store";
+import { useGlobalSearchStore } from "@/app/stores/use-search-store";
 import NoDataPage from "@/components/no-data-page";
 import {
   translateFiltersState,
@@ -16,6 +17,7 @@ import TableContainer from "./table-container";
 export default function TablePage() {
   const { tableId } = useParams<{ tableId: string }>();
   const setIsLoading = useLoadingStore((state) => state.setIsLoading);
+  const { globalSearch } = useGlobalSearchStore();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [filters, setFilters] = useState<ColumnFiltersState>([]);
 
@@ -41,16 +43,12 @@ export default function TablePage() {
       limit: 5000,
       sorting: translateSortingState(sorting, columns ?? []),
       filters: translateFiltersState(filters, columns ?? []),
+      globalSearch,
     },
     {
       getNextPageParam: (lastPage) => lastPage.nextCursor,
       placeholderData: keepPreviousData,
     },
-  );
-
-  const rowsWithCells = useMemo(
-    () => rowsData?.pages?.flatMap((page) => page.items) ?? [],
-    [rowsData],
   );
 
   const isLoading =
@@ -64,11 +62,34 @@ export default function TablePage() {
     setIsLoading(isFetching || isLoading);
   }, [isLoading, setIsLoading, isFetching]);
 
-  if (isLoading) return null;
+  const rowsWithCells = useMemo(
+    () => rowsData?.pages?.flatMap((page) => page.items) ?? [],
+    [rowsData],
+  );
 
-  if (!tableWithViews || !columns || !rowsWithCells) {
+  const globalsearchMatches = useMemo(() => {
+    if (!rowsData?.pages) return { columnIds: [], cells: [] };
+
+    const allColumnIds = rowsData.pages.flatMap(
+      (page) => page.searchMatches.columnIds,
+    );
+    const allCells = rowsData.pages.flatMap((page) => page.searchMatches.cells);
+
+    return {
+      columnIds: [...new Set(allColumnIds)],
+      cells: allCells,
+    };
+  }, [rowsData?.pages]);
+
+  if (isLoading) {
+    return null;
+  }
+
+  if (!tableWithViews || !columns || !rowsData) {
     return <NoDataPage missingData="table data" />;
   }
+
+  // Combine search matches from ALL pages
 
   return (
     <div className="flex h-full w-full flex-col">
@@ -84,6 +105,7 @@ export default function TablePage() {
         onSortingChange={setSorting}
         columnFilters={filters}
         onColumnFiltersChange={setFilters}
+        globalSearchMatches={globalsearchMatches}
       />
     </div>
   );

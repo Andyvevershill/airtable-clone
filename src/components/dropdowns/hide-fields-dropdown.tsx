@@ -45,7 +45,7 @@ export default function HideFieldsDropdown<TData>({
       <DropdownMenuTrigger asChild>
         <button
           onClick={() => console.log("🖱️ Hide fields button clicked")}
-          className={`pointer flex h-7 flex-row items-center gap-1 rounded-xs border border-transparent p-2 text-[13px] ${
+          className={`pointer flex h-6.5 flex-row items-center gap-1 rounded-sm border border-transparent p-2 text-[13px] ${
             numberOfHiddenCols > 0
               ? "bg-[#C4ECFF] text-gray-900 hover:border-2 hover:border-[#7FAFC4]"
               : "text-gray-500 hover:bg-gray-100"
@@ -87,31 +87,21 @@ export default function HideFieldsDropdown<TData>({
               key={column.id}
               className="mx-3 my-2 flex flex-row items-center gap-2 rounded-xs px-2 hover:bg-gray-100"
             >
-              {/* ✅ Toggle with stopPropagation to prevent double-firing */}
               <div onClick={(e) => e.stopPropagation()}>
                 <Toggle
                   checked={column.getIsVisible()}
                   onChange={(value) => {
-                    console.log("🔘 Toggle clicked:", {
-                      label,
-                      newValue: value,
-                    });
                     column.toggleVisibility(value);
                   }}
                 />
               </div>
 
-              {/* ✅ Label area - separate click handler */}
               <div
                 className="flex flex-1 cursor-pointer flex-row items-center gap-2"
                 onClick={(e) => {
                   e.stopPropagation();
                   const newValue = !column.getIsVisible();
-                  console.log("👆 Label clicked:", {
-                    label,
-                    currentVisible: column.getIsVisible(),
-                    newValue,
-                  });
+
                   column.toggleVisibility(newValue);
                 }}
               >
@@ -129,13 +119,7 @@ export default function HideFieldsDropdown<TData>({
         {filteredColumns.length === 0 ? (
           <div className="mx-3 my-4 flex flex-row items-baseline gap-4">
             <p className="text-[13px] text-gray-400">No results.</p>
-            <button
-              onClick={() => {
-                console.log("🧹 Clear search clicked");
-                setSearch("");
-              }}
-              className="cursor-pointer text-xs text-gray-400 hover:text-gray-300"
-            >
+            <button className="cursor-pointer text-xs text-gray-400 hover:text-gray-300">
               Clear
             </button>
           </div>

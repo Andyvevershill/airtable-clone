@@ -32,9 +32,9 @@ export function generateColumnDefinitions(
       onCellUpdate: onCellEdit,
     },
 
-    enableSorting: true,
-    enableColumnFilter: true,
-    enableHiding: true,
+    // enableSorting: true,
+    // enableColumnFilter: true,
+    // enableHiding: true,
 
     header: ({ column }) => (
       <DataTableColumnHeader

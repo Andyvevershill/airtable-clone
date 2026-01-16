@@ -1,5 +1,6 @@
 "use client";
 
+import { useLoadingViewStore } from "@/app/stores/use-loading-view-store";
 import {
   generateColumnDefinitions,
   transformRowsToTanStackFormat,
@@ -7,8 +8,11 @@ import {
 import { TableSidebar } from "@/components/table/table-sidebar";
 import { TableToolbar } from "@/components/table/table-toolbar";
 import { useCellCommitter } from "@/hooks/use-cell-commiter";
-import type { RowWithCells, TableWithViews, TransformedRow } from "@/types";
+import { useViewUpdater } from "@/hooks/use-view-updater";
+import { applyViewToTableState } from "@/lib/helper-functions";
+import type { RowWithCells, TableWithViews } from "@/types";
 import type { ColumnType } from "@/types/column";
+import type { GlobalSearchMatches } from "@/types/view";
 import {
   getCoreRowModel,
   useReactTable,
@@ -17,7 +21,8 @@ import {
   type SortingState,
   type VisibilityState,
 } from "@tanstack/react-table";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { LuLoaderPinwheel } from "react-icons/lu";
 import { Table } from "./table";
 
 interface Props {
@@ -34,6 +39,7 @@ interface Props {
   onSortingChange: OnChangeFn<SortingState>;
   columnFilters: ColumnFiltersState;
   onColumnFiltersChange: OnChangeFn<ColumnFiltersState>;
+  globalSearchMatches: GlobalSearchMatches;
 }
 
 export default function TableContainer({
@@ -50,15 +56,12 @@ export default function TableContainer({
   onSortingChange,
   columnFilters,
   onColumnFiltersChange,
+  globalSearchMatches,
 }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-
-  const editingCellRef = useRef<{
-    rowId: string;
-    columnId: string;
-  } | null>(null);
-
+  const { isLoadingView, setIsLoadingView } = useLoadingViewStore();
+  const [columnVisibility, onColumnVisibilityChange] =
+    useState<VisibilityState>({});
   const [localColumns, setLocalColumns] = useState<ColumnType[]>(columns);
   const [localRows, setLocalRows] = useState(
     transformRowsToTanStackFormat(rowsWithCells),
@@ -69,37 +72,50 @@ export default function TableContainer({
   }, [columns]);
 
   useEffect(() => {
-    const transformed = transformRowsToTanStackFormat(rowsWithCells);
-
-    if (!editingCellRef.current) {
-      setLocalRows(transformed);
-    } else {
-      const { rowId: editingRowId, columnId: editingColumnId } =
-        editingCellRef.current;
-
-      setLocalRows((prevRows) =>
-        transformed.map((newRow): TransformedRow => {
-          if (newRow._rowId === editingRowId) {
-            const prevRow = prevRows.find((r) => r._rowId === newRow._rowId);
-
-            if (prevRow) {
-              const preservedValue = prevRow._cells[editingColumnId];
-
-              return {
-                ...newRow,
-                _cells: {
-                  ...newRow._cells,
-                  [editingColumnId]: preservedValue ?? null,
-                },
-              };
-            }
-          }
-
-          return newRow;
-        }),
-      );
-    }
+    setLocalRows(transformRowsToTanStackFormat(rowsWithCells));
   }, [rowsWithCells]);
+
+  const activeView = useMemo(
+    () => tableWithViews.views.find((v) => v.isActive),
+    [tableWithViews.views],
+  );
+
+  useEffect(() => {
+    if (!activeView?.id) return;
+
+    setIsLoadingView(true);
+
+    applyViewToTableState(activeView, {
+      onSortingChange,
+      onColumnFiltersChange,
+      onColumnVisibilityChange,
+    });
+
+    const MIN_DELAY = 500;
+
+    const timer = setTimeout(() => {
+      setIsLoadingView(false);
+    }, MIN_DELAY);
+
+    return () => clearTimeout(timer);
+  }, [
+    activeView?.id,
+    onSortingChange,
+    onColumnFiltersChange,
+    onColumnVisibilityChange,
+    setIsLoadingView,
+  ]);
+
+  useViewUpdater(
+    activeView?.id ?? "",
+    tableWithViews.id,
+    {
+      sorting,
+      columnFilters,
+      columnVisibility,
+    },
+    columns,
+  );
 
   const { commitCell } = useCellCommitter({
     localRows,
@@ -114,13 +130,13 @@ export default function TableContainer({
     data: localRows,
     columns: tanstackColumns,
     getCoreRowModel: getCoreRowModel(),
-    onColumnVisibilityChange: setColumnVisibility,
 
     manualSorting: true,
     manualFiltering: true,
 
     onSortingChange,
     onColumnFiltersChange,
+    onColumnVisibilityChange,
 
     state: {
       sorting,
@@ -148,17 +164,55 @@ export default function TableContainer({
           </div>
         )}
 
-        <div className="flex-1 overflow-x-scroll">
-          <Table
-            table={table}
-            tableId={tableWithViews.id}
-            rowCount={rowCount}
-            transformedRows={localRows}
-            columns={localColumns}
-            fetchNextPage={fetchNextPage}
-            hasNextPage={hasNextPage}
-            isFetchingNextPage={isFetchingNextPage}
-          />
+        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
+          {/* TABLE */}
+          <div className="flex-1 overflow-x-auto">
+            {isLoadingView ? (
+              <div className="flex h-full w-full items-center justify-center">
+                <div className="flex flex-col items-center gap-6 text-gray-600">
+                  <LuLoaderPinwheel size={22} className="animate-spin" />
+                  <p className="text-sm text-gray-600">Loading this view...</p>
+                </div>
+              </div>
+            ) : rowsWithCells.length === 0 && columnFilters.length > 0 ? (
+              <div className="flex h-full items-center justify-center p-8 text-center">
+                <div className="max-w-md">
+                  <h3 className="text-md font-medium text-gray-800">
+                    Displaying filtered results
+                  </h3>
+
+                  <button
+                    onClick={() => onColumnFiltersChange([])}
+                    className="pointer mt-6 rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Clear filters
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <Table
+                table={table}
+                tableId={tableWithViews.id}
+                rowCount={rowCount}
+                transformedRows={localRows}
+                columns={localColumns}
+                fetchNextPage={fetchNextPage}
+                hasNextPage={hasNextPage}
+                isFetchingNextPage={isFetchingNextPage}
+                sorting={sorting}
+                filters={columnFilters}
+                globalSearchMatches={globalSearchMatches}
+              />
+            )}
+          </div>
+
+          {/* RECORDS BAR */}
+          <div className="sticky bottom-0 z-20 border-t border-gray-300 bg-white px-3 py-2">
+            <div className="text-xs text-gray-600">
+              {rowCount} {rowCount === 1 ? "record" : "records"}
+              {isFetchingNextPage && " – Loading more…"}
+            </div>
+          </div>
         </div>
       </div>
     </div>

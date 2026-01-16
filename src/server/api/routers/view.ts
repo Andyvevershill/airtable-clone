@@ -25,14 +25,64 @@ export const viewRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       return await ctx.db
         .update(views)
-        .set({ isFavourite: input.isFavourite })
+        .set({ isFavourite: !input.isFavourite })
+        .where(eq(views.id, input.id));
+    }),
+
+  setActive: protectedProcedure
+    .input(z.object({ id: z.string(), tableId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db
+        .update(views)
+        .set({ isActive: false })
+        .where(eq(views.tableId, input.tableId));
+
+      return await ctx.db
+        .update(views)
+        .set({ isActive: true })
         .where(eq(views.id, input.id));
     }),
 
   deleteById: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      return await ctx.db.delete(views).where(eq(views.id, input.id));
+      // 1. Get the view being deleted
+      const currentView = await ctx.db.query.views.findFirst({
+        where: eq(views.id, input.id),
+      });
+
+      if (!currentView) {
+        throw new Error("View not found");
+      }
+
+      // 2. Get all views for the SAME TABLE
+      const allViews = await ctx.db.query.views.findMany({
+        where: eq(views.tableId, currentView.tableId),
+        orderBy: (views, { asc }) => [asc(views.createdAt)],
+      });
+
+      if (allViews.length === 1) {
+        throw new Error("Cannot delete last view for this table");
+      }
+
+      // 3. If deleting the active view, activate another one
+      if (currentView.isActive) {
+        const nextView = allViews.find((v) => v.id !== currentView.id);
+
+        if (!nextView) {
+          throw new Error("No remaining view to activate");
+        }
+
+        await ctx.db
+          .update(views)
+          .set({ isActive: true })
+          .where(eq(views.id, nextView.id));
+      }
+
+      // 4. Delete the view
+      await ctx.db.delete(views).where(eq(views.id, input.id));
+
+      return { success: true };
     }),
 
   updateName: protectedProcedure
@@ -67,12 +117,30 @@ export const viewRouter = createTRPCRouter({
     }),
 
   createView: protectedProcedure
-    .input(z.object({ name: z.string(), tableId: z.string() }))
+    .input(
+      z.object({
+        name: z.string(),
+        tableId: z.string(),
+        viewId: z.string(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
-      return await ctx.db.insert(views).values({
+      // remove active state for the rest
+      await ctx.db
+        .update(views)
+        .set({ isActive: false })
+        .where(eq(views.tableId, input.tableId));
+
+      // create and set this one as active
+
+      const newView = await ctx.db.insert(views).values({
+        id: input.viewId,
         name: input.name,
         tableId: input.tableId,
         isFavourite: false,
+        isActive: true,
       });
+
+      return newView;
     }),
 });

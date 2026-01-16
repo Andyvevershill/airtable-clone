@@ -1,23 +1,48 @@
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { cells } from "@/server/db/schemas";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 export const cellRouter = createTRPCRouter({
-  updateCell: protectedProcedure
+  upsertCell: protectedProcedure
     .input(
       z.object({
-        cellId: z.string(),
-        value: z.string() || z.number(),
+        rowId: z.string(),
+        columnId: z.string(),
+        value: z.string().nullable(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Get current max position
-      await ctx.db
-        .update(cells)
-        .set({ value: input.value })
-        .where(eq(cells.id, input.cellId));
+      const existingCell = await ctx.db.query.cells.findFirst({
+        where: and(
+          eq(cells.rowId, input.rowId),
+          eq(cells.columnId, input.columnId),
+        ),
+      });
 
-      return;
+      if (existingCell) {
+        const [result] = await ctx.db
+          .update(cells)
+          .set({
+            value: input.value,
+            updatedAt: new Date(),
+          })
+          .where(eq(cells.id, existingCell.id))
+          .returning();
+
+        return result;
+      } else {
+        const [result] = await ctx.db
+          .insert(cells)
+          .values({
+            rowId: input.rowId,
+            columnId: input.columnId,
+            value: input.value,
+            updatedAt: new Date(),
+          })
+          .returning();
+
+        return result;
+      }
     }),
 });

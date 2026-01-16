@@ -1,26 +1,66 @@
 "use client";
 
 import { useSavingStore } from "@/app/stores/use-saving-store";
+import type { View } from "@/server/db/schemas";
 import { api } from "@/trpc/react";
+import { CircleStar } from "lucide-react";
 import { useState } from "react";
+import { AiOutlineLock } from "react-icons/ai";
+import { GrGroup } from "react-icons/gr";
+import { IoPersonOutline } from "react-icons/io5";
 
 interface Props {
   tableId: string;
+  viewLength: number;
+  setViews: React.Dispatch<React.SetStateAction<View[]>>;
   onCancel: () => void;
   onSuccess: () => void;
 }
 
-export function CreateViewForm({ tableId, onCancel, onSuccess }: Props) {
-  const [viewName, setViewName] = useState("");
+export function CreateViewForm({
+  tableId,
+  onCancel,
+  setViews,
+  onSuccess,
+  viewLength,
+}: Props) {
+  const [viewName, setViewName] = useState<string>(`Grid ${viewLength + 1}`);
   const setIsSaving = useSavingStore((s) => s.setIsSaving);
 
+  const utils = api.useUtils();
+
   const createView = api.view.createView.useMutation({
-    onMutate: () => {
+    onMutate: ({ viewId, name: viewName, tableId }) => {
       setIsSaving(true);
-    },
-    onSuccess: () => {
-      setViewName("");
+
+      setViews((prev) => {
+        //  deactivate any currently-active view
+        const deactivated = prev.map((v) =>
+          v.isActive ? { ...v, isActive: false } : v,
+        );
+
+        // append the new active view at the bottom
+        return [
+          ...deactivated,
+          {
+            id: viewId,
+            tableId,
+            name: viewName,
+            createdAt: new Date(),
+            isFavourite: false,
+            isActive: true,
+            filters: null,
+            sorting: null,
+            hidden: null,
+          },
+        ];
+      });
       onSuccess();
+    },
+
+    onSuccess: () => {
+      void utils.table.getTableWithViews.invalidate({ tableId });
+      setViewName("");
     },
     onSettled: () => {
       setIsSaving(false);
@@ -30,13 +70,20 @@ export function CreateViewForm({ tableId, onCancel, onSuccess }: Props) {
   const handleCreateView = () => {
     if (!viewName.trim()) return;
     createView.mutate({
+      viewId: crypto.randomUUID(),
       name: viewName,
       tableId: tableId,
     });
   };
 
+  const list = [
+    { label: "Collaborative", icon: GrGroup, showBlue: true },
+    { label: "Personal", icon: IoPersonOutline },
+    { label: "Locked", icon: AiOutlineLock },
+  ];
+
   return (
-    <div className="space-y-3 p-2">
+    <div className="w-full space-y-3 p-2">
       <input
         type="text"
         placeholder="View name"
@@ -48,22 +95,47 @@ export function CreateViewForm({ tableId, onCancel, onSuccess }: Props) {
           }
         }}
         autoFocus
-        className="w-full rounded border border-gray-300 px-1 py-1.5 text-[13px] focus:border-blue-500 focus:outline-none"
+        className="text-md w-[380px] rounded border border-gray-200 px-1 py-1.5 focus:ring-2 focus:ring-gray-300 focus:outline-none"
       />
-      <div className="flex gap-2">
+      <div className="mt-4 flex flex-col gap-2">
+        <h2 className="text-md font-[500] text-gray-800">Who can edit</h2>
+        <div className="text-gray-70 flex w-full flex-row justify-between gap-1 text-[13px]">
+          {list.map((item, index) => (
+            <div key={index} className="pointer flex items-center gap-1">
+              {item.showBlue ? (
+                <div className="pointer flex h-4 w-4 items-center justify-center rounded-full border-2 border-gray-300">
+                  <div className="h-2 w-2 rounded-full bg-blue-500" />
+                </div>
+              ) : (
+                <div className="pointer flex h-4 w-4 items-center justify-center rounded-full border-2 border-gray-300">
+                  <div className="h-2 w-2 rounded-full" />
+                </div>
+              )}
+              <item.icon size={16} />
+              <span>{item.label}</span>
+              {!item.showBlue && <CircleStar size={16} color="#166EE1" />}
+            </div>
+          ))}
+        </div>
+
+        <p className="text-[13px] text-gray-500">
+          All collaborators can edit the configuration
+        </p>
+      </div>
+      <div className="flex w-full flex-row items-center justify-end">
         <button
           onClick={() => {
             setViewName("");
             onCancel();
           }}
-          className="flex-1 rounded border border-gray-300 px-2 py-1.5 text-[13px] hover:bg-gray-50"
+          className="pointer max-w-[65px] flex-1 rounded-sm px-2 py-1.5 text-[13px] hover:bg-gray-50"
         >
           Cancel
         </button>
         <button
           onClick={handleCreateView}
           disabled={!viewName.trim()}
-          className="flex-1 rounded bg-blue-600 px-3 py-1.5 text-[13px] text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+          className="pointer max-w-[125px] flex-1 rounded-sm bg-[#166EE1] px-3 py-1.5 text-[13px] text-white"
         >
           Create view
         </button>

@@ -23,6 +23,13 @@ export const rowsRouter = createTRPCRouter({
   getRowsInfinite: protectedProcedure
     .input(getRowsInfiniteInput)
     .query(async ({ ctx, input }) => {
+      console.log("🔧 Backend received input:", {
+        tableId: input.tableId,
+        globalSearch: input.globalSearch,
+        filters: input.filters,
+        sorting: input.sorting,
+      });
+
       const offset = input.cursor ?? 0;
       const { sorting, filters, globalSearch } = input;
 
@@ -42,7 +49,6 @@ export const rowsRouter = createTRPCRouter({
         );
       }
 
-      // Stable sort — very important for infinite loading
       orderByClauses.push(asc(rows.position));
 
       // ── 2. Build WHERE conditions ────────────────────────────────────────
@@ -88,18 +94,15 @@ export const rowsRouter = createTRPCRouter({
         whereConditions.push(condition);
       }
 
-      // Optional global search (across all text columns — you can optimize later)
-      if (globalSearch?.trim()) {
-        // Very rough example — in real app you'd probably have a separate text-searchable column or full-text index
-        whereConditions
-          .push
-          // or exists (select from cell where ... ilike ...)
-          ();
-      }
-
       const finalWhere = and(...whereConditions);
 
-      // ── 3. Execute ────────────────────────────────────────────────────────
+      console.log(
+        "🎯 Executing query with",
+        whereConditions.length,
+        "conditions",
+      );
+
+      // ── 3. Execute Query ──────────────────────────────────────────────────
       const tableRows = await ctx.db
         .select()
         .from(rows)
@@ -108,7 +111,8 @@ export const rowsRouter = createTRPCRouter({
         .limit(input.limit)
         .offset(offset);
 
-      // Your existing cells fetch (very good pattern!)
+      console.log("📊 Query returned", tableRows.length, "rows");
+
       const rowIds = tableRows.map((r) => r.id);
       const rowCells = rowIds.length
         ? await ctx.db.select().from(cells).where(inArray(cells.rowId, rowIds))
@@ -119,8 +123,52 @@ export const rowsRouter = createTRPCRouter({
         cells: rowCells.filter((c) => c.rowId === row.id),
       }));
 
+      // ── 4. Calculate Search Matches (if globalSearch exists) ─────────────
+      const searchMatches: {
+        columnIds: string[];
+        cells: Array<{ rowId: string; cellId: string }>;
+      } = { columnIds: [], cells: [] };
+
+      if (globalSearch?.trim()) {
+        console.log("🔍 Calculating search matches for:", globalSearch);
+
+        const searchTerm = globalSearch.trim().toLowerCase();
+
+        // Get all columns for this table
+        const tableColumns = await ctx.db
+          .select({ id: columns.id, name: columns.name })
+          .from(columns)
+          .where(eq(columns.tableId, input.tableId));
+
+        // Find matching column headers
+        const matchedColumnIds = tableColumns
+          .filter((col) => col.name.toLowerCase().includes(searchTerm))
+          .map((col) => col.id);
+
+        // Find matching cell values (only from the filtered/sorted rows)
+        const matchedCells = rowCells
+          .filter((cell) =>
+            cell.value?.toString().toLowerCase().includes(searchTerm),
+          )
+          .map((cell) => ({
+            rowId: cell.rowId,
+            cellId: cell.id,
+          }));
+
+        searchMatches.columnIds = matchedColumnIds;
+        searchMatches.cells = matchedCells;
+
+        console.log("✅ Search matches:", {
+          columns: matchedColumnIds.length,
+          cells: matchedCells.length,
+        });
+      }
+
+      console.log("✅ Returning", rowsWithCells.length, "rows with cells");
+
       return {
         items: rowsWithCells,
+        searchMatches,
         nextCursor:
           tableRows.length === input.limit ? offset + input.limit : undefined,
       };

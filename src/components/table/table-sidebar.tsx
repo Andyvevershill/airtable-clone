@@ -1,13 +1,12 @@
 "use client";
-import { useSavingStore } from "@/app/stores/use-saving-store";
-import { api } from "@/trpc/react";
+
 import type { TableWithViews } from "@/types";
-import { Search, Star, TableCellsSplit } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { CiSearch } from "react-icons/ci";
 import Add100kRowButton from "../buttons/add-100k-rows-button";
+import ViewButton from "../buttons/view-button";
 import { CreateViewDropdown } from "../dropdowns/create-view-dropdown";
-import { EditViewDropdown } from "../dropdowns/edit-view-dropdown";
-import ViewEditMode from "../view/view-edit-mode";
+import { Input } from "../ui/input";
 interface Props {
   sidebarOpen: boolean;
   tableWithViews: TableWithViews;
@@ -16,36 +15,11 @@ export function TableSidebar({ tableWithViews, sidebarOpen }: Props) {
   const [views, setViews] = useState(tableWithViews.views);
   const [hoveredViewId, setHoveredViewId] = useState<string | null>(null);
   const [editViewId, setEditViewId] = useState<string | null>(null);
-  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
-  const setIsSaving = useSavingStore((s) => s.setIsSaving);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const utils = api.useUtils();
-  // keep in sync if server data changes
-  useEffect(() => {
-    setViews(tableWithViews.views);
-  }, [tableWithViews.views]);
-
-  const toggleFavouriteSidebar = api.view.toggleFavourite.useMutation({
-    onMutate: ({ id, isFavourite }) => {
-      setIsSaving(true);
-      setViews((prev) =>
-        prev.map((v) =>
-          v.id === id ? { ...v, isFavourite: !isFavourite } : v,
-        ),
-      );
-    },
-    onSuccess: () => {
-      void utils.table.getTableWithViews.invalidate({
-        tableId: tableWithViews.id,
-      });
-    },
-    onError: (_err, { id, isFavourite }) => {
-      setViews((prev) =>
-        prev.map((v) => (v.id === id ? { ...v, isFavourite } : v)),
-      );
-    },
-    onSettled: () => setIsSaving(false),
-  });
+  const filteredViews = views.filter((view) =>
+    view.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
 
   return (
     <div
@@ -54,83 +28,44 @@ export function TableSidebar({ tableWithViews, sidebarOpen }: Props) {
       }`}
     >
       <div
-        className={`flex h-full flex-col justify-between overflow-hidden transition-opacity ${
+        className={`flex h-full flex-col justify-between gap-2 overflow-hidden transition-opacity ${
           sidebarOpen ? "opacity-100" : "opacity-0"
         }`}
       >
-        <div className="space-y-1 px-2 py-2">
-          <CreateViewDropdown tableId={tableWithViews.id} />
+        <div className="flex flex-col gap-2 px-2 py-1">
+          <CreateViewDropdown
+            tableId={tableWithViews.id}
+            viewLength={views.length}
+            setViews={setViews}
+          />
 
-          <button className="flex h-9 w-full items-center gap-2 rounded px-2 text-gray-500">
-            <Search size={18} />
-            <span className="text-[13px]">Find a view</span>
-          </button>
+          <div className="relative flex h-8 flex-1 items-center text-[13px]">
+            <CiSearch className="absolute left-2 text-gray-400" size={16} />
+            <Input
+              type="text"
+              value={searchQuery}
+              onKeyDown={(e) => e.stopPropagation()}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Find a view"
+              className="h-7 w-full rounded-xs border-none bg-white pl-8 shadow-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
 
-          {views.map((view) => {
+          {filteredViews.map((view) => {
             const isHovered = hoveredViewId === view.id;
             const isEditing = editViewId === view.id;
             return (
-              <div
+              <ViewButton
                 key={view.id}
-                onMouseEnter={() => setHoveredViewId(view.id)}
-                onMouseLeave={() => setHoveredViewId(null)}
-                onDoubleClick={(e) => {
-                  e.stopPropagation();
-                  setEditViewId(view.id);
-                }}
-                className={`pointer flex h-9 w-full items-center gap-2 rounded px-2 text-[13px] ${
-                  view.isFavourite ? "bg-gray-100" : ""
-                }`}
-              >
-                <div className="mr-2 w-3">
-                  {isHovered ? (
-                    <div
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFavouriteSidebar.mutate({
-                          id: view.id,
-                          isFavourite: view.isFavourite,
-                        });
-                      }}
-                      className="flex h-6 w-6 items-center justify-center rounded-md hover:bg-gray-100"
-                    >
-                      <Star
-                        size={16}
-                        className={
-                          view.isFavourite
-                            ? "fill-yellow-500 text-yellow-500"
-                            : "text-gray-800"
-                        }
-                      />
-                    </div>
-                  ) : (
-                    <TableCellsSplit size={16} className="text-blue-500" />
-                  )}
-                </div>
-
-                {isEditing ? (
-                  <ViewEditMode
-                    view={view}
-                    setViews={setViews}
-                    onDone={() => setEditViewId(null)}
-                  />
-                ) : (
-                  <div className="flex w-full items-center justify-between">
-                    <span className="truncate text-[13px]">{view.name}</span>
-                    {(isHovered || openDropdownId === view.id) && (
-                      <EditViewDropdown
-                        deleteDisabled={views.length === 1}
-                        view={view}
-                        setViews={setViews}
-                        onRename={() => setEditViewId(view.id)}
-                        onOpenChange={(open) =>
-                          setOpenDropdownId(open ? view.id : null)
-                        }
-                      />
-                    )}
-                  </div>
-                )}
-              </div>
+                setHoveredViewId={setHoveredViewId}
+                setViews={setViews}
+                setEditViewId={setEditViewId}
+                view={view}
+                views={views}
+                searchQuery={searchQuery}
+                isHovered={isHovered}
+                isEditing={isEditing}
+              />
             );
           })}
         </div>

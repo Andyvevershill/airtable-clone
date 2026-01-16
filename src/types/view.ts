@@ -48,10 +48,22 @@ export const getRowsInfiniteInput = z.object({
 
 export const viewInputSchema = z.object({
   id: z.string(),
-  name: z.string(),
+  name: z.string().optional(),
   filters: z.array(filterRuleSchema).optional().default([]),
   sorting: z.array(sortRuleSchema).optional().default([]),
   hidden: z.array(z.string()).optional().default([]),
 });
 
 export type ViewInput = z.infer<typeof viewInputSchema>;
+
+const globalSearchMatchesSchema = z.object({
+  columnIds: z.array(z.string()),
+  cells: z.array(
+    z.object({
+      rowId: z.string(),
+      cellId: z.string(),
+    }),
+  ),
+});
+
+export type GlobalSearchMatches = z.infer<typeof globalSearchMatchesSchema>;
