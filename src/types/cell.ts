@@ -4,7 +4,6 @@ const cellSchema = z.object({
   id: z.string(),
   rowId: z.string(),
   columnId: z.string(),
-
   value: z.string().nullable(),
 });
 

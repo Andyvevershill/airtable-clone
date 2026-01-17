@@ -22,7 +22,7 @@ export function useCellCommitter({ localRows, setLocalRows }: Params) {
       return { previousRows, rowId, columnId };
     },
     onError: (error, variables, context) => {
-      // ✅ Rollback optimistic update on error
+      // Rollback optimistic update on error
       if (context?.previousRows) {
         setLocalRows(context.previousRows);
       }
@@ -37,7 +37,7 @@ export function useCellCommitter({ localRows, setLocalRows }: Params) {
     columnId: string,
     value: string | null,
   ) => {
-    // Optional: Validate row exists (early exit if not found)
+    //  Validate row exists (early exit if not found)
     const row = localRows.find((r) => r._rowId === rowId);
     if (!row) {
       console.warn(`Row ${rowId} not found in local state`);

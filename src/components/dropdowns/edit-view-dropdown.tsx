@@ -15,7 +15,12 @@ import { Star } from "lucide-react";
 import { GoPencil } from "react-icons/go";
 import { HiOutlineDotsHorizontal, HiOutlineDuplicate } from "react-icons/hi";
 import { RiDeleteBinLine } from "react-icons/ri";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../ui/tooltip";
 
 interface Props {
   view: View;
@@ -137,22 +142,28 @@ export function EditViewDropdown({
         <DropdownMenuSeparator />
 
         <DropdownMenuItem
-          className={cn(deleteDisabled && "opacity-50")}
-          disabled={deleteDisabled}
+          className={cn(deleteDisabled && "opacity-50 hover:bg-none")}
+          onSelect={(e) => {
+            if (deleteDisabled) {
+              e.preventDefault(); // Prevent the dropdown from closing
+            }
+          }}
         >
           {deleteDisabled ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="pointer flex gap-2 text-[#B10F41]">
-                  <RiDeleteBinLine className="h-3.5 w-3.5" />
-                  Delete view
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                You can&apos;t delete a view when it&apos; the only grid view
-                left in the table
-              </TooltipContent>
-            </Tooltip>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex w-full gap-2 text-[#B10F41]">
+                    <RiDeleteBinLine className="h-3.5 w-3.5" />
+                    Delete view
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  You can&apos;t delete a view when it&apos;s the only grid view
+                  left in the table
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           ) : (
             <button
               onClick={() => deleteView.mutate({ id: view.id })}

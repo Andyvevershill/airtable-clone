@@ -93,7 +93,7 @@ export const rowsRouter = createTRPCRouter({
       const tableRows = await ctx.db
         .select({
           id: rows.id,
-          tableid: rows.tableId,
+          tableId: rows.tableId,
         })
         .from(rows)
         .where(finalWhere)

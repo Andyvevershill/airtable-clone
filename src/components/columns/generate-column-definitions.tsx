@@ -32,10 +32,6 @@ export function generateColumnDefinitions(
       onCellUpdate: onCellEdit,
     },
 
-    // enableSorting: true,
-    // enableColumnFilter: true,
-    // enableHiding: true,
-
     header: ({ column }) => (
       <DataTableColumnHeader
         column={column}
@@ -54,7 +50,6 @@ export function transformRowsToTanStackFormat(
   return rows.map((row) => {
     const transformedRow: TransformedRow = {
       _rowId: row.id,
-      _position: row.position,
       _cells: {},
       _cellMap: {},
     };

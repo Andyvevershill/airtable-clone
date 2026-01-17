@@ -12,7 +12,6 @@ export type RowWithCells = Row & { cells: Cell[] };
 
 export type TransformedRow = {
   _rowId: string;
-  _position: number;
   _cells: Record<string, string | number | null>;
   _cellMap: Record<string, string>;
 };

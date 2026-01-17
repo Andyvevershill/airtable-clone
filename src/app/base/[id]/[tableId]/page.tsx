@@ -79,13 +79,20 @@ export default function TablePage() {
     const matches = rowsData.pages.flatMap(
       (page) => page.searchMatches.matches,
     );
-    setGlobalSearchLength(matches.length);
-    setIsSearching(false);
 
     return {
       matches,
     };
   }, [rowsData?.pages]);
+
+  useEffect(() => {
+    setGlobalSearchLength(globalSearchMatches.matches.length);
+    setIsSearching(false);
+  }, [
+    globalSearchMatches.matches.length,
+    setGlobalSearchLength,
+    setIsSearching,
+  ]);
 
   if (isLoading) {
     return null;

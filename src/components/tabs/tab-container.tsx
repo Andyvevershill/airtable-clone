@@ -6,6 +6,7 @@ import type { BaseWithTables } from "@/types/base";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState, type CSSProperties } from "react";
+import { IoChevronDown } from "react-icons/io5";
 import { RiArrowDownSLine } from "react-icons/ri";
 import { TableTabDropdown } from "../dropdowns/table-tab-dropdown";
 import { AddTableButton } from "./add-table-button";
@@ -76,8 +77,9 @@ export default function TabContainer({ base }: Props) {
           setTables={setTables}
         />
       </div>
-      <div className="flex flex-row items-center justify-end">
-        <p>test</p>
+      <div className="pointer mr-4 flex flex-row items-center justify-end gap-2 text-[13px] text-gray-600">
+        <p>Tools</p>
+        <IoChevronDown />
       </div>
     </div>
   );

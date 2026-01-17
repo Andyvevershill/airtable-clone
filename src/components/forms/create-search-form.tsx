@@ -67,7 +67,7 @@ export function CreateSearchForm() {
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger className="pointer flex items-center gap-2">
+      <DropdownMenuTrigger asChild className="pointer flex items-center gap-2">
         <Button
           variant="ghost"
           size="sm"

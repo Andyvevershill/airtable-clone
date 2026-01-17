@@ -5,14 +5,14 @@ interface GlobalSearchStore {
   activeMatchIndex: number;
   globalSearchLength: number;
   isSearching: boolean;
-  hasSearched: boolean; // Add this
+  hasSearched: boolean;
 
   setGlobalSearch: (value: string) => void;
   setActiveMatchIndex: (index: number) => void;
   setGlobalSearchLength: (length: number) => void;
   setIsSearching: (v: boolean) => void;
-  setHasSearched: (v: boolean) => void; // Add this
-  resetSearch: () => void; // Add this
+  setHasSearched: (v: boolean) => void;
+  resetSearch: () => void;
 }
 
 export const useGlobalSearchStore = create<GlobalSearchStore>((set) => ({
@@ -20,12 +20,12 @@ export const useGlobalSearchStore = create<GlobalSearchStore>((set) => ({
   activeMatchIndex: 0,
   globalSearchLength: 0,
   isSearching: false,
-  hasSearched: false, // Add this
+  hasSearched: false,
 
   setGlobalSearch: (globalSearch) =>
     set({
       globalSearch,
-      hasSearched: true, // Mark that a search was performed
+      hasSearched: true,
     }),
 
   setIsSearching: (isSearching) => set({ isSearching }),

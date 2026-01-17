@@ -25,9 +25,9 @@ interface Props {
 }
 
 const items = [
-  { text: "Colour", icon: <PaintBucket /> },
-  { icon: <MdFormatLineSpacing /> },
-  { text: "Share and sync", icon: <CiShare1 /> },
+  { id: 1, text: "Colour", icon: <PaintBucket /> },
+  { id: 2, icon: <MdFormatLineSpacing /> },
+  { id: 3, text: "Share and sync", icon: <CiShare1 /> },
 ];
 
 export function TableToolbar({ table, sideBarState: [open, setOpen] }: Props) {
@@ -82,7 +82,7 @@ export function TableToolbar({ table, sideBarState: [open, setOpen] }: Props) {
 
           {items.map((item) => (
             <Button
-              key={item.text}
+              key={item.id}
               variant="ghost"
               className="pointer h-6.5 rounded-sm"
               style={{ fontWeight: 450 }}
