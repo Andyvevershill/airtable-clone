@@ -226,7 +226,7 @@ export function Table({
         <div className="relative inline-block min-w-full pr-16 align-top">
           <div className="pointer-events-none sticky top-0 z-40">
             <div
-              className="pointer-events-auto absolute top-0 flex h-9 w-23.5 items-center justify-center border-b border-l border-gray-200 bg-white shadow-[inset_0_-1px_0_0_rgb(229,231,235)] hover:bg-gray-50"
+              className="pointer-events-auto absolute top-0 flex h-[28px] w-23.5 items-center justify-center border-b border-l border-gray-200 bg-white shadow-[inset_0_-1px_0_0_rgb(229,231,235)] hover:bg-gray-50"
               style={{ left: tableWidth }}
             >
               <CreateColumnDropdown tableId={tableId} />

@@ -41,6 +41,7 @@ function AddRowButton({ tableId, sorting, filters, columns }: Props) {
         const newRow = {
           id: tempRowId,
           tableId,
+          position: old.pages[0]?.items.length ?? 0,
           cells: [],
         };
 
