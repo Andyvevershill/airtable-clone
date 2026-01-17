@@ -1,6 +1,6 @@
 "use client";
 
-import { useLoadingViewStore } from "@/app/stores/use-loading-view-store";
+import { useLoadingStore } from "@/app/stores/use-loading-store";
 import { Button } from "@/components/ui/button";
 import type { TransformedRow } from "@/types";
 import type { Table } from "@tanstack/react-table";
@@ -31,7 +31,7 @@ const items = [
 ];
 
 export function TableToolbar({ table, sideBarState: [open, setOpen] }: Props) {
-  const { isLoadingView } = useLoadingViewStore();
+  const { isLoadingView } = useLoadingStore();
 
   return (
     <div className="flex h-[47px] items-center justify-between border-b border-gray-200 bg-white px-3">

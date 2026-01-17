@@ -15,15 +15,11 @@ export function TableFooter({
   sorting,
   filters,
 }: TableFooterProps) {
-  const getColumnSpan = (): number => {
-    return columns.length + 1;
-  };
-
   return (
     <tfoot>
       <tr>
         <td
-          colSpan={getColumnSpan()}
+          colSpan={columns.length + 1}
           className="pointer h-8 border border-gray-200 bg-white p-0"
         >
           <AddRowButton

@@ -5,7 +5,6 @@ import { faker } from "@faker-js/faker";
 import {
   and,
   asc,
-  desc,
   eq,
   gt,
   ilike,
@@ -33,13 +32,14 @@ export const rowsRouter = createTRPCRouter({
         const cellValueSubquery =
           sort.type === "number"
             ? sql`CAST((SELECT value FROM cell WHERE row_id = row.id AND column_id = ${sort.columnId} LIMIT 1) AS NUMERIC)`
-            : sql`(SELECT value FROM cell WHERE row_id = row.id AND column_id = ${sort.columnId} LIMIT 1)`;
+            : sql`LOWER((SELECT value FROM cell WHERE row_id = row.id AND column_id = ${sort.columnId} LIMIT 1))`;
 
-        orderByClauses.push(
-          sort.direction === "desc"
-            ? desc(cellValueSubquery)
-            : asc(cellValueSubquery),
-        );
+        // Nulls last for both
+        if (sort.direction === "desc") {
+          orderByClauses.push(sql`${cellValueSubquery} DESC NULLS LAST`);
+        } else {
+          orderByClauses.push(sql`${cellValueSubquery} ASC NULLS LAST`);
+        }
       }
 
       orderByClauses.push(asc(rows.position));

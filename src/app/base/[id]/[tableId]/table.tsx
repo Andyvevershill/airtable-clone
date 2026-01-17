@@ -16,23 +16,9 @@ import type {
   Table,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import {
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type RefObject,
-} from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
-const TABLE_CONFIG = {
-  MIN_COL_WIDTH: 175,
-  ROW_HEIGHT: 32,
-  GUTTER_WIDTH: 70,
-  OVERSCAN: 80,
-  PREFETCH_THRESHOLD: 7500,
-  SCROLL_THROTTLE_MS: 150,
-} as const;
+/* ---------------- helpers ---------------- */
 
 function throttle<T extends (...args: Parameters<T>) => ReturnType<T>>(
   func: T,
@@ -48,71 +34,23 @@ function throttle<T extends (...args: Parameters<T>) => ReturnType<T>>(
   };
 }
 
-// SEARCH MATCH FUNCTIONS
-
-function createMatchedColumnSet(matches: GlobalSearchMatches["matches"]) {
-  const set = new Set<string>();
-  for (const match of matches) {
-    if (match.type === "column") {
-      set.add(match.columnId);
-    }
-  }
-  return set;
-}
-
-function createMatchedCellSet(matches: GlobalSearchMatches["matches"]) {
-  const set = new Set<string>();
-  for (const match of matches) {
-    if (match.type === "cell") {
-      set.add(match.cellId);
-    }
-  }
-  return set;
-}
-
-function createMatchedRowIndexSet(matches: GlobalSearchMatches["matches"]) {
-  const set = new Set<number>();
-  for (const match of matches) {
-    if (match.type === "cell") {
-      set.add(match.rowIndex);
-    }
-  }
-  return set;
-}
-
-// HOOKS
-
-function useTableWidth(tableRef: RefObject<HTMLTableElement | null>) {
-  const [tableWidth, setTableWidth] = useState(0);
-
-  useLayoutEffect(() => {
-    if (!tableRef.current) return;
-
-    const update = () => setTableWidth(tableRef.current!.offsetWidth);
-    update();
-
-    const observer = new ResizeObserver(update);
-    observer.observe(tableRef.current);
-
-    return () => observer.disconnect();
-  }, []);
-
-  return tableWidth;
-}
-
 interface Props {
   table: Table<TransformedRow>;
   tableId: string;
   columns: ColumnType[];
   rowCount: number;
   transformedRows: TransformedRow[];
+
   fetchNextPage: () => void;
   hasNextPage?: boolean;
   isFetchingNextPage: boolean;
+
   sorting: SortingState;
   filters: ColumnFiltersState;
   globalSearchMatches: GlobalSearchMatches;
 }
+
+const ROW_HEIGHT = 32;
 
 export function Table({
   table,
@@ -129,63 +67,75 @@ export function Table({
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLTableElement>(null);
-  const lastFetchedIndexRef = useRef<number>(-1);
-
+  const [tableWidth, setTableWidth] = useState(0);
   const { activeMatchIndex } = useGlobalSearchStore();
   const setIsLoading = useLoadingStore((state) => state.setIsLoading);
+
+  const lastFetchedIndex = useRef<number>(-1);
   const activeMatch = globalSearchMatches.matches[activeMatchIndex];
-  const isFiltering = table.getState().columnFilters.length > 0;
-  const effectiveRowCount = isFiltering ? transformedRows.length : rowCount;
-
-  //  Calculate table container width
-  const getContainerWidth = (): string => {
-    return tableWidth ? `${tableWidth + 200}px` : "100%";
-  };
-
-  const tableWidth = useTableWidth(tableRef);
-
-  const rowVirtualizer = useVirtualizer({
-    count: effectiveRowCount,
-    getScrollElement: () => scrollRef.current,
-    estimateSize: () => TABLE_CONFIG.ROW_HEIGHT,
-    overscan: TABLE_CONFIG.OVERSCAN,
-  });
-
-  const matchedColumnIdSet = useMemo(
-    () => createMatchedColumnSet(globalSearchMatches.matches),
-    [globalSearchMatches.matches],
-  );
-
-  const matchedCellIdSet = useMemo(
-    () => createMatchedCellSet(globalSearchMatches.matches),
-    [globalSearchMatches.matches],
-  );
-
-  const matchedRowIndexSet = useMemo(
-    () => createMatchedRowIndexSet(globalSearchMatches.matches),
-    [globalSearchMatches.matches],
-  );
-
-  const { handleTableKeyDown } = useTableKeyboardNavigation({
-    tableRef,
-    totalRows: transformedRows.length,
-    totalCols: columns.length,
-  });
 
   useEffect(() => {
     setIsLoading(isFetchingNextPage);
   }, [isFetchingNextPage, setIsLoading]);
 
-  //  Active Match Scrolling
+  useLayoutEffect(() => {
+    if (!tableRef.current) return;
+    const update = () => setTableWidth(tableRef.current!.offsetWidth);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(tableRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  const isFiltering = table.getState().columnFilters.length > 0;
+  const effectiveRowCount = isFiltering ? transformedRows.length : rowCount;
+
+  const rowVirtualizer = useVirtualizer({
+    count: effectiveRowCount,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 80,
+  });
+
+  const matchedColumnIdSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const match of globalSearchMatches.matches) {
+      if (match.type === "column") {
+        set.add(match.columnId);
+      }
+    }
+    return set;
+  }, [globalSearchMatches.matches]);
+
+  const matchedCellIdSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const match of globalSearchMatches.matches) {
+      if (match.type === "cell") {
+        set.add(match.cellId);
+      }
+    }
+    return set;
+  }, [globalSearchMatches.matches]);
+
+  const matchedRowIndexSet = useMemo(() => {
+    const set = new Set<number>();
+    for (const match of globalSearchMatches.matches) {
+      if (match.type === "cell") {
+        set.add(match.rowIndex);
+      }
+    }
+    return set;
+  }, [globalSearchMatches.matches]);
+
   useEffect(() => {
     if (!activeMatch || !scrollRef.current || !tableRef.current) return;
 
     const scrollToMatch = () => {
       if (activeMatch.type === "cell") {
-        const activeRowIndex = activeMatch.rowIndex;
+        const rowIndex = activeMatch.rowIndex;
 
-        if (activeMatch.rowIndex !== -1) {
-          rowVirtualizer.scrollToIndex(activeRowIndex, {
+        if (rowIndex !== -1) {
+          rowVirtualizer.scrollToIndex(rowIndex, {
             align: "center",
             behavior: "smooth",
           });
@@ -221,7 +171,6 @@ export function Table({
     return () => clearTimeout(timeoutId);
   }, [activeMatch, activeMatchIndex, transformedRows, rowVirtualizer]);
 
-  //Infinite Scroll Prefetch
   useEffect(() => {
     const scrollElement = scrollRef.current;
     if (!scrollElement) return;
@@ -233,22 +182,18 @@ export function Table({
       if (items.length < 5) return;
 
       const lastIndex = items[items.length - 1]?.index ?? 0;
-      const prefetchThreshold =
-        transformedRows.length - TABLE_CONFIG.PREFETCH_THRESHOLD;
+      const prefetchThreshold = transformedRows.length - 7500;
 
       if (lastIndex >= prefetchThreshold) {
-        if (lastFetchedIndexRef.current !== lastIndex) {
-          lastFetchedIndexRef.current = lastIndex;
+        if (lastFetchedIndex.current !== lastIndex) {
+          lastFetchedIndex.current = lastIndex;
           fetchNextPage();
         }
       }
     };
 
     checkPrefetch();
-    const throttledCheck = throttle(
-      checkPrefetch,
-      TABLE_CONFIG.SCROLL_THROTTLE_MS,
-    );
+    const throttledCheck = throttle(checkPrefetch, 150);
     scrollElement.addEventListener("scroll", throttledCheck);
 
     return () => {
@@ -262,19 +207,23 @@ export function Table({
     fetchNextPage,
   ]);
 
-  //  Reset Prefetch Tracking
   useEffect(() => {
-    lastFetchedIndexRef.current = -1;
+    lastFetchedIndex.current = -1;
   }, [transformedRows.length]);
+
+  const { handleTableKeyDown } = useTableKeyboardNavigation({
+    tableRef,
+    totalRows: transformedRows.length,
+    totalCols: columns.length + 1,
+  });
 
   return (
     <div
       className="relative flex h-full w-full flex-col bg-slate-100"
-      style={{ width: getContainerWidth() }}
+      style={{ width: tableWidth ? `${tableWidth + 200}px` : "100%" }}
     >
       <div ref={scrollRef} className="relative flex-1 overflow-auto">
         <div className="relative inline-block min-w-full pr-16 align-top">
-          {/* Add Column Button - Sticky positioned outside table */}
           <div className="pointer-events-none sticky top-0 z-40">
             <div
               className="pointer-events-auto absolute top-0 flex h-9 w-23.5 items-center justify-center border-b border-l border-gray-200 bg-white shadow-[inset_0_-1px_0_0_rgb(229,231,235)] hover:bg-gray-50"
@@ -301,7 +250,6 @@ export function Table({
               activeMatch={activeMatch}
               matchedCellIdSet={matchedCellIdSet}
               matchedRowIndexSet={matchedRowIndexSet}
-              isFetchingNextPage={isFetchingNextPage}
             />
 
             <TableFooter

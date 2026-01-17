@@ -1,5 +1,6 @@
 "use client";
 
+import { useLoadingStore } from "@/app/stores/use-loading-store";
 import { useSavingStore } from "@/app/stores/use-saving-store";
 import type { View } from "@/server/db/schemas";
 import { api } from "@/trpc/react";
@@ -32,6 +33,7 @@ export default function ViewButton({
 }: Props) {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const setIsSaving = useSavingStore((s) => s.setIsSaving);
+  const { setIsLoadingView } = useLoadingStore();
 
   const utils = api.useUtils();
 
@@ -90,6 +92,7 @@ export default function ViewButton({
   });
   function handleSetActive() {
     if (view.isActive) return;
+    setIsLoadingView(true);
     handleActiveChange.mutate({
       id: view.id,
       tableId: view.tableId,
@@ -105,7 +108,7 @@ export default function ViewButton({
         e.stopPropagation();
         setEditViewId(view.id);
       }}
-      className={`pointer flex h-9 w-full items-center gap-2 rounded px-2 text-[13px] ${
+      className={`pointer flex h-[32.25px] w-full items-center gap-2 rounded px-2 text-[13px] ${
         view.isActive ? "bg-gray-100" : ""
       }`}
     >

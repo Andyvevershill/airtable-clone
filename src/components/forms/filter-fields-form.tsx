@@ -1,5 +1,6 @@
 "use client";
 
+import { useLoadingStore } from "@/app/stores/use-loading-store";
 import {
   Select,
   SelectContent,
@@ -36,6 +37,7 @@ export default function FilterFieldsForm({
   onApply,
   onClose,
 }: Props) {
+  const { setIsFiltering } = useLoadingStore();
   const [filters, setFilters] = useState<FilterRule[]>(() => {
     if (!currentFilters.length) {
       return [];
@@ -73,8 +75,6 @@ export default function FilterFieldsForm({
   const [searchColumn, setSearchColumn] = useState("");
   const [searchConditions, setSearchConditions] = useState("");
 
-  /* ---------------- helpers ---------------- */
-
   const getConditions = (fieldId: string | null) => {
     const column = columns.find((c) => c.id === fieldId);
     const type = column?.columnDef.meta?.dataType ?? "string";
@@ -105,8 +105,6 @@ export default function FilterFieldsForm({
     const column = columns.find((c) => c.id === fieldId);
     return column?.columnDef.meta?.dataType === "number" ? "number" : "text";
   };
-
-  /* ---------------- mutations ---------------- */
 
   const editFilter = (updated: FilterRule) => {
     setFilters((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
@@ -145,8 +143,6 @@ export default function FilterFieldsForm({
     ]);
   };
 
-  /* ---------------- apply ---------------- */
-
   const handleApply = () => {
     const validFilters: ColumnFiltersState = filters
       .filter((f) => f.fieldId && f.operator)
@@ -158,6 +154,7 @@ export default function FilterFieldsForm({
         },
       }));
 
+    setIsFiltering(true);
     onApply(validFilters);
     onClose();
   };
@@ -166,8 +163,6 @@ export default function FilterFieldsForm({
     const label = col.columnDef.meta?.label ?? col.id;
     return label.toLowerCase().includes(searchColumn.toLowerCase());
   });
-
-  /* ---------------- render ---------------- */
 
   return (
     <div className="flex h-full w-full flex-col">

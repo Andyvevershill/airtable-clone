@@ -45,18 +45,15 @@ export default function TabContainer({ base }: Props) {
               href={`/base/${base.id}/${table.id}`}
               onMouseEnter={() => {
                 if (!isActive) {
-                  // preload the core data of chosen tab
                   void utils.table.getTableWithViews.prefetch({
                     tableId: table.id,
                   });
-                  void utils.column.getColumns.prefetch({
-                    tableId: table.id,
-                  });
+                  void utils.column.getColumns.prefetch({ tableId: table.id });
                 }
               }}
-              className={`flex h-full items-center gap-2 rounded-t-xs border-r px-4 py-1 text-[13px] transition-colors ${
+              className={`relative flex h-full items-center gap-2 rounded-t-sm px-4 py-1 text-[13px] transition-colors after:absolute after:top-1/2 after:right-0 after:h-1/3 after:w-px after:-translate-y-1/2 after:bg-[var(--tab-hover-darken)] ${
                 isActive
-                  ? "bg-white font-normal"
+                  ? "bg-white font-normal after:hidden"
                   : "text-gray-500 hover:bg-[var(--tab-hover-darken)]"
               }`}
             >

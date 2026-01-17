@@ -1,6 +1,6 @@
 "use client";
 
-import { useLoadingViewStore } from "@/app/stores/use-loading-view-store";
+import { useLoadingStore } from "@/app/stores/use-loading-store";
 import {
   generateColumnDefinitions,
   transformRowsToTanStackFormat,
@@ -59,8 +59,7 @@ export default function TableContainer({
   globalSearchMatches,
 }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { isLoadingView, setIsLoadingView } = useLoadingViewStore();
-  const [rowSelection, setRowSelection] = useState({});
+  const { isLoadingView, isFiltering, setIsLoadingView } = useLoadingStore();
   const [columnVisibility, onColumnVisibilityChange] =
     useState<VisibilityState>({});
   const [localColumns, setLocalColumns] = useState<ColumnType[]>(columns);
@@ -84,15 +83,13 @@ export default function TableContainer({
   useEffect(() => {
     if (!activeView?.id) return;
 
-    setIsLoadingView(true);
-
     applyViewToTableState(activeView, {
       onSortingChange,
       onColumnFiltersChange,
       onColumnVisibilityChange,
     });
 
-    const MIN_DELAY = 500;
+    const MIN_DELAY = 200;
 
     const timer = setTimeout(() => {
       setIsLoadingView(false);
@@ -132,7 +129,6 @@ export default function TableContainer({
     columns: tanstackColumns,
     getCoreRowModel: getCoreRowModel(),
     getRowId: (row) => row._rowId,
-    onRowSelectionChange: setRowSelection,
 
     manualSorting: true,
     manualFiltering: true,
@@ -169,19 +165,27 @@ export default function TableContainer({
 
         <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
           {/* TABLE */}
-          <div className="flex-1 overflow-x-auto">
+          {/* TABLE */}
+          <div className="relative flex-1 overflow-x-auto">
             {isLoadingView ? (
-              <div className="flex h-full w-full items-center justify-center">
-                <div className="flex flex-col items-center gap-6 text-gray-600">
+              <div className="inset-0 z-10 flex h-full w-full items-center justify-center bg-slate-100">
+                <div className="flex flex-col items-center justify-center gap-6 text-gray-600">
                   <LuLoaderPinwheel size={22} className="animate-spin" />
                   <p className="text-sm text-gray-600">Loading this view...</p>
+                </div>
+              </div>
+            ) : isFiltering ? (
+              <div className="inset-0 z-10 flex h-full w-full items-center justify-center bg-slate-100">
+                <div className="flex flex-col items-center justify-center gap-6 text-gray-600">
+                  <LuLoaderPinwheel size={22} className="animate-spin" />
+                  <p className="text-sm text-gray-600">Filtering fields...</p>
                 </div>
               </div>
             ) : rowsWithCells.length === 0 && columnFilters.length > 0 ? (
               <div className="flex h-full items-center justify-center p-8 text-center">
                 <div className="max-w-md">
                   <h3 className="text-md font-medium text-gray-800">
-                    Displaying filtered results
+                    All records are filtered
                   </h3>
 
                   <button

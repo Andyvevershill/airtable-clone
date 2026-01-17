@@ -17,7 +17,7 @@ import TableContainer from "./table-container";
 
 export default function TablePage() {
   const { tableId } = useParams<{ tableId: string }>();
-  const { setIsLoading } = useLoadingStore();
+  const { setIsLoading, setIsFiltering } = useLoadingStore();
   const { setGlobalSearchLength, setIsSearching } = useGlobalSearchStore();
   const { globalSearch } = useGlobalSearchStore();
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -69,6 +69,17 @@ export default function TablePage() {
     () => rowsData?.pages?.flatMap((page) => page.items) ?? [],
     [rowsData],
   );
+
+  // Track when filtering starts and stops
+  useEffect(() => {
+    if (filters.length > 0 && isFetching) {
+      // Filtering has started
+      setIsFiltering(true);
+    } else if (!isFetching) {
+      // Filtering has finished (we have results or no results)
+      setIsFiltering(false);
+    }
+  }, [filters.length, isFetching, setIsFiltering]);
 
   // transform search matches into readable format
   const globalSearchMatches = useMemo(() => {
