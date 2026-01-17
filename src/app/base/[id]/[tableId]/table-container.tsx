@@ -130,6 +130,7 @@ export default function TableContainer({
     data: localRows,
     columns: tanstackColumns,
     getCoreRowModel: getCoreRowModel(),
+    getRowId: (row) => row._rowId,
 
     manualSorting: true,
     manualFiltering: true,

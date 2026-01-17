@@ -6,8 +6,6 @@ const cellSchema = z.object({
   columnId: z.string(),
 
   value: z.string().nullable(),
-
-  updatedAt: z.date().nullable(),
 });
 
 export type Cell = z.infer<typeof cellSchema>;

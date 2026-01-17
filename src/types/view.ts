@@ -56,14 +56,15 @@ export const viewInputSchema = z.object({
 
 export type ViewInput = z.infer<typeof viewInputSchema>;
 
-const globalSearchMatchesSchema = z.object({
-  columnIds: z.array(z.string()),
-  cells: z.array(
-    z.object({
-      rowId: z.string(),
-      cellId: z.string(),
-    }),
-  ),
-});
+export type SearchMatch =
+  | { type: "column"; columnId: string }
+  | {
+      type: "cell";
+      cellId: string;
+      rowId: string;
+      columnId: string;
+    };
 
-export type GlobalSearchMatches = z.infer<typeof globalSearchMatchesSchema>;
+export type GlobalSearchMatches = {
+  matches: SearchMatch[];
+};

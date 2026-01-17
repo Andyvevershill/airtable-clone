@@ -1,6 +1,5 @@
 "use client";
 
-import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -11,6 +10,7 @@ import {
 import type { TransformedRow } from "@/types";
 import type { Column, ColumnFiltersState } from "@tanstack/react-table";
 import { HelpCircle } from "lucide-react";
+import Image from "next/image";
 import { useState } from "react";
 import { AiOutlinePlus } from "react-icons/ai";
 import { PiDotsSixVertical } from "react-icons/pi";
@@ -38,14 +38,7 @@ export default function FilterFieldsForm({
 }: Props) {
   const [filters, setFilters] = useState<FilterRule[]>(() => {
     if (!currentFilters.length) {
-      return [
-        {
-          id: crypto.randomUUID(),
-          fieldId: null,
-          operator: null,
-          value: null,
-        },
-      ];
+      return [];
     }
 
     return currentFilters.map((f) => {
@@ -179,167 +172,189 @@ export default function FilterFieldsForm({
   return (
     <div className="flex h-full w-full flex-col">
       <div className="flex h-full w-full flex-col gap-2 px-4 py-3">
-        <div className="flex flex-row items-center gap-1 text-gray-500">
+        <div className="flex flex-row items-center gap-1 text-gray-600">
           <p className="text-[13px] font-normal">Filter</p>
         </div>
 
-        <DropdownMenuSeparator />
+        <div className="flex h-8 w-full flex-row items-center justify-start rounded-sm border border-gray-100 px-2 text-[13px] text-gray-600">
+          <Image
+            src="/green-icon.png"
+            alt="Login illustration"
+            width={26}
+            height={26}
+            priority
+          />
+          <p className="ml-2 text-gray-500">Describe what you want to see</p>
+        </div>
 
-        <p className="mt-2 text-[13px] font-normal text-gray-500">
-          In this view, show records
-        </p>
+        {filters.length === 0 ? (
+          <div className="flex flex-row items-center justify-start gap-2">
+            <p className="mt-2 text-[13px] font-normal text-gray-400">
+              No filter conditions are applied
+            </p>
+            <HelpCircle size={16} className="text-gray-400" />
+          </div>
+        ) : (
+          <>
+            <p className="mt-2 text-[13px] font-normal text-gray-400">
+              In this view, show records
+            </p>
 
-        {filters.map((filter) => {
-          const conditions = getConditions(filter.fieldId);
-          const conditionsArr = conditions.filter((c) =>
-            c.label.toLowerCase().includes(searchConditions.toLowerCase()),
-          );
+            {filters.map((filter) => {
+              const conditions = getConditions(filter.fieldId);
+              const conditionsArr = conditions.filter((c) =>
+                c.label.toLowerCase().includes(searchConditions.toLowerCase()),
+              );
 
-          const selectedColumn = columns.find((c) => c.id === filter.fieldId);
+              const selectedColumn = columns.find(
+                (c) => c.id === filter.fieldId,
+              );
 
-          const fieldLabel =
-            selectedColumn?.columnDef.meta?.label ??
-            filter.fieldId ??
-            "Select a field";
+              const fieldLabel =
+                selectedColumn?.columnDef.meta?.label ??
+                filter.fieldId ??
+                "Select a field";
 
-          return (
-            <div
-              key={filter.id}
-              className="my-1 ml-4 flex flex-row items-center text-[13px]"
-            >
-              <div className="w-25">
-                <p className="mr-3">
-                  {filters[0] === filter ? "Where" : "and"}
-                </p>
-              </div>
-
-              {/* Field */}
-              <Select
-                value={filter.fieldId ?? undefined}
-                onValueChange={(value) =>
-                  editFilter({
-                    ...filter,
-                    fieldId: value,
-                    operator: null,
-                    value: null,
-                  })
-                }
-              >
-                <SelectTrigger
-                  size="sm"
-                  className="w-[130px] flex-shrink-0 rounded-none border-r-0 text-[13px]"
+              return (
+                <div
+                  key={filter.id}
+                  className="my-1 ml-4 flex flex-row items-center text-[13px]"
                 >
-                  <SelectValue placeholder="Select a field">
-                    {fieldLabel}
-                  </SelectValue>
-                </SelectTrigger>
-
-                <SelectContent
-                  align="start"
-                  position="popper"
-                  className="rounded-none"
-                  onCloseAutoFocus={(e) => e.preventDefault()}
-                >
-                  <div className="px-2">
-                    <input
-                      value={searchColumn}
-                      onChange={(e) => setSearchColumn(e.target.value)}
-                      onKeyDown={(e) => e.stopPropagation()}
-                      placeholder="Find a field"
-                      className="w-full rounded-xs border-none px-2 py-1.5 text-[13px] outline-none"
-                    />
+                  <div className="w-25">
+                    <p className="mr-3">
+                      {filters[0] === filter ? "Where" : "and"}
+                    </p>
                   </div>
 
-                  {filteredColumns.map((column) => {
-                    const label = column.columnDef.meta?.label ?? column.id;
-                    return (
-                      <SelectItem
-                        key={column.id}
-                        value={column.id}
-                        className="truncate text-[13px]"
-                      >
-                        {label}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-
-              {/* Operator */}
-              <Select
-                value={filter.operator ?? undefined}
-                onValueChange={(value) =>
-                  editFilter({ ...filter, operator: value })
-                }
-              >
-                <SelectTrigger
-                  size="sm"
-                  className="w-[130px] flex-shrink-0 rounded-none text-[13px]"
-                >
-                  <SelectValue placeholder="Select operator" />
-                </SelectTrigger>
-
-                <SelectContent
-                  align="start"
-                  position="popper"
-                  className="rounded-none"
-                  onCloseAutoFocus={(e) => e.preventDefault()}
-                >
-                  <div className="px-2">
-                    <input
-                      value={searchConditions}
-                      onChange={(e) => setSearchConditions(e.target.value)}
-                      onKeyDown={(e) => e.stopPropagation()}
-                      placeholder="Find an operator"
-                      className="w-full rounded-xs border-none px-2 py-1.5 text-[13px] outline-none"
-                    />
-                  </div>
-
-                  {conditionsArr.map((condition) => (
-                    <SelectItem
-                      key={condition.value}
-                      value={condition.value}
-                      className="truncate text-[13px]"
+                  {/* Field */}
+                  <Select
+                    value={filter.fieldId ?? undefined}
+                    onValueChange={(value) =>
+                      editFilter({
+                        ...filter,
+                        fieldId: value,
+                        operator: null,
+                        value: null,
+                      })
+                    }
+                  >
+                    <SelectTrigger
+                      size="sm"
+                      className="w-[130px] flex-shrink-0 rounded-none border-r-0 text-[13px]"
                     >
-                      {condition.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                      <SelectValue placeholder="Select a field">
+                        {fieldLabel}
+                      </SelectValue>
+                    </SelectTrigger>
 
-              {/* Value */}
-              <input
-                type={getInputType(filter.fieldId)}
-                value={filter.value ?? ""}
-                disabled={shouldDisableInput(filter.operator)}
-                onChange={(e) =>
-                  editFilter({
-                    ...filter,
-                    value:
-                      getInputType(filter.fieldId) === "number"
-                        ? Number(e.target.value)
-                        : e.target.value,
-                  })
-                }
-                placeholder={
-                  shouldDisableInput(filter.operator) ? "" : "Enter a value"
-                }
-                className="h-8 w-[150px] flex-shrink-0 rounded-none border-y border-gray-200 px-2 text-[13px] outline-none focus:border-2 focus:border-blue-600"
-              />
+                    <SelectContent
+                      align="start"
+                      position="popper"
+                      className="rounded-none"
+                      onCloseAutoFocus={(e) => e.preventDefault()}
+                    >
+                      <div className="px-2">
+                        <input
+                          value={searchColumn}
+                          onChange={(e) => setSearchColumn(e.target.value)}
+                          onKeyDown={(e) => e.stopPropagation()}
+                          placeholder="Find a field"
+                          className="w-full rounded-xs border-none px-2 py-1.5 text-[13px] outline-none"
+                        />
+                      </div>
 
-              <button
-                onClick={() => removeFilter(filter.id)}
-                className="pointer flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-none border border-r-0 border-gray-200 hover:bg-gray-200"
-              >
-                <RiDeleteBinLine className="h-4 w-4 text-gray-600" />
-              </button>
+                      {filteredColumns.map((column) => {
+                        const label = column.columnDef.meta?.label ?? column.id;
+                        return (
+                          <SelectItem
+                            key={column.id}
+                            value={column.id}
+                            className="truncate text-[13px]"
+                          >
+                            {label}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
 
-              <button className="pointer flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-none border border-gray-200 hover:bg-gray-200">
-                <PiDotsSixVertical className="h-4 w-4 text-gray-900" />
-              </button>
-            </div>
-          );
-        })}
+                  {/* Operator */}
+                  <Select
+                    value={filter.operator ?? undefined}
+                    onValueChange={(value) =>
+                      editFilter({ ...filter, operator: value })
+                    }
+                  >
+                    <SelectTrigger
+                      size="sm"
+                      className="w-[130px] flex-shrink-0 rounded-none text-[13px]"
+                    >
+                      <SelectValue placeholder="Select operator" />
+                    </SelectTrigger>
+
+                    <SelectContent
+                      align="start"
+                      position="popper"
+                      className="rounded-none"
+                      onCloseAutoFocus={(e) => e.preventDefault()}
+                    >
+                      <div className="px-2">
+                        <input
+                          value={searchConditions}
+                          onChange={(e) => setSearchConditions(e.target.value)}
+                          onKeyDown={(e) => e.stopPropagation()}
+                          placeholder="Find an operator"
+                          className="w-full rounded-xs border-none px-2 py-1.5 text-[13px] outline-none"
+                        />
+                      </div>
+
+                      {conditionsArr.map((condition) => (
+                        <SelectItem
+                          key={condition.value}
+                          value={condition.value}
+                          className="truncate text-[13px]"
+                        >
+                          {condition.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {/* Value */}
+                  <input
+                    type={getInputType(filter.fieldId)}
+                    value={filter.value ?? ""}
+                    disabled={shouldDisableInput(filter.operator)}
+                    onChange={(e) =>
+                      editFilter({
+                        ...filter,
+                        value:
+                          getInputType(filter.fieldId) === "number"
+                            ? Number(e.target.value)
+                            : e.target.value,
+                      })
+                    }
+                    placeholder={
+                      shouldDisableInput(filter.operator) ? "" : "Enter a value"
+                    }
+                    className="h-8 w-[150px] flex-shrink-0 rounded-none border-y border-gray-200 px-2 text-[13px] outline-none focus:border-2 focus:border-blue-600"
+                  />
+
+                  <button
+                    onClick={() => removeFilter(filter.id)}
+                    className="pointer flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-none border border-r-0 border-gray-200 hover:bg-gray-100"
+                  >
+                    <RiDeleteBinLine className="h-4 w-4 text-gray-600" />
+                  </button>
+
+                  <button className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-none border border-gray-200 hover:cursor-grab hover:bg-gray-100">
+                    <PiDotsSixVertical className="h-4 w-4 text-gray-900" />
+                  </button>
+                </div>
+              );
+            })}
+          </>
+        )}
       </div>
 
       <div className="flex w-full justify-between p-2">
@@ -349,7 +364,9 @@ export default function FilterFieldsForm({
             className="flex cursor-pointer items-center gap-1 hover:text-gray-900"
           >
             <AiOutlinePlus />
-            <p className="text-[13px]">Add condition</p>
+            <p className="text-[13px] font-[450] text-[#166ee1]">
+              Add condition
+            </p>
           </div>
 
           <div className="ml-2 flex cursor-pointer items-center gap-1 hover:text-gray-900">

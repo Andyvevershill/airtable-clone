@@ -126,7 +126,7 @@ export function EditViewDropdown({
             duplicate.mutate({
               id: view.id,
               newId: crypto.randomUUID(),
-              name: `${view.name} – duplicate`,
+              name: `${view.name} copy`,
             })
           }
         >

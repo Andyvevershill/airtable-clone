@@ -1,4 +1,3 @@
-import { useSavingStore } from "@/app/stores/use-saving-store";
 import {
   translateFiltersState,
   translateSortingState,
@@ -24,18 +23,11 @@ export function useViewUpdater(
   state: ViewState,
   columns: ColumnType[],
 ) {
-  const setIsSaving = useSavingStore((s) => s.setIsSaving);
   const utils = api.useUtils();
 
   const updateView = api.view.updateView.useMutation({
-    onMutate: () => {
-      setIsSaving(true);
-    },
     onSuccess: () => {
       void utils.table.getTableWithViews.invalidate({ tableId });
-    },
-    onSettled: () => {
-      setIsSaving(false);
     },
   });
 

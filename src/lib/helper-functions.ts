@@ -106,7 +106,6 @@ export function applyViewToTableState(
 
   callbacks.onColumnFiltersChange(filtersState);
 
-  // Visibility (hidden columns) — NO Object.fromEntries (avoids `any`)
   const visibilityState: VisibilityState = {};
 
   for (const colId of activeView.hidden ?? []) {

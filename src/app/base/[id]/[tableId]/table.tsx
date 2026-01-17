@@ -1,4 +1,5 @@
 import { useLoadingStore } from "@/app/stores/use-loading-store";
+import { useGlobalSearchStore } from "@/app/stores/use-search-store";
 import AddRowButton from "@/components/buttons/add-row-button";
 import { CreateColumnDropdown } from "@/components/dropdowns/create-column-dropdown";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,7 +15,7 @@ import {
   type Table,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 function throttle<T extends (...args: Parameters<T>) => ReturnType<T>>(
   func: T,
@@ -67,16 +68,16 @@ export function Table({
   const scrollRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLTableElement>(null);
   const [tableWidth, setTableWidth] = useState(0);
-
+  const { activeMatchIndex } = useGlobalSearchStore();
   const setIsLoading = useLoadingStore((state) => state.setIsLoading);
 
   const lastFetchedIndex = useRef<number>(-1);
+  const activeMatch = globalSearchMatches.matches[activeMatchIndex];
 
   useEffect(() => {
     setIsLoading(isFetchingNextPage);
   }, [isFetchingNextPage, setIsLoading]);
 
-  // for sticking the add col buttion to the side of the table
   useLayoutEffect(() => {
     if (!tableRef.current) return;
     const update = () => setTableWidth(tableRef.current!.offsetWidth);
@@ -96,7 +97,78 @@ export function Table({
     overscan: 80,
   });
 
-  // Prefetch logic on scroll
+  // UI changes for search results
+  const matchedColumnIdSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const match of globalSearchMatches.matches) {
+      if (match.type === "column") {
+        set.add(match.columnId);
+      }
+    }
+    return set;
+  }, [globalSearchMatches.matches]);
+
+  // UI changes for matches in cells
+  const matchedCellIdSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const match of globalSearchMatches.matches) {
+      if (match.type === "cell") {
+        set.add(match.cellId);
+      }
+    }
+    return set;
+  }, [globalSearchMatches.matches]);
+
+  useEffect(() => {
+    if (!activeMatch || !scrollRef.current || !tableRef.current) return;
+
+    const scrollToMatch = () => {
+      if (activeMatch.type === "cell") {
+        // For cell matches, scroll to the row
+        const rowIndex = transformedRows.findIndex(
+          (row) => row._rowId === activeMatch.rowId,
+        );
+
+        if (rowIndex !== -1) {
+          rowVirtualizer.scrollToIndex(rowIndex, {
+            align: "center",
+            behavior: "smooth",
+          });
+
+          // Also scroll horizontally to the column if needed
+          setTimeout(() => {
+            const cellElement = tableRef.current?.querySelector(
+              `[data-cell-id="${activeMatch.cellId}"]`,
+            );
+            if (cellElement && scrollRef.current) {
+              cellElement.scrollIntoView({
+                behavior: "smooth",
+                block: "nearest",
+                inline: "center",
+              });
+            }
+          }, 100);
+        }
+      } else if (activeMatch.type === "column") {
+        // For column matches, just scroll horizontally to the header
+        const headerElement = tableRef.current?.querySelector(
+          `th[data-column-id="${activeMatch.columnId}"]`,
+        );
+        if (headerElement && scrollRef.current) {
+          headerElement.scrollIntoView({
+            behavior: "smooth",
+            block: "nearest",
+            inline: "center",
+          });
+        }
+      }
+    };
+
+    // Small delay to ensure rendering is complete
+    const timeoutId = setTimeout(scrollToMatch, 50);
+    return () => clearTimeout(timeoutId);
+  }, [activeMatch, activeMatchIndex, transformedRows, rowVirtualizer]);
+
   useEffect(() => {
     const scrollElement = scrollRef.current;
     if (!scrollElement) return;
@@ -149,7 +221,7 @@ export function Table({
       className="relative flex h-full w-full flex-col bg-slate-100"
       style={{ width: tableWidth ? `${tableWidth + 200}px` : "100%" }}
     >
-      <div ref={scrollRef} className="relative flex-1">
+      <div ref={scrollRef} className="relative flex-1 overflow-auto">
         <div className="relative inline-block min-w-full pr-16 align-top">
           <div className="pointer-events-none sticky top-0 z-40">
             <div
@@ -168,38 +240,44 @@ export function Table({
             <thead className="sticky top-0 z-20 bg-white">
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <th
-                      key={header.id}
-                      className={cn(
-                        "relative overflow-hidden border-r border-gray-200 bg-white px-3 py-2 text-left text-[13px] font-medium text-gray-700 shadow-[inset_0_-1px_0_0_rgb(229,231,235)] hover:bg-gray-50",
+                  {headerGroup.headers.map((header) => {
+                    const isActiveColumn =
+                      activeMatch?.type === "column" &&
+                      activeMatch.columnId === header.id;
 
-                        header.column.getIsFiltered() &&
-                          "bg-[#F6FBF7] font-semibold",
-                        header.column.getIsSorted() &&
-                          !header.column.getIsFiltered() &&
-                          "bg-[#FAF5F2] font-semibold",
-                        globalSearchMatches.columnIds.includes(header.id) &&
-                          "bg-[#FFF3D3] font-semibold",
-                      )}
-                      style={{
-                        minWidth: MIN_COL_WIDTH,
-                        width: header.getSize(),
-                        position: "relative",
-                        fontWeight: 500,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
-                      {flexRender(
-                        header.column.columnDef.header,
-                        header.getContext(),
-                      )}
+                    return (
+                      <th
+                        key={header.id}
+                        data-column-id={header.id}
+                        className={cn(
+                          "relative overflow-hidden border-r border-gray-200 bg-white px-3 py-2 text-left text-[13px] font-medium text-gray-700 shadow-[inset_0_-1px_0_0_rgb(229,231,235)] hover:bg-gray-50",
 
-                      <div className="absolute top-0 right-0 h-full w-1 touch-none select-none" />
-                    </th>
-                  ))}
+                          header.column.getIsFiltered() && "bg-[#F6FBF7]",
+                          header.column.getIsSorted() &&
+                            !header.column.getIsFiltered() &&
+                            "bg-[#FAF5F2]",
+                          matchedColumnIdSet.has(header.id) && "bg-[#FFF3D3]",
+                          isActiveColumn && "bg-[#f1cf6b]",
+                        )}
+                        style={{
+                          minWidth: MIN_COL_WIDTH,
+                          width: header.getSize(),
+                          position: "relative",
+                          fontWeight: 500,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {flexRender(
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
+
+                        <div className="absolute top-0 right-0 h-full w-1 touch-none select-none" />
+                      </th>
+                    );
+                  })}
                 </tr>
               ))}
             </thead>
@@ -250,12 +328,10 @@ export function Table({
                   );
                 }
 
-                // Optimistic gap or invalid index → render nothing
                 if (!tanstackRow) {
                   return null;
                 }
 
-                // Real row (TS now knows tanstackRow is defined)
                 return (
                   <tr
                     key={tanstackRow.id}
@@ -269,19 +345,24 @@ export function Table({
                     }}
                   >
                     {tanstackRow.getVisibleCells().map((cell) => {
+                      const isActiveCell =
+                        activeMatch?.type === "cell" &&
+                        activeMatch.cellId === cell.id;
+
                       return (
                         <td
                           key={cell.id}
+                          data-cell-id={cell.id}
                           className={cn(
                             "overflow-hidden border border-gray-200 p-0 transition-colors",
 
-                            // existing states
                             cell.column.getIsFiltered() && "bg-[#ebfbec]",
                             cell.column.getIsSorted() &&
                               !cell.column.getIsFiltered() &&
                               "bg-[#FFF2EA]",
 
-                            // 🔥 global search match (cell-level)
+                            matchedCellIdSet.has(cell.id) && "bg-[#FFF3D3]",
+                            isActiveCell && "bg-[#f1cf6b]",
                           )}
                           style={{
                             minWidth: MIN_COL_WIDTH,

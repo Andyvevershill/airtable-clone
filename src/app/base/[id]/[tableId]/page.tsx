@@ -8,6 +8,7 @@ import {
   translateSortingState,
 } from "@/lib/helper-functions";
 import { api } from "@/trpc/react";
+import type { SearchMatch } from "@/types/view";
 import { keepPreviousData } from "@tanstack/react-query";
 import type { ColumnFiltersState, SortingState } from "@tanstack/react-table";
 import { useParams } from "next/navigation";
@@ -16,7 +17,8 @@ import TableContainer from "./table-container";
 
 export default function TablePage() {
   const { tableId } = useParams<{ tableId: string }>();
-  const setIsLoading = useLoadingStore((state) => state.setIsLoading);
+  const { setIsLoading } = useLoadingStore();
+  const { setGlobalSearchLength, setIsSearching } = useGlobalSearchStore();
   const { globalSearch } = useGlobalSearchStore();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [filters, setFilters] = useState<ColumnFiltersState>([]);
@@ -62,22 +64,26 @@ export default function TablePage() {
     setIsLoading(isFetching || isLoading);
   }, [isLoading, setIsLoading, isFetching]);
 
+  // combine rows from all pages
   const rowsWithCells = useMemo(
     () => rowsData?.pages?.flatMap((page) => page.items) ?? [],
     [rowsData],
   );
 
-  const globalsearchMatches = useMemo(() => {
-    if (!rowsData?.pages) return { columnIds: [], cells: [] };
+  // transform search matches into readable format
+  const globalSearchMatches = useMemo(() => {
+    if (!rowsData?.pages) {
+      return { matches: [] as SearchMatch[] };
+    }
 
-    const allColumnIds = rowsData.pages.flatMap(
-      (page) => page.searchMatches.columnIds,
+    const matches = rowsData.pages.flatMap(
+      (page) => page.searchMatches.matches,
     );
-    const allCells = rowsData.pages.flatMap((page) => page.searchMatches.cells);
+    setGlobalSearchLength(matches.length);
+    setIsSearching(false);
 
     return {
-      columnIds: [...new Set(allColumnIds)],
-      cells: allCells,
+      matches,
     };
   }, [rowsData?.pages]);
 
@@ -88,8 +94,6 @@ export default function TablePage() {
   if (!tableWithViews || !columns || !rowsData) {
     return <NoDataPage missingData="table data" />;
   }
-
-  // Combine search matches from ALL pages
 
   return (
     <div className="flex h-full w-full flex-col">
@@ -105,7 +109,7 @@ export default function TablePage() {
         onSortingChange={setSorting}
         columnFilters={filters}
         onColumnFiltersChange={setFilters}
-        globalSearchMatches={globalsearchMatches}
+        globalSearchMatches={globalSearchMatches}
       />
     </div>
   );
