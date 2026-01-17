@@ -57,7 +57,7 @@ export function TableToolbar({ table, sideBarState: [open, setOpen] }: Props) {
           <Button
             variant="ghost"
             size="sm"
-            className="rounded-sm p-0 text-gray-500"
+            className="rounded-xs p-0 text-gray-500"
           >
             <Search />
           </Button>
@@ -71,7 +71,7 @@ export function TableToolbar({ table, sideBarState: [open, setOpen] }: Props) {
           <Button
             variant="ghost"
             size="sm"
-            className="pointer gap-1 rounded-sm"
+            className="pointer gap-1 rounded-xs"
             style={{ fontWeight: 350 }}
           >
             <PanelsTopLeft />
@@ -84,7 +84,7 @@ export function TableToolbar({ table, sideBarState: [open, setOpen] }: Props) {
             <Button
               key={item.id}
               variant="ghost"
-              className="pointer h-6.5 rounded-sm"
+              className="pointer h-6.5 rounded-xs"
               style={{ fontWeight: 450 }}
             >
               {item.icon}

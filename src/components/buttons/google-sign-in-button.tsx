@@ -12,15 +12,13 @@ export default function GoogleSignInButton() {
     }
   };
 
-  // we need the button to shrink to fit the content if small screen
-
   return (
     <button
-      className="pointer IC flex h-10 flex-row rounded-sm border border-gray-200 bg-white px-10 py-2 text-black shadow-xs transition hover:shadow-sm md:w-125"
+      className="pointer IC mb-2 flex h-10 flex-row rounded-sm border border-gray-200 bg-white px-10 text-[15px] text-black shadow-xs transition hover:shadow-sm md:w-125"
       onClick={handleSocialLogin}
     >
       <FcGoogle className="h-7 w-7 pr-2 font-sans" />
-      Continue with <span className="pl-1 font-semibold">Google</span>
+      Continue with <span className="pl-1 font-[550]">Google</span>
     </button>
   );
 }

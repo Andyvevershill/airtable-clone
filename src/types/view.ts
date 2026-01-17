@@ -8,7 +8,6 @@ const filterOperator = z.enum([
   // string fields
   "contains",
   "notContains",
-  // so like a search
   "equals",
   "isEmpty",
   "isNotEmpty",
@@ -61,8 +60,7 @@ export type SearchMatch =
   | {
       type: "cell";
       cellId: string;
-      rowId: string;
-      columnId: string;
+      rowIndex: number;
     };
 
 export type GlobalSearchMatches = {

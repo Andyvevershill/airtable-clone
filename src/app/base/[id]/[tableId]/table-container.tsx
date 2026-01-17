@@ -60,6 +60,7 @@ export default function TableContainer({
 }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { isLoadingView, setIsLoadingView } = useLoadingViewStore();
+  const [rowSelection, setRowSelection] = useState({});
   const [columnVisibility, onColumnVisibilityChange] =
     useState<VisibilityState>({});
   const [localColumns, setLocalColumns] = useState<ColumnType[]>(columns);
@@ -131,6 +132,7 @@ export default function TableContainer({
     columns: tanstackColumns,
     getCoreRowModel: getCoreRowModel(),
     getRowId: (row) => row._rowId,
+    onRowSelectionChange: setRowSelection,
 
     manualSorting: true,
     manualFiltering: true,

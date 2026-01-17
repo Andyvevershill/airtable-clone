@@ -1,6 +1,6 @@
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { cells, columns, rows } from "@/server/db/schemas/bases";
-import { getRowsInfiniteInput } from "@/types/view";
+import { getRowsInfiniteInput, type SearchMatch } from "@/types/view";
 import { faker } from "@faker-js/faker";
 import {
   and,
@@ -94,6 +94,7 @@ export const rowsRouter = createTRPCRouter({
         .select({
           id: rows.id,
           tableId: rows.tableId,
+          position: rows.position,
         })
         .from(rows)
         .where(finalWhere)
@@ -120,14 +121,6 @@ export const rowsRouter = createTRPCRouter({
       }));
 
       // ── 4. Calculate Search Matches (if globalSearch exists) ─────────────
-      type SearchMatch =
-        | { type: "column"; columnId: string }
-        | {
-            type: "cell";
-            cellId: string;
-            rowId: string;
-            columnId: string;
-          };
 
       const searchMatches: {
         matches: SearchMatch[];
@@ -136,7 +129,7 @@ export const rowsRouter = createTRPCRouter({
       if (globalSearch?.trim()) {
         const searchTerm = globalSearch.trim().toLowerCase();
 
-        //  Column matches (first)
+        // Column matches (first)
         const tableColumns = await ctx.db
           .select({ id: columns.id, name: columns.name })
           .from(columns)
@@ -151,14 +144,18 @@ export const rowsRouter = createTRPCRouter({
           }
         }
 
-        // Cell matches
+        // Cell matches - with row index
         for (const cell of rowCells) {
           if (cell.value?.toString().toLowerCase().includes(searchTerm)) {
+            // Find the index of this row in the tableRows array
+            const rowIndex = tableRows.findIndex(
+              (row) => row.id === cell.rowId,
+            );
+
             searchMatches.matches.push({
               type: "cell",
               cellId: `${cell.rowId}_${cell.columnId}`,
-              rowId: cell.rowId,
-              columnId: cell.columnId,
+              rowIndex: rowIndex !== -1 ? rowIndex : 0, // Include the row's position in the current page
             });
           }
         }

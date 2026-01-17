@@ -42,7 +42,7 @@ export default function FilterFieldsDropdown<TData>({
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <button
-          className={`pointer flex h-6.5 flex-row items-center gap-1 rounded-sm border border-transparent p-2 text-[13px] ${
+          className={`pointer flex h-6.5 flex-row items-center gap-1 rounded-xs border border-transparent p-2 text-[13px] ${
             currentlyFilteredColumns.length > 0
               ? "bg-[#cff5d1] text-gray-900 hover:border-2 hover:border-[#a5d6a7]"
               : "text-gray-500 hover:bg-gray-100"
