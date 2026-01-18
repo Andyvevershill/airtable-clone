@@ -35,7 +35,7 @@ export default function TablePage() {
   const queryParams = useMemo(
     () => ({
       tableId,
-      limit: 5000,
+      limit: 3000,
       sorting: translateSortingState(sorting, columns ?? []),
       filters: translateFiltersState(filters, columns ?? []),
       globalSearch,

@@ -94,7 +94,7 @@ export function Table({
     count: effectiveRowCount,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => ROW_HEIGHT,
-    overscan: 80,
+    overscan: 30,
   });
 
   const matchedColumnIdSet = useMemo(() => {

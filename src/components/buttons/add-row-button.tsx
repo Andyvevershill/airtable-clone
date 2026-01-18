@@ -1,13 +1,28 @@
+import type { InfiniteData } from "@tanstack/react-query";
+import type { ColumnFiltersState, SortingState } from "@tanstack/react-table";
+import { type inferRouterOutputs } from "@trpc/server";
+import { memo, useCallback, useMemo } from "react";
+import { AiOutlinePlus } from "react-icons/ai";
+
 import { useGlobalSearchStore } from "@/app/stores/use-search-store";
 import {
   translateFiltersState,
   translateSortingState,
 } from "@/lib/helper-functions";
+import type { AppRouter } from "@/server/api/root";
 import { api } from "@/trpc/react";
 import type { ColumnType } from "@/types";
-import type { ColumnFiltersState, SortingState } from "@tanstack/react-table";
-import { memo, useCallback, useMemo } from "react";
-import { AiOutlinePlus } from "react-icons/ai";
+
+/* ────────────────────────────────────────────────────────────── */
+/* Types                                                          */
+/* ────────────────────────────────────────────────────────────── */
+
+type RouterOutput = inferRouterOutputs<AppRouter>;
+type RowsPage = RouterOutput["row"]["getRowsInfinite"];
+type InfiniteRowsData = InfiniteData<RowsPage, number | null>;
+type Row = RowsPage["items"][number];
+
+/* ────────────────────────────────────────────────────────────── */
 
 interface Props {
   tableId: string;
@@ -20,11 +35,11 @@ function AddRowButton({ tableId, sorting, filters, columns }: Props) {
   const { globalSearch } = useGlobalSearchStore();
   const utils = api.useUtils();
 
-  // Memoize query key to prevent recalculation on every render
+  /* Query key */
   const queryKey = useMemo(
     () => ({
       tableId,
-      limit: 5000,
+      limit: 3000,
       sorting: translateSortingState(sorting, columns),
       filters: translateFiltersState(filters, columns),
       globalSearch,
@@ -33,110 +48,86 @@ function AddRowButton({ tableId, sorting, filters, columns }: Props) {
   );
 
   const addRow = api.row.addRow.useMutation({
+    /* ───────── Optimistic add ───────── */
     onMutate: async (newRow) => {
-      // Cancel any ongoing fetches
       await utils.row.getRowsInfinite.cancel(queryKey);
 
-      // Get current data for rollback
       const previousData = utils.row.getRowsInfinite.getInfiniteData(queryKey);
 
-      // If no data exists, skip optimistic update
-      if (!previousData?.pages?.[0]) {
-        return { previousData: null, rowId: newRow.id };
-      }
+      utils.row.getRowsInfinite.setInfiniteData(
+        queryKey,
+        (old: InfiniteRowsData | undefined) => {
+          if (!old?.pages?.[0]) return old;
 
-      // Optimistically update the cache - only modify first page
-      utils.row.getRowsInfinite.setInfiniteData(queryKey, (old) => {
-        if (!old?.pages?.[0]) return old;
+          const firstPage = old.pages[0];
 
-        const firstPage = old.pages[0];
+          const optimisticRow: Row = {
+            id: newRow.id,
+            tableId,
+            position: firstPage.items.length,
+            cells: [],
+          };
 
-        // Create optimistic row matching exact server structure
-        const optimisticRow = {
-          id: newRow.id,
-          tableId,
-          position: firstPage.items.length,
-          createdAt: new Date(),
-          updatedAt: null,
-          cells: [],
-        };
-
-        // Only create new first page, reuse the rest for performance
-        return {
-          ...old,
-          pages: [
-            { ...firstPage, items: [...firstPage.items, optimisticRow] },
-            ...old.pages.slice(1),
-          ],
-        };
-      });
-
-      // DON'T update count optimistically - let it sync from actual data
-      // This prevents virtualizer from rendering empty space
+          return {
+            ...old,
+            pages: [
+              {
+                ...firstPage,
+                items: [...firstPage.items, optimisticRow],
+              },
+              ...old.pages.slice(1),
+            ],
+          };
+        },
+      );
 
       return { previousData, rowId: newRow.id };
     },
 
-    onError: (err, _variables, context) => {
-      // Rollback to previous data on error
-      if (context?.previousData) {
-        utils.row.getRowsInfinite.setInfiniteData(
-          queryKey,
-          context.previousData,
-        );
+    /* ───────── Rollback ───────── */
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previousData) {
+        utils.row.getRowsInfinite.setInfiniteData(queryKey, ctx.previousData);
       }
-
-      // No need to rollback count since we don't update it optimistically
     },
 
-    onSuccess: (serverRow, _variables, context) => {
-      // If we don't have context, invalidate everything
-      if (!context?.previousData || !context?.rowId) {
-        void utils.row.getRowsInfinite.invalidate({ tableId });
-        void utils.row.getRowCount.invalidate({ tableId });
-        return;
-      }
+    /* ───────── Replace optimistic row ───────── */
+    onSuccess: (serverRow, _vars, ctx) => {
+      if (!ctx?.rowId) return;
 
-      // Replace optimistic row with real server data
-      utils.row.getRowsInfinite.setInfiniteData(queryKey, (old) => {
-        if (!old?.pages?.[0]) return old;
+      utils.row.getRowsInfinite.setInfiniteData(
+        queryKey,
+        (old: InfiniteRowsData | undefined) => {
+          if (!old?.pages?.[0]) return old;
 
-        const firstPage = old.pages[0];
-        const rowIndex = firstPage.items.findIndex(
-          (item) => item.id === context.rowId,
-        );
+          const firstPage = old.pages[0];
 
-        // If we can't find the optimistic row, invalidate as fallback
-        if (rowIndex === -1) {
-          void utils.row.getRowsInfinite.invalidate({ tableId });
-          return old;
-        }
+          const items = firstPage.items.map((row) =>
+            row.id === ctx.rowId ? serverRow : row,
+          );
 
-        // Replace optimistic row with server row (add empty cells array)
-        const newRow = { ...serverRow, cells: [] };
-        const newItems = [...firstPage.items];
-        newItems[rowIndex] = newRow;
+          return {
+            ...old,
+            pages: [{ ...firstPage, items }, ...old.pages.slice(1)],
+          };
+        },
+      );
 
-        return {
-          ...old,
-          pages: [{ ...firstPage, items: newItems }, ...old.pages.slice(1)],
-        };
-      });
+      /* keep count in sync */
+      const updated = utils.row.getRowsInfinite.getInfiniteData(queryKey);
 
-      // Update count based on actual data to keep it in sync
-      const updatedData = utils.row.getRowsInfinite.getInfiniteData(queryKey);
-      const actualRowCount =
-        updatedData?.pages.reduce((sum, page) => sum + page.items.length, 0) ??
-        0;
-      utils.row.getRowCount.setData({ tableId }, actualRowCount);
+      const count =
+        updated?.pages.reduce((sum, p) => sum + p.items.length, 0) ?? 0;
 
-      // Count was already updated above, no need to update again
+      utils.row.getRowCount.setData({ tableId }, count);
     },
   });
 
   const handleClick = useCallback(() => {
-    const newId = crypto.randomUUID();
-    addRow.mutate({ id: newId, tableId });
+    addRow.mutate({
+      id: crypto.randomUUID(),
+      tableId,
+    });
   }, [addRow, tableId]);
 
   return (

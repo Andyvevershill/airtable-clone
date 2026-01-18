@@ -198,20 +198,43 @@ export const rowsRouter = createTRPCRouter({
           })
           .returning();
 
-        if (!newRow) throw new Error("Failed to create row");
-
-        // Create cells in batch
-        if (tableColumns.length > 0) {
-          await tx.insert(cells).values(
-            tableColumns.map((column) => ({
-              rowId: newRow.id,
-              columnId: column.id,
-              value: null,
-            })),
-          );
+        if (!newRow) {
+          throw new Error("Failed to create row");
         }
 
-        return newRow;
+        // Create cells
+        let createdCells: {
+          id: string;
+          rowId: string;
+          columnId: string;
+          value: string | null;
+        }[] = [];
+
+        if (tableColumns.length > 0) {
+          createdCells = await tx
+            .insert(cells)
+            .values(
+              tableColumns.map((column) => ({
+                rowId: newRow.id,
+                columnId: column.id,
+                value: null,
+              })),
+            )
+            .returning({
+              id: cells.id,
+              rowId: cells.rowId,
+              columnId: cells.columnId,
+              value: cells.value,
+            });
+        }
+
+        // Return same shape as getRowsInfinite
+        return {
+          id: newRow.id,
+          tableId: newRow.tableId,
+          position: newRow.position,
+          cells: createdCells,
+        };
       });
     }),
 
