@@ -218,54 +218,62 @@ export function Table({
   });
 
   return (
-    <div className="relative flex h-full w-full flex-col bg-slate-100">
-      <div ref={scrollRef} className="relative flex-1 overflow-auto">
-        <div className="relative inline-block min-w-full pr-16 align-top">
-          <div className="pointer-events-none sticky top-0 z-40">
-            <div
-              className="pointer-events-auto absolute top-0 flex h-[28px] w-23.5 items-center justify-center border-b border-l border-gray-200 bg-white shadow-[inset_0_-1px_0_0_rgb(229,231,235)] hover:bg-gray-50"
-              style={{ left: tableWidth }}
-            >
-              <CreateColumnDropdown tableId={tableId} />
+    <>
+      <div
+        className="relative flex h-full w-full flex-col bg-slate-100"
+        style={{
+          width: tableWidth ? `${tableWidth + 200}px` : "100%",
+          minWidth: "100%",
+        }}
+      >
+        <div ref={scrollRef} className="relative flex-1 overflow-auto">
+          <div className="relative inline-block min-w-full pr-16 align-top">
+            <div className="pointer-events-none sticky top-0 z-40">
+              <div
+                className="pointer-events-auto absolute top-0 flex h-[28px] w-23.5 items-center justify-center border-b border-l border-gray-200 bg-white shadow-[inset_0_-1px_0_0_rgb(229,231,235)] hover:bg-gray-50"
+                style={{ left: tableWidth }}
+              >
+                <CreateColumnDropdown tableId={tableId} />
+              </div>
             </div>
+
+            <table
+              ref={tableRef}
+              className="border-collapse bg-white"
+              onKeyDown={handleTableKeyDown}
+            >
+              <TableHeader
+                table={table}
+                activeMatch={activeMatch}
+                matchedColumnIdSet={matchedColumnIdSet}
+              />
+
+              <TableBody
+                rowVirtualizer={rowVirtualizer}
+                table={table}
+                activeMatch={activeMatch}
+                matchedCellIdSet={matchedCellIdSet}
+                matchedRowIndexSet={matchedRowIndexSet}
+              />
+
+              <TableFooter
+                tableId={tableId}
+                columns={columns}
+                sorting={sorting}
+                filters={filters}
+              />
+            </table>
           </div>
-
-          <table
-            ref={tableRef}
-            className="border-collapse bg-white"
-            onKeyDown={handleTableKeyDown}
-          >
-            <TableHeader
-              table={table}
-              activeMatch={activeMatch}
-              matchedColumnIdSet={matchedColumnIdSet}
-            />
-
-            <TableBody
-              rowVirtualizer={rowVirtualizer}
-              table={table}
-              activeMatch={activeMatch}
-              matchedCellIdSet={matchedCellIdSet}
-              matchedRowIndexSet={matchedRowIndexSet}
-            />
-
-            <TableFooter
-              tableId={tableId}
-              columns={columns}
-              sorting={sorting}
-              filters={filters}
-            />
-          </table>
         </div>
       </div>
 
-      {/* RECORDS BAR - Must be inside Table component */}
+      {/* RECORDS BAR - Outside the width-constrained div */}
       <div className="sticky bottom-0 z-20 border-t border-gray-300 bg-white px-3 py-2">
         <div className="text-xs text-gray-600">
           {rowCount} {rowCount === 1 ? "record" : "records"}
           {isFetchingNextPage && " – Loading more…"}
         </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -164,8 +164,8 @@ export default function TableContainer({
           </div>
         )}
 
-        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
-          <div className="relative flex-1 overflow-x-auto">
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="relative flex-1 overflow-auto">
             {isLoadingView ? (
               <div className="inset-0 z-10 flex h-full w-full items-center justify-center bg-slate-100">
                 <div className="flex flex-col items-center justify-center gap-6 text-gray-600">
