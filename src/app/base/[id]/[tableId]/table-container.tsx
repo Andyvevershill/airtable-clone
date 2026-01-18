@@ -73,7 +73,7 @@ export default function TableContainer({
   );
 
   useEffect(() => {
-    if (!activeView) return;
+    if (!activeView?.id) return;
 
     applyViewToTableState(activeView, {
       onSortingChange,
@@ -81,10 +81,14 @@ export default function TableContainer({
       onColumnVisibilityChange,
     });
 
-    const t = setTimeout(() => setIsLoadingView(false), 200);
-    return () => clearTimeout(t);
+    const MIN_DELAY = 200;
+    const timer = setTimeout(() => {
+      setIsLoadingView(false);
+    }, MIN_DELAY);
+
+    return () => clearTimeout(timer);
   }, [
-    activeView,
+    activeView?.id,
     onSortingChange,
     onColumnFiltersChange,
     onColumnVisibilityChange,
@@ -98,11 +102,13 @@ export default function TableContainer({
     columns,
   );
 
+  // Memoize transformed data instead of using local state
   const tableData = useMemo(
     () => transformRowsToTanStackFormat(rowsWithCells),
     [rowsWithCells],
   );
 
+  // Memoize query input for cell committer
   const rowsQueryInput = useMemo(
     () => ({
       tableId: tableWithViews.id,
@@ -111,7 +117,6 @@ export default function TableContainer({
       filters: translateFiltersState(columnFilters, columns),
       globalSearch: globalSearch || undefined,
     }),
-
     [tableWithViews.id, sorting, columnFilters, columns, globalSearch],
   );
 
@@ -119,10 +124,9 @@ export default function TableContainer({
     rowsQueryInput,
   });
 
-  const tanstackColumns = useMemo(
-    () => generateColumnDefinitions(columns, commitCell),
-    [columns, commitCell],
-  );
+  const tanstackColumns = useMemo(() => {
+    return generateColumnDefinitions(columns, commitCell);
+  }, [columns, commitCell]);
 
   const table = useReactTable({
     data: tableData,
@@ -131,25 +135,33 @@ export default function TableContainer({
     getRowId: (row) => row._rowId,
     manualSorting: true,
     manualFiltering: true,
-    state: { sorting, columnFilters, columnVisibility },
     onSortingChange,
     onColumnFiltersChange,
     onColumnVisibilityChange,
+    state: {
+      sorting,
+      columnFilters,
+      columnVisibility,
+    },
   });
+
+  const sidebarState: [boolean, (v: boolean) => void] = useMemo(
+    () => [sidebarOpen, setSidebarOpen],
+    [sidebarOpen],
+  );
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-slate-100">
-      <TableToolbar
-        sideBarState={[sidebarOpen, setSidebarOpen]}
-        table={table}
-      />
+      <TableToolbar sideBarState={sidebarState} table={table} />
 
       <div className="flex flex-1 overflow-hidden">
         {sidebarOpen && (
-          <TableSidebar
-            sidebarOpen={sidebarOpen}
-            tableWithViews={tableWithViews}
-          />
+          <div className="shrink-0">
+            <TableSidebar
+              sidebarOpen={sidebarOpen}
+              tableWithViews={tableWithViews}
+            />
+          </div>
         )}
 
         <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
@@ -165,6 +177,7 @@ export default function TableContainer({
               <div className="inset-0 z-10 flex h-full w-full items-center justify-center bg-slate-100">
                 <div className="flex flex-col items-center justify-center gap-6 text-gray-600">
                   <LuLoaderPinwheel size={22} className="animate-spin" />
+                  <p className="text-sm text-gray-600">Filtering fields...</p>
                 </div>
               </div>
             ) : rowsWithCells.length === 0 && columnFilters.length > 0 ? (
@@ -197,13 +210,6 @@ export default function TableContainer({
                 globalSearchMatches={globalSearchMatches}
               />
             )}
-          </div>
-          {/* RECORDS BAR */}
-          <div className="sticky bottom-0 z-20 border-t border-gray-300 bg-white px-3 py-2">
-            <div className="text-xs text-gray-600">
-              {rowCount} {rowCount === 1 ? "record" : "records"}
-              {isFetchingNextPage && " – Loading more…"}
-            </div>
           </div>
         </div>
       </div>
