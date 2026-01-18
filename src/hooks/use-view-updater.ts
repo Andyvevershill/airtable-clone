@@ -4,12 +4,14 @@ import {
 } from "@/lib/helper-functions";
 import { api } from "@/trpc/react";
 import type { ColumnType } from "@/types/column";
+import type { ViewInput } from "@/types/view";
 import type {
   ColumnFiltersState,
   SortingState,
   VisibilityState,
 } from "@tanstack/react-table";
-import { useEffect } from "react";
+import isEqual from "fast-deep-equal";
+import { useEffect, useMemo, useRef } from "react";
 
 interface ViewState {
   sorting: SortingState;
@@ -29,23 +31,58 @@ export function useViewUpdater(
     onSuccess: () => {
       void utils.table.getTableWithViews.invalidate({ tableId });
     },
+    onError: (err) => {
+      console.error(
+        "%c[view:update] ERROR",
+        "color:#dc2626;font-weight:bold",
+        err,
+      );
+    },
   });
 
-  useEffect(() => {
-    updateView.mutate({
+  const nextViewInput: ViewInput = useMemo(() => {
+    const payload = {
       id: viewId,
       sorting: translateSortingState(state.sorting, columns),
       filters: translateFiltersState(state.columnFilters, columns),
       hidden: Object.keys(state.columnVisibility).filter(
         (columnId) => state.columnVisibility[columnId] === false,
       ),
-    });
+    };
+
+    return payload;
   }, [
+    viewId,
     state.sorting,
     state.columnFilters,
     state.columnVisibility,
-    viewId,
-    tableId,
     columns,
   ]);
+
+  const lastCommittedRef = useRef<ViewInput | null>(null);
+  const lastViewIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!viewId) {
+      return;
+    }
+
+    if (lastViewIdRef.current !== viewId) {
+      lastViewIdRef.current = viewId;
+      lastCommittedRef.current = nextViewInput;
+      return;
+    }
+
+    if (!lastCommittedRef.current) {
+      lastCommittedRef.current = nextViewInput;
+      return;
+    }
+
+    if (isEqual(lastCommittedRef.current, nextViewInput)) {
+      return;
+    }
+
+    lastCommittedRef.current = nextViewInput;
+    updateView.mutate(nextViewInput);
+  }, [nextViewInput, viewId, updateView]);
 }
