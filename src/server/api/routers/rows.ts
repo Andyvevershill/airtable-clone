@@ -263,6 +263,7 @@ export const rowsRouter = createTRPCRouter({
         for (let i = batchStart; i < batchEnd; i++) {
           rowsToInsert.push({
             tableId: input.tableId,
+            position: startPosition + i,
             createdAt: new Date(),
             updatedAt: null,
           });

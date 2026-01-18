@@ -135,7 +135,6 @@ function AddRowButton({ tableId, sorting, filters, columns }: Props) {
       className="pointer flex h-full w-full items-center justify-start pl-2 hover:bg-gray-50"
       title="Add row"
       onClick={handleClick}
-      disabled={addRow.isPending}
     >
       <AiOutlinePlus size={16} className="text-gray-600" />
     </button>

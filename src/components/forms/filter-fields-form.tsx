@@ -12,7 +12,7 @@ import type { TransformedRow } from "@/types";
 import type { Column, ColumnFiltersState } from "@tanstack/react-table";
 import { HelpCircle } from "lucide-react";
 import Image from "next/image";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AiOutlinePlus } from "react-icons/ai";
 import { PiDotsSixVertical } from "react-icons/pi";
 import { RiDeleteBinLine } from "react-icons/ri";
@@ -163,6 +163,14 @@ export default function FilterFieldsForm({
     const label = col.columnDef.meta?.label ?? col.id;
     return label.toLowerCase().includes(searchColumn.toLowerCase());
   });
+
+  const isApplyDisabled = useMemo(() => {
+    // If no filters, disable
+    if (filters.length === 0) return true;
+
+    // Check if all filters have both fieldId and operator selected
+    return !filters.every((filter) => filter.fieldId && filter.operator);
+  }, [filters]);
 
   return (
     <div className="flex h-full w-full flex-col">
@@ -380,6 +388,7 @@ export default function FilterFieldsForm({
           </button>
 
           <button
+            disabled={isApplyDisabled}
             onClick={handleApply}
             className="pointer h-7 rounded-xs bg-[#166ee1] px-3 text-[13px] text-white hover:bg-[#1557b8]"
           >
