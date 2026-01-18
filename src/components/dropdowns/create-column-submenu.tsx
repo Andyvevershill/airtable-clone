@@ -27,27 +27,25 @@ export function CreateColumnSubmenu({
     onMutate: async (newColumn) => {
       setIsSaving(true);
 
-      //  Cancel outgoing refetches
       await utils.column.getColumns.cancel({ tableId });
 
-      //  Snapshot previous value
       const previousColumns = utils.column.getColumns.getData({ tableId });
 
-      //  Optimistically add new column
       utils.column.getColumns.setData({ tableId }, (old) => {
         if (!old) return old;
 
-        const tempColumn = {
-          id: `temp-${Date.now()}`,
-          tableId,
-          name: newColumn.name || "Untitled column",
-          type: newColumn.type,
-          position: old.length,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-
-        return [...old, tempColumn];
+        return [
+          ...old,
+          {
+            id: newColumn.id,
+            tableId,
+            name: newColumn.name || "Untitled column",
+            type: newColumn.type,
+            position: old.length,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ];
       });
 
       const previousRows = utils.row.getRowsInfinite.getInfiniteData({
@@ -55,38 +53,39 @@ export function CreateColumnSubmenu({
         limit: 250,
       });
 
-      utils.row.getRowsInfinite.setInfiniteData(
-        { tableId, limit: 250 },
-        (old) => {
-          if (!old) return old;
+      if (previousRows) {
+        utils.row.getRowsInfinite.setInfiniteData(
+          { tableId, limit: 250 },
+          (old) => {
+            if (!old) return old;
 
-          return {
-            ...old,
-            pages: old.pages.map((page) => ({
-              ...page,
-              items: page.items.map((row) => ({
-                ...row,
-                cells: [
-                  ...row.cells,
-                  {
-                    id: `temp-cell-${Date.now()}-${row.id}`,
-                    rowId: row.id,
-                    columnId: `temp-${Date.now()}`,
-                    value: null,
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                  },
-                ],
+            return {
+              ...old,
+              pages: old.pages.map((page) => ({
+                ...page,
+                items: page.items.map((row) => ({
+                  ...row,
+                  cells: [
+                    ...row.cells,
+                    {
+                      id: crypto.randomUUID(),
+                      rowId: row.id,
+                      columnId: newColumn.id,
+                      value: null,
+                      createdAt: new Date(),
+                      updatedAt: new Date(),
+                    },
+                  ],
+                })),
               })),
-            })),
-          };
-        },
-      );
+            };
+          },
+        );
+      }
 
       return { previousColumns, previousRows };
     },
     onError: (err, variables, context) => {
-      // ✅ Rollback on error
       if (context?.previousColumns) {
         utils.column.getColumns.setData({ tableId }, context.previousColumns);
       }
@@ -99,9 +98,11 @@ export function CreateColumnSubmenu({
       console.error("Failed to add column:", err);
       setIsSaving(false);
     },
-    onSuccess: () => {
-      void utils.column.getColumns.invalidate({ tableId });
-      void utils.row.getRowsInfinite.invalidate({ tableId });
+    onSuccess: async (data, variables) => {
+      if (variables.id !== data.id) {
+        await utils.column.getColumns.invalidate({ tableId });
+        await utils.row.getRowsInfinite.invalidate({ tableId });
+      }
       setIsSaving(false);
     },
     onSettled: () => {
@@ -110,7 +111,10 @@ export function CreateColumnSubmenu({
   });
 
   function handleCreateColumn() {
+    const newId = crypto.randomUUID();
+
     addColumn.mutate({
+      id: newId,
       tableId,
       type: selectedField,
       name: columnName || "Untitled column",

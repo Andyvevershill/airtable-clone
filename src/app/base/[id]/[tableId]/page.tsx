@@ -18,8 +18,8 @@ import TableContainer from "./table-container";
 export default function TablePage() {
   const { tableId } = useParams<{ tableId: string }>();
   const { setIsLoading, setIsFiltering } = useLoadingStore();
-  const { setGlobalSearchLength, setIsSearching } = useGlobalSearchStore();
-  const { globalSearch } = useGlobalSearchStore();
+  const { globalSearch, setGlobalSearchLength, setIsSearching } =
+    useGlobalSearchStore();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [filters, setFilters] = useState<ColumnFiltersState>([]);
 

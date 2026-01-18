@@ -181,10 +181,9 @@ export const rowsRouter = createTRPCRouter({
     }),
 
   addRow: protectedProcedure
-    .input(z.object({ tableId: z.string() }))
+    .input(z.object({ tableId: z.string(), id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return await ctx.db.transaction(async (tx) => {
-        // Get all columns for this table
         const tableColumns = await tx.query.columns.findMany({
           where: eq(columns.tableId, input.tableId),
           orderBy: (columns, { asc }) => [asc(columns.position)],
@@ -194,6 +193,7 @@ export const rowsRouter = createTRPCRouter({
         const [newRow] = await tx
           .insert(rows)
           .values({
+            id: input.id,
             tableId: input.tableId,
           })
           .returning();
@@ -263,7 +263,6 @@ export const rowsRouter = createTRPCRouter({
         for (let i = batchStart; i < batchEnd; i++) {
           rowsToInsert.push({
             tableId: input.tableId,
-            position: startPosition + i,
             createdAt: new Date(),
             updatedAt: null,
           });

@@ -19,6 +19,7 @@ export const columnRouter = createTRPCRouter({
   addColumn: protectedProcedure
     .input(
       z.object({
+        id: z.string(),
         tableId: z.string(),
         name: z.string(),
         type: z.string(),
@@ -37,6 +38,7 @@ export const columnRouter = createTRPCRouter({
       const [newColumn] = await ctx.db
         .insert(columns)
         .values({
+          id: input.id,
           tableId: input.tableId,
           name: input.name,
           type: input.type,

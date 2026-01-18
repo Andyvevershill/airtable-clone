@@ -1,3 +1,4 @@
+import { useGlobalSearchStore } from "@/app/stores/use-search-store";
 import {
   translateFiltersState,
   translateSortingState,
@@ -16,30 +17,32 @@ interface Props {
 }
 
 function AddRowButton({ tableId, sorting, filters, columns }: Props) {
+  const { globalSearch } = useGlobalSearchStore();
   const utils = api.useUtils();
 
   const addRow = api.row.addRow.useMutation({
-    onMutate: async () => {
+    onMutate: async (newRow) => {
       const queryKey = {
         tableId,
         limit: 5000,
         sorting: translateSortingState(sorting, columns),
         filters: translateFiltersState(filters, columns),
+        globalSearch,
       };
 
       await utils.row.getRowsInfinite.cancel(queryKey);
+
       const previousData = utils.row.getRowsInfinite.getInfiniteData(queryKey);
-      const tempRowId = `temp-${Date.now()}`;
 
       if (!previousData) {
-        return { previousData: null, queryKey, tempRowId: null };
+        return { previousData: null, queryKey, rowId: newRow.id };
       }
 
       utils.row.getRowsInfinite.setInfiniteData(queryKey, (old) => {
         if (!old) return old;
 
-        const newRow = {
-          id: tempRowId,
+        const optimisticRow = {
+          id: newRow.id,
           tableId,
           position: old.pages[0]?.items.length ?? 0,
           cells: [],
@@ -48,12 +51,14 @@ function AddRowButton({ tableId, sorting, filters, columns }: Props) {
         return {
           ...old,
           pages: old.pages.map((page, index) =>
-            index === 0 ? { ...page, items: [...page.items, newRow] } : page,
+            index === 0
+              ? { ...page, items: [...page.items, optimisticRow] }
+              : page,
           ),
         };
       });
 
-      return { previousData, queryKey, tempRowId };
+      return { previousData, queryKey, rowId: newRow.id };
     },
 
     onError: (err, _variables, context) => {
@@ -66,7 +71,13 @@ function AddRowButton({ tableId, sorting, filters, columns }: Props) {
     },
 
     onSuccess: (serverRow, _variables, context) => {
-      if (!context?.previousData || !context?.tempRowId) {
+      if (!context?.previousData || !context?.rowId) {
+        void utils.row.getRowsInfinite.invalidate({ tableId });
+        void utils.row.getRowCount.invalidate({ tableId });
+        return;
+      }
+
+      if (context.rowId !== serverRow.id) {
         void utils.row.getRowsInfinite.invalidate({ tableId });
         void utils.row.getRowCount.invalidate({ tableId });
         return;
@@ -84,20 +95,20 @@ function AddRowButton({ tableId, sorting, filters, columns }: Props) {
 
             const lastIndex = page.items.length - 1;
 
-            if (page.items[lastIndex]?.id === context.tempRowId) {
+            if (page.items[lastIndex]?.id === context.rowId) {
               const newItems = [...page.items];
               newItems[lastIndex] = newRow;
               return { ...page, items: newItems };
             }
 
-            const tempIndex = page.items.findIndex(
-              (item) => item.id === context.tempRowId,
+            const rowIndex = page.items.findIndex(
+              (item) => item.id === context.rowId,
             );
 
-            if (tempIndex === -1) return page;
+            if (rowIndex === -1) return page;
 
             const newItems = [...page.items];
-            newItems[tempIndex] = newRow;
+            newItems[rowIndex] = newRow;
             return { ...page, items: newItems };
           }),
         };
@@ -109,12 +120,14 @@ function AddRowButton({ tableId, sorting, filters, columns }: Props) {
       const actualItemCount =
         currentData?.pages.reduce((sum, page) => sum + page.items.length, 0) ??
         0;
+
       utils.row.getRowCount.setData({ tableId }, actualItemCount);
     },
   });
 
   const handleClick = useCallback(() => {
-    addRow.mutate({ tableId });
+    const newId = crypto.randomUUID();
+    addRow.mutate({ id: newId, tableId });
   }, [addRow, tableId]);
 
   return (
