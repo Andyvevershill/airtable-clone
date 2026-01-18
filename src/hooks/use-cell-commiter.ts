@@ -2,79 +2,76 @@
 
 import { useSavingStore } from "@/app/stores/use-saving-store";
 import { api } from "@/trpc/react";
-import type { TransformedRow } from "@/types/row";
-import { useCallback, useRef } from "react";
+import type { getRowsInfiniteInput } from "@/types/view";
+import { useCallback } from "react";
+import type { z } from "zod";
+
+type RowsQueryInput = z.infer<typeof getRowsInfiniteInput>;
 
 interface Params {
-  localRows: TransformedRow[];
-  setLocalRows: React.Dispatch<React.SetStateAction<TransformedRow[]>>;
+  rowsQueryInput: RowsQueryInput;
 }
 
-export function useCellCommitter({ localRows, setLocalRows }: Params) {
+export function useCellCommitter({ rowsQueryInput }: Params) {
   const setIsSaving = useSavingStore((s) => s.setIsSaving);
-
-  // Use ref to always have latest localRows without it being a dependency
-  const localRowsRef = useRef(localRows);
-  localRowsRef.current = localRows;
+  const utils = api.useUtils();
 
   const mutation = api.cell.upsertCell.useMutation({
-    onMutate: ({ rowId, columnId }) => {
+    onMutate: async ({ rowId, columnId, value }) => {
       setIsSaving(true);
 
-      // Use ref to get current state
-      const previousRows = localRowsRef.current;
+      // Cancel ongoing fetches for THIS exact query
+      await utils.row.getRowsInfinite.cancel(rowsQueryInput);
 
-      return { previousRows, rowId, columnId };
+      const previousData =
+        utils.row.getRowsInfinite.getInfiniteData(rowsQueryInput);
+
+      // Optimistically update only the affected cell
+      utils.row.getRowsInfinite.setInfiniteData(rowsQueryInput, (old) => {
+        if (!old) return old;
+
+        return {
+          ...old,
+          pages: old.pages.map((page) => ({
+            ...page,
+            items: page.items.map((row) => {
+              if (row.id !== rowId) return row;
+
+              return {
+                ...row,
+                cells: {
+                  ...row.cells,
+                  [columnId]: value,
+                },
+              };
+            }),
+          })),
+        };
+      });
+
+      return { previousData };
     },
-    onError: (error, variables, context) => {
-      // Rollback optimistic update on error
-      if (context?.previousRows) {
-        setLocalRows(context.previousRows);
+
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previousData) {
+        utils.row.getRowsInfinite.setInfiniteData(
+          rowsQueryInput,
+          ctx.previousData,
+        );
       }
     },
+
     onSettled: () => {
       setIsSaving(false);
     },
   });
 
-  // Wrap in useCallback with STABLE dependencies
   const commitCell = useCallback(
     (rowId: string, columnId: string, value: string | null) => {
-      // Use ref to access current localRows
-      const currentRows = localRowsRef.current;
-
-      // Validate row exists (early exit if not found)
-      const row = currentRows.find((r) => r._rowId === rowId);
-      if (!row) {
-        console.warn(`Row ${rowId} not found in local state`);
-        return;
-      }
-
-      // Optimistic local update
-      setLocalRows((prev) =>
-        prev.map((r) => {
-          if (r._rowId !== rowId) return r;
-
-          const updatedCells = { ...r._cells, [columnId]: value };
-
-          const cellId = r._cellMap[columnId];
-          const updatedCellMap = cellId
-            ? r._cellMap
-            : { ...r._cellMap, [columnId]: `temp-${rowId}-${columnId}` };
-
-          return {
-            ...r,
-            _cells: updatedCells,
-            _cellMap: updatedCellMap,
-          };
-        }),
-      );
-
-      // Send to backend
       mutation.mutate({ rowId, columnId, value });
     },
-    [mutation, setLocalRows],
-  ); // Only depends on mutation and setLocalRows (both stable)
+    [mutation],
+  );
 
   return { commitCell };
 }

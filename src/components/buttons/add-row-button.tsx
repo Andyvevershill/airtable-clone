@@ -6,7 +6,7 @@ import {
 import { api } from "@/trpc/react";
 import type { ColumnType } from "@/types";
 import type { ColumnFiltersState, SortingState } from "@tanstack/react-table";
-import { memo, useCallback } from "react";
+import { memo, useCallback, useMemo } from "react";
 import { AiOutlinePlus } from "react-icons/ai";
 
 interface Props {
@@ -20,108 +20,117 @@ function AddRowButton({ tableId, sorting, filters, columns }: Props) {
   const { globalSearch } = useGlobalSearchStore();
   const utils = api.useUtils();
 
+  // Memoize query key to prevent recalculation on every render
+  const queryKey = useMemo(
+    () => ({
+      tableId,
+      limit: 5000,
+      sorting: translateSortingState(sorting, columns),
+      filters: translateFiltersState(filters, columns),
+      globalSearch,
+    }),
+    [tableId, sorting, filters, columns, globalSearch],
+  );
+
   const addRow = api.row.addRow.useMutation({
     onMutate: async (newRow) => {
-      const queryKey = {
-        tableId,
-        limit: 5000,
-        sorting: translateSortingState(sorting, columns),
-        filters: translateFiltersState(filters, columns),
-        globalSearch,
-      };
-
+      // Cancel any ongoing fetches
       await utils.row.getRowsInfinite.cancel(queryKey);
 
+      // Get current data for rollback
       const previousData = utils.row.getRowsInfinite.getInfiniteData(queryKey);
 
-      if (!previousData) {
-        return { previousData: null, queryKey, rowId: newRow.id };
+      // If no data exists, skip optimistic update
+      if (!previousData?.pages?.[0]) {
+        return { previousData: null, rowId: newRow.id };
       }
 
+      // Optimistically update the cache - only modify first page
       utils.row.getRowsInfinite.setInfiniteData(queryKey, (old) => {
-        if (!old) return old;
+        if (!old?.pages?.[0]) return old;
 
+        const firstPage = old.pages[0];
+
+        // Create optimistic row matching exact server structure
         const optimisticRow = {
           id: newRow.id,
           tableId,
-          position: old.pages[0]?.items.length ?? 0,
+          position: firstPage.items.length,
+          createdAt: new Date(),
+          updatedAt: null,
           cells: [],
         };
 
+        // Only create new first page, reuse the rest for performance
         return {
           ...old,
-          pages: old.pages.map((page, index) =>
-            index === 0
-              ? { ...page, items: [...page.items, optimisticRow] }
-              : page,
-          ),
+          pages: [
+            { ...firstPage, items: [...firstPage.items, optimisticRow] },
+            ...old.pages.slice(1),
+          ],
         };
       });
 
-      return { previousData, queryKey, rowId: newRow.id };
+      // DON'T update count optimistically - let it sync from actual data
+      // This prevents virtualizer from rendering empty space
+
+      return { previousData, rowId: newRow.id };
     },
 
     onError: (err, _variables, context) => {
-      if (context?.previousData && context?.queryKey) {
+      // Rollback to previous data on error
+      if (context?.previousData) {
         utils.row.getRowsInfinite.setInfiniteData(
-          context.queryKey,
+          queryKey,
           context.previousData,
         );
       }
+
+      // No need to rollback count since we don't update it optimistically
     },
 
     onSuccess: (serverRow, _variables, context) => {
+      // If we don't have context, invalidate everything
       if (!context?.previousData || !context?.rowId) {
         void utils.row.getRowsInfinite.invalidate({ tableId });
         void utils.row.getRowCount.invalidate({ tableId });
         return;
       }
 
-      if (context.rowId !== serverRow.id) {
-        void utils.row.getRowsInfinite.invalidate({ tableId });
-        void utils.row.getRowCount.invalidate({ tableId });
-        return;
-      }
+      // Replace optimistic row with real server data
+      utils.row.getRowsInfinite.setInfiniteData(queryKey, (old) => {
+        if (!old?.pages?.[0]) return old;
 
-      const newRow = { ...serverRow, cells: [] };
+        const firstPage = old.pages[0];
+        const rowIndex = firstPage.items.findIndex(
+          (item) => item.id === context.rowId,
+        );
 
-      utils.row.getRowsInfinite.setInfiniteData(context.queryKey, (old) => {
-        if (!old) return old;
+        // If we can't find the optimistic row, invalidate as fallback
+        if (rowIndex === -1) {
+          void utils.row.getRowsInfinite.invalidate({ tableId });
+          return old;
+        }
+
+        // Replace optimistic row with server row (add empty cells array)
+        const newRow = { ...serverRow, cells: [] };
+        const newItems = [...firstPage.items];
+        newItems[rowIndex] = newRow;
 
         return {
           ...old,
-          pages: old.pages.map((page, i) => {
-            if (i !== 0) return page;
-
-            const lastIndex = page.items.length - 1;
-
-            if (page.items[lastIndex]?.id === context.rowId) {
-              const newItems = [...page.items];
-              newItems[lastIndex] = newRow;
-              return { ...page, items: newItems };
-            }
-
-            const rowIndex = page.items.findIndex(
-              (item) => item.id === context.rowId,
-            );
-
-            if (rowIndex === -1) return page;
-
-            const newItems = [...page.items];
-            newItems[rowIndex] = newRow;
-            return { ...page, items: newItems };
-          }),
+          pages: [{ ...firstPage, items: newItems }, ...old.pages.slice(1)],
         };
       });
 
-      const currentData = utils.row.getRowsInfinite.getInfiniteData(
-        context.queryKey,
-      );
-      const actualItemCount =
-        currentData?.pages.reduce((sum, page) => sum + page.items.length, 0) ??
+      // Update count based on actual data to keep it in sync
+      const updatedData = utils.row.getRowsInfinite.getInfiniteData(queryKey);
+      const actualRowCount =
+        updatedData?.pages.reduce((sum, page) => sum + page.items.length, 0) ??
         0;
+      utils.row.getRowCount.setData({ tableId }, actualRowCount);
 
-      utils.row.getRowCount.setData({ tableId }, actualItemCount);
+      // Count was already updated above, no need to update again
     },
   });
 

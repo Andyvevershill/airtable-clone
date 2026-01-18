@@ -18,6 +18,7 @@ export function CreateSearchForm() {
     setGlobalSearch,
     setActiveMatchIndex,
     setIsSearching,
+    setHasSearched,
     globalSearchLength,
     activeMatchIndex,
     isSearching,
@@ -30,11 +31,12 @@ export function CreateSearchForm() {
   function handleSearch() {
     if (!searchQuery.trim()) return;
     setIsSearching(true);
+    setHasSearched(true);
     setGlobalSearch(searchQuery);
   }
 
   function handleClearSearch() {
-    resetSearch(); // Use the reset function
+    resetSearch();
     setsearchQuery("");
     setOpen(false);
   }

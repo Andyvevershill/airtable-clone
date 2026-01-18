@@ -8,7 +8,6 @@ import {
   translateSortingState,
 } from "@/lib/helper-functions";
 import { api } from "@/trpc/react";
-import type { SearchMatch } from "@/types/view";
 import { keepPreviousData } from "@tanstack/react-query";
 import type { ColumnFiltersState, SortingState } from "@tanstack/react-table";
 import { useParams } from "next/navigation";
@@ -20,6 +19,7 @@ export default function TablePage() {
   const { setIsLoading, setIsFiltering } = useLoadingStore();
   const { globalSearch, setGlobalSearchLength, setIsSearching } =
     useGlobalSearchStore();
+
   const [sorting, setSorting] = useState<SortingState>([]);
   const [filters, setFilters] = useState<ColumnFiltersState>([]);
 
@@ -32,6 +32,17 @@ export default function TablePage() {
   const { data: rowCount, isLoading: countLoading } =
     api.row.getRowCount.useQuery({ tableId });
 
+  const queryParams = useMemo(
+    () => ({
+      tableId,
+      limit: 5000,
+      sorting: translateSortingState(sorting, columns ?? []),
+      filters: translateFiltersState(filters, columns ?? []),
+      globalSearch,
+    }),
+    [tableId, sorting, filters, columns, globalSearch],
+  );
+
   const {
     data: rowsData,
     fetchNextPage,
@@ -39,19 +50,10 @@ export default function TablePage() {
     isFetching,
     isFetchingNextPage,
     isLoading: rowsLoading,
-  } = api.row.getRowsInfinite.useInfiniteQuery(
-    {
-      tableId,
-      limit: 5000,
-      sorting: translateSortingState(sorting, columns ?? []),
-      filters: translateFiltersState(filters, columns ?? []),
-      globalSearch,
-    },
-    {
-      getNextPageParam: (lastPage) => lastPage.nextCursor,
-      placeholderData: keepPreviousData,
-    },
-  );
+  } = api.row.getRowsInfinite.useInfiniteQuery(queryParams, {
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
+    placeholderData: keepPreviousData,
+  });
 
   const isLoading =
     tableWithViewsLoading ||
@@ -62,73 +64,59 @@ export default function TablePage() {
 
   useEffect(() => {
     setIsLoading(isFetching || isLoading);
-  }, [isLoading, setIsLoading, isFetching]);
+  }, [isFetching, isLoading, setIsLoading]);
 
-  // combine rows from all pages
   const rowsWithCells = useMemo(
-    () => rowsData?.pages?.flatMap((page) => page.items) ?? [],
+    () => rowsData?.pages.flatMap((p) => p.items) ?? [],
     [rowsData],
   );
 
-  // Track when filtering starts and stops
   useEffect(() => {
-    if (filters.length > 0 && isFetching) {
-      // Filtering has started
-      setIsFiltering(true);
-    } else if (!isFetching) {
-      // Filtering has finished (we have results or no results)
-      setIsFiltering(false);
-    }
+    if (filters.length && isFetching) setIsFiltering(true);
+    if (!isFetching) setIsFiltering(false);
   }, [filters.length, isFetching, setIsFiltering]);
 
-  // transform search matches into readable format
-  const globalSearchMatches = useMemo(() => {
-    if (!rowsData?.pages) {
-      return { matches: [] as SearchMatch[] };
-    }
+  const globalSearchMatches = useMemo(
+    () => ({
+      matches: rowsData?.pages.flatMap((p) => p.searchMatches.matches) ?? [],
+    }),
+    [rowsData],
+  );
 
-    const matches = rowsData.pages.flatMap(
-      (page) => page.searchMatches.matches,
-    );
-
-    return {
-      matches,
-    };
-  }, [rowsData?.pages]);
-
+  // Stop spinner when search completes (fetching stops AND we have search query)
   useEffect(() => {
-    setGlobalSearchLength(globalSearchMatches.matches.length);
-    setIsSearching(false);
+    if (globalSearch && !isFetching) {
+      setGlobalSearchLength(globalSearchMatches.matches.length);
+      setIsSearching(false);
+    }
   }, [
+    globalSearch,
+    isFetching,
     globalSearchMatches.matches.length,
     setGlobalSearchLength,
     setIsSearching,
   ]);
 
-  if (isLoading) {
-    return null;
-  }
+  if (isLoading) return null;
 
   if (!tableWithViews || !columns || !rowsData) {
     return <NoDataPage missingData="table data" />;
   }
 
   return (
-    <div className="flex h-full w-full flex-col">
-      <TableContainer
-        tableWithViews={tableWithViews}
-        columns={columns}
-        rowCount={rowCount ?? 0}
-        rowsWithCells={rowsWithCells}
-        fetchNextPage={fetchNextPage}
-        hasNextPage={hasNextPage}
-        isFetchingNextPage={isFetchingNextPage}
-        sorting={sorting}
-        onSortingChange={setSorting}
-        columnFilters={filters}
-        onColumnFiltersChange={setFilters}
-        globalSearchMatches={globalSearchMatches}
-      />
-    </div>
+    <TableContainer
+      tableWithViews={tableWithViews}
+      columns={columns}
+      rowCount={rowCount ?? 0}
+      rowsWithCells={rowsWithCells}
+      fetchNextPage={fetchNextPage}
+      hasNextPage={hasNextPage}
+      isFetchingNextPage={isFetchingNextPage}
+      sorting={sorting}
+      onSortingChange={setSorting}
+      columnFilters={filters}
+      onColumnFiltersChange={setFilters}
+      globalSearchMatches={globalSearchMatches}
+    />
   );
 }

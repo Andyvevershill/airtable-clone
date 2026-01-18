@@ -4,6 +4,10 @@ import type { RowWithCells, TransformedRow } from "@/types/row";
 import type { CellContext, ColumnDef } from "@tanstack/react-table";
 import EditableCell from "../table/editable-cell";
 
+/* ---------------------------------------------
+ * Cell renderer
+ * ------------------------------------------- */
+
 function EditableCellRenderer(props: CellContext<TransformedRow, unknown>) {
   const { column } = props;
   const meta = column.columnDef.meta!;
@@ -18,12 +22,18 @@ function EditableCellRenderer(props: CellContext<TransformedRow, unknown>) {
   );
 }
 
+/* ---------------------------------------------
+ * Column definitions
+ * ------------------------------------------- */
+
 export function generateColumnDefinitions(
   dbColumns: ColumnType[],
   onCellEdit: (rowId: string, columnId: string, value: string | null) => void,
 ): ColumnDef<TransformedRow>[] {
   return dbColumns.map((col) => ({
     id: col.id,
+
+    // TanStack will only read what it needs for visible rows
     accessorFn: (row) => row._cells[col.id],
 
     meta: {
@@ -44,6 +54,16 @@ export function generateColumnDefinitions(
   }));
 }
 
+/* ---------------------------------------------
+ * Row transformation (PURE)
+ * ------------------------------------------- */
+type Cell = {
+  id: string;
+  value: string | null;
+  rowId: string;
+  columnId: string;
+};
+
 export function transformRowsToTanStackFormat(
   rows: RowWithCells[],
 ): TransformedRow[] {
@@ -54,10 +74,17 @@ export function transformRowsToTanStackFormat(
       _cellMap: {},
     };
 
-    row.cells.forEach((cell) => {
+    if (!row.cells) return transformedRow;
+
+    // Handle BOTH array and object shapes with proper typing
+    const cellsArray: Cell[] = Array.isArray(row.cells)
+      ? row.cells
+      : Object.values(row.cells);
+
+    for (const cell of cellsArray) {
       transformedRow._cells[cell.columnId] = cell.value;
       transformedRow._cellMap[cell.columnId] = cell.id;
-    });
+    }
 
     return transformedRow;
   });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useLoadingStore } from "@/app/stores/use-loading-store";
+import { useGlobalSearchStore } from "@/app/stores/use-search-store";
 import {
   generateColumnDefinitions,
   transformRowsToTanStackFormat,
@@ -9,7 +10,11 @@ import { TableSidebar } from "@/components/table/table-sidebar";
 import { TableToolbar } from "@/components/table/table-toolbar";
 import { useCellCommitter } from "@/hooks/use-cell-commiter";
 import { useViewUpdater } from "@/hooks/use-view-updater";
-import { applyViewToTableState } from "@/lib/helper-functions";
+import {
+  applyViewToTableState,
+  translateFiltersState,
+  translateSortingState,
+} from "@/lib/helper-functions";
 import type { RowWithCells, TableWithViews } from "@/types";
 import type { ColumnType } from "@/types/column";
 import type { GlobalSearchMatches } from "@/types/view";
@@ -47,11 +52,9 @@ export default function TableContainer({
   columns,
   rowCount,
   rowsWithCells,
-
   fetchNextPage,
   hasNextPage,
   isFetchingNextPage,
-
   sorting,
   onSortingChange,
   columnFilters,
@@ -59,21 +62,10 @@ export default function TableContainer({
   globalSearchMatches,
 }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { globalSearch } = useGlobalSearchStore();
   const { isLoadingView, isFiltering, setIsLoadingView } = useLoadingStore();
   const [columnVisibility, onColumnVisibilityChange] =
     useState<VisibilityState>({});
-  const [localColumns, setLocalColumns] = useState<ColumnType[]>(columns);
-  const [localRows, setLocalRows] = useState(
-    transformRowsToTanStackFormat(rowsWithCells),
-  );
-
-  useEffect(() => {
-    setLocalColumns(columns);
-  }, [columns]);
-
-  useEffect(() => {
-    setLocalRows(transformRowsToTanStackFormat(rowsWithCells));
-  }, [rowsWithCells]);
 
   const activeView = useMemo(
     () => tableWithViews.views.find((v) => v.isActive),
@@ -81,7 +73,7 @@ export default function TableContainer({
   );
 
   useEffect(() => {
-    if (!activeView?.id) return;
+    if (!activeView) return;
 
     applyViewToTableState(activeView, {
       onSortingChange,
@@ -89,15 +81,10 @@ export default function TableContainer({
       onColumnVisibilityChange,
     });
 
-    const MIN_DELAY = 200;
-
-    const timer = setTimeout(() => {
-      setIsLoadingView(false);
-    }, MIN_DELAY);
-
-    return () => clearTimeout(timer);
+    const t = setTimeout(() => setIsLoadingView(false), 200);
+    return () => clearTimeout(t);
   }, [
-    activeView?.id,
+    activeView,
     onSortingChange,
     onColumnFiltersChange,
     onColumnVisibilityChange,
@@ -107,65 +94,65 @@ export default function TableContainer({
   useViewUpdater(
     activeView?.id ?? "",
     tableWithViews.id,
-    {
-      sorting,
-      columnFilters,
-      columnVisibility,
-    },
+    { sorting, columnFilters, columnVisibility },
     columns,
   );
 
+  const tableData = useMemo(
+    () => transformRowsToTanStackFormat(rowsWithCells),
+    [rowsWithCells],
+  );
+
+  const rowsQueryInput = useMemo(
+    () => ({
+      tableId: tableWithViews.id,
+      limit: 5000,
+      sorting: translateSortingState(sorting, columns),
+      filters: translateFiltersState(columnFilters, columns),
+      globalSearch: globalSearch || undefined,
+    }),
+
+    [tableWithViews.id, sorting, columnFilters, columns, globalSearch],
+  );
+
   const { commitCell } = useCellCommitter({
-    localRows,
-    setLocalRows,
+    rowsQueryInput,
   });
 
-  const tanstackColumns = useMemo(() => {
-    return generateColumnDefinitions(localColumns, commitCell);
-  }, [localColumns, commitCell]);
+  const tanstackColumns = useMemo(
+    () => generateColumnDefinitions(columns, commitCell),
+    [columns, commitCell],
+  );
 
   const table = useReactTable({
-    data: localRows,
+    data: tableData,
     columns: tanstackColumns,
     getCoreRowModel: getCoreRowModel(),
     getRowId: (row) => row._rowId,
-
     manualSorting: true,
     manualFiltering: true,
-
+    state: { sorting, columnFilters, columnVisibility },
     onSortingChange,
     onColumnFiltersChange,
     onColumnVisibilityChange,
-
-    state: {
-      sorting,
-      columnFilters,
-      columnVisibility,
-    },
   });
-
-  const sidebarState: [boolean, (v: boolean) => void] = useMemo(
-    () => [sidebarOpen, setSidebarOpen],
-    [sidebarOpen],
-  );
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-slate-100">
-      <TableToolbar sideBarState={sidebarState} table={table} />
+      <TableToolbar
+        sideBarState={[sidebarOpen, setSidebarOpen]}
+        table={table}
+      />
 
       <div className="flex flex-1 overflow-hidden">
         {sidebarOpen && (
-          <div className="shrink-0">
-            <TableSidebar
-              sidebarOpen={sidebarOpen}
-              tableWithViews={tableWithViews}
-            />
-          </div>
+          <TableSidebar
+            sidebarOpen={sidebarOpen}
+            tableWithViews={tableWithViews}
+          />
         )}
 
         <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
-          {/* TABLE */}
-          {/* TABLE */}
           <div className="relative flex-1 overflow-x-auto">
             {isLoadingView ? (
               <div className="inset-0 z-10 flex h-full w-full items-center justify-center bg-slate-100">
@@ -178,7 +165,6 @@ export default function TableContainer({
               <div className="inset-0 z-10 flex h-full w-full items-center justify-center bg-slate-100">
                 <div className="flex flex-col items-center justify-center gap-6 text-gray-600">
                   <LuLoaderPinwheel size={22} className="animate-spin" />
-                  <p className="text-sm text-gray-600">Filtering fields...</p>
                 </div>
               </div>
             ) : rowsWithCells.length === 0 && columnFilters.length > 0 ? (
@@ -201,8 +187,8 @@ export default function TableContainer({
                 table={table}
                 tableId={tableWithViews.id}
                 rowCount={rowCount}
-                transformedRows={localRows}
-                columns={localColumns}
+                transformedRows={tableData}
+                columns={columns}
                 fetchNextPage={fetchNextPage}
                 hasNextPage={hasNextPage}
                 isFetchingNextPage={isFetchingNextPage}
@@ -212,7 +198,6 @@ export default function TableContainer({
               />
             )}
           </div>
-
           {/* RECORDS BAR */}
           <div className="sticky bottom-0 z-20 border-t border-gray-300 bg-white px-3 py-2">
             <div className="text-xs text-gray-600">
