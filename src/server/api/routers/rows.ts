@@ -25,11 +25,7 @@ export const rowsRouter = createTRPCRouter({
       const offset = input.cursor ?? 0;
       const { sorting, filters, globalSearch } = input;
 
-      // ══════════════════════════════════════════════════════════════════════
-      // OPTIMIZED APPROACH: Single query with LEFT JOINs instead of subqueries
-      // ══════════════════════════════════════════════════════════════════════
-
-      // ── 1. Build dynamic LEFT JOINs for sorting columns ──────────────────
+      //  Build dynamic LEFT JOINs for sorting columns
       let query = ctx.db
         .select({
           rowId: rows.id,
@@ -44,7 +40,7 @@ export const rowsRouter = createTRPCRouter({
         .leftJoin(cells, eq(cells.rowId, rows.id))
         .$dynamic();
 
-      // ── 2. Build WHERE conditions ────────────────────────────────────────
+      //  Build WHERE conditions
       const whereConditions: SQL[] = [eq(rows.tableId, input.tableId)];
 
       // Column filters - we need to filter on the joined cells
@@ -53,8 +49,6 @@ export const rowsRouter = createTRPCRouter({
         const filterConditions: SQL[] = [];
 
         for (const f of filters) {
-          let condition: SQL;
-
           switch (f.operator) {
             case "equals":
               filterConditions.push(
