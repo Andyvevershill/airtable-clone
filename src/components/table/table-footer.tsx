@@ -7,6 +7,7 @@ interface TableFooterProps {
   columns: ColumnType[];
   sorting: SortingState;
   filters: ColumnFiltersState;
+  notHydratedVirtualRows: boolean;
 }
 
 export function TableFooter({
@@ -14,6 +15,7 @@ export function TableFooter({
   columns,
   sorting,
   filters,
+  notHydratedVirtualRows,
 }: TableFooterProps) {
   return (
     <tfoot>
@@ -23,6 +25,7 @@ export function TableFooter({
           className="pointer h-8 border border-t-0 border-l-0 border-gray-200 bg-white p-0"
         >
           <AddRowButton
+            notHydratedVirtualRows={notHydratedVirtualRows}
             tableId={tableId}
             sorting={sorting}
             filters={filters}

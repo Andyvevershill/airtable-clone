@@ -217,6 +217,12 @@ export function Table({
     totalCols: columns.length + 1,
   });
 
+  const loadedRowCount = table.getRowModel().rows.length;
+
+  const notHydratedVirtualRows = rowVirtualizer
+    .getVirtualItems()
+    .some((v) => v.index >= loadedRowCount);
+
   return (
     <>
       <div
@@ -261,6 +267,7 @@ export function Table({
                 columns={columns}
                 sorting={sorting}
                 filters={filters}
+                notHydratedVirtualRows={notHydratedVirtualRows}
               />
             </table>
           </div>
