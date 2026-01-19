@@ -25,72 +25,110 @@ export const rowsRouter = createTRPCRouter({
       const offset = input.cursor ?? 0;
       const { sorting, filters, globalSearch } = input;
 
-      // ── 1. Build ORDER BY ────────────────────────────────────────────────
+      //  Build WHERE conditions
+      const whereConditions: SQL[] = [eq(rows.tableId, input.tableId)];
+
+      // Column filters - we need to filter on the joined cells
+      // For filters, we'll need to ensure the cell matches the column
+      if (filters.length > 0) {
+        const filterConditions: SQL[] = [];
+
+        for (const f of filters) {
+          switch (f.operator) {
+            case "equals":
+              filterConditions.push(
+                and(
+                  eq(cells.columnId, f.columnId),
+                  eq(cells.value, f.value as string),
+                )!,
+              );
+              break;
+            case "contains":
+              filterConditions.push(
+                and(
+                  eq(cells.columnId, f.columnId),
+                  ilike(cells.value, `%${f.value}%`),
+                )!,
+              );
+              break;
+            case "notContains":
+              filterConditions.push(
+                and(
+                  eq(cells.columnId, f.columnId),
+                  not(ilike(cells.value, `%${f.value}%`)),
+                )!,
+              );
+              break;
+            case "greaterThan":
+              filterConditions.push(
+                and(
+                  eq(cells.columnId, f.columnId),
+                  gt(sql`CAST(${cells.value} AS NUMERIC)`, f.value as number),
+                )!,
+              );
+              break;
+            case "lessThan":
+              filterConditions.push(
+                and(
+                  eq(cells.columnId, f.columnId),
+                  lt(sql`CAST(${cells.value} AS NUMERIC)`, f.value as number),
+                )!,
+              );
+              break;
+            case "isEmpty":
+              filterConditions.push(
+                and(eq(cells.columnId, f.columnId), isNull(cells.value))!,
+              );
+              break;
+            case "isNotEmpty":
+              filterConditions.push(
+                and(eq(cells.columnId, f.columnId), isNotNull(cells.value))!,
+              );
+              break;
+            default:
+              continue;
+          }
+        }
+
+        // For filters, we use a subquery approach since we need ALL filters to match
+        // This checks that the row has cells matching all filter criteria
+        if (filterConditions.length > 0) {
+          for (const filterCond of filterConditions) {
+            whereConditions.push(
+              sql`EXISTS (
+                SELECT 1 FROM ${cells} 
+                WHERE ${cells.rowId} = ${rows.id} 
+                AND ${filterCond}
+              )`,
+            );
+          }
+        }
+      }
+
+      //  Get filtered row IDs first
+      //  Get just the row IDs that match filters and sorting
       const orderByClauses: SQL[] = [];
 
       for (const sort of sorting) {
-        const cellValueSubquery =
+        // Use a lateral join or subquery for sorting
+        const sortExpr =
           sort.type === "number"
-            ? sql`CAST((SELECT value FROM cell WHERE row_id = row.id AND column_id = ${sort.columnId} LIMIT 1) AS NUMERIC)`
-            : sql`LOWER((SELECT value FROM cell WHERE row_id = row.id AND column_id = ${sort.columnId} LIMIT 1))`;
+            ? sql`(SELECT CAST(value AS NUMERIC) FROM ${cells} WHERE ${cells.rowId} = ${rows.id} AND ${cells.columnId} = ${sort.columnId} LIMIT 1)`
+            : sql`(SELECT LOWER(value) FROM ${cells} WHERE ${cells.rowId} = ${rows.id} AND ${cells.columnId} = ${sort.columnId} LIMIT 1)`;
 
-        // Nulls last for both
         if (sort.direction === "desc") {
-          orderByClauses.push(sql`${cellValueSubquery} DESC NULLS LAST`);
+          orderByClauses.push(sql`${sortExpr} DESC NULLS LAST`);
         } else {
-          orderByClauses.push(sql`${cellValueSubquery} ASC NULLS LAST`);
+          orderByClauses.push(sql`${sortExpr} ASC NULLS LAST`);
         }
       }
 
       orderByClauses.push(asc(rows.position));
 
-      // ── 2. Build WHERE conditions ────────────────────────────────────────
-      const whereConditions: SQL[] = [eq(rows.tableId, input.tableId)];
-
-      // Column filters
-      for (const f of filters) {
-        const colId = f.columnId;
-
-        const valueSubquery = sql`
-        (SELECT value FROM cell 
-         WHERE row_id = row.id AND column_id = ${colId} LIMIT 1)
-      `;
-
-        let condition: SQL;
-
-        switch (f.operator) {
-          case "equals":
-            condition = eq(valueSubquery, f.value);
-            break;
-          case "contains":
-            condition = ilike(valueSubquery, `%${f.value}%`);
-            break;
-          case "notContains":
-            condition = not(ilike(valueSubquery, `%${f.value}%`));
-            break;
-          case "greaterThan":
-            condition = gt(sql`CAST(${valueSubquery} AS NUMERIC)`, f.value);
-            break;
-          case "lessThan":
-            condition = lt(sql`CAST(${valueSubquery} AS NUMERIC)`, f.value);
-            break;
-          case "isEmpty":
-            condition = isNull(valueSubquery);
-            break;
-          case "isNotEmpty":
-            condition = isNotNull(valueSubquery);
-            break;
-          default:
-            continue;
-        }
-
-        whereConditions.push(condition);
-      }
-
       const finalWhere = and(...whereConditions);
 
-      // ── 3. Execute Query ──────────────────────────────────────────────────
-      const tableRows = await ctx.db
+      // Get paginated row IDs with sorting
+      const paginatedRows = await ctx.db
         .select({
           id: rows.id,
           tableId: rows.tableId,
@@ -102,7 +140,9 @@ export const rowsRouter = createTRPCRouter({
         .limit(input.limit)
         .offset(offset);
 
-      const rowIds = tableRows.map((r) => r.id);
+      const rowIds = paginatedRows.map((r) => r.id);
+
+      //Fetch all cells for these rows in ONE query
       const rowCells = rowIds.length
         ? await ctx.db
             .select({
@@ -115,13 +155,15 @@ export const rowsRouter = createTRPCRouter({
             .where(inArray(cells.rowId, rowIds))
         : [];
 
-      const rowsWithCells = tableRows.map((row) => ({
-        ...row,
+      //  Assemble rows with cells
+      const rowsWithCells = paginatedRows.map((row) => ({
+        id: row.id,
+        tableId: row.tableId,
+        position: row.position,
         cells: rowCells.filter((c) => c.rowId === row.id),
       }));
 
-      // ── 4. Calculate Search Matches (if globalSearch exists) ─────────────
-
+      // Calculate Search Matches (if globalSearch exists)
       const searchMatches: {
         matches: SearchMatch[];
       } = { matches: [] };
@@ -147,15 +189,14 @@ export const rowsRouter = createTRPCRouter({
         // Cell matches - with row index
         for (const cell of rowCells) {
           if (cell.value?.toString().toLowerCase().includes(searchTerm)) {
-            // Find the index of this row in the tableRows array
-            const rowIndex = tableRows.findIndex(
+            const rowIndex = paginatedRows.findIndex(
               (row) => row.id === cell.rowId,
             );
 
             searchMatches.matches.push({
               type: "cell",
               cellId: `${cell.rowId}_${cell.columnId}`,
-              rowIndex: rowIndex !== -1 ? rowIndex : 0, // Include the row's position in the current page
+              rowIndex: rowIndex !== -1 ? rowIndex : 0,
             });
           }
         }
@@ -165,7 +206,9 @@ export const rowsRouter = createTRPCRouter({
         items: rowsWithCells,
         searchMatches,
         nextCursor:
-          tableRows.length === input.limit ? offset + input.limit : undefined,
+          paginatedRows.length === input.limit
+            ? offset + input.limit
+            : undefined,
       };
     }),
 
@@ -228,7 +271,6 @@ export const rowsRouter = createTRPCRouter({
             });
         }
 
-        // Return SAME shape as getRowsInfinite
         return {
           id: newRow.id,
           tableId: newRow.tableId,
@@ -247,7 +289,7 @@ export const rowsRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       console.log(
-        `[addBulkRows] Starting bulk insert of 100k rows for table ${input.tableId}`,
+        `[addBulkRows] Starting bulk insert of ${input.count} rows for table ${input.tableId}`,
       );
 
       // Get columns to know what cells to create
@@ -258,75 +300,68 @@ export const rowsRouter = createTRPCRouter({
 
       console.log(`[addBulkRows] Found ${tableColumns.length} columns`);
 
-      const maxRowPosition = await ctx.db.query.rows.findFirst({
-        where: eq(rows.tableId, input.tableId),
-        orderBy: (rows, { desc }) => [desc(rows.position)],
-      });
-
-      const startPosition = (maxRowPosition?.position ?? -1) + 1;
-      console.log(`[addBulkRows] Starting position: ${startPosition}`);
-
-      const totalRows = 100000;
-
+      const totalRows = input.count;
       const batchSize = 1000;
       const batches = Math.ceil(totalRows / batchSize);
 
       console.log(`[addBulkRows] Processing ${batches} batch(es)`);
 
+      let totalInserted = 0;
+
       for (let batch = 0; batch < batches; batch++) {
         const batchStart = batch * batchSize;
         const batchEnd = Math.min((batch + 1) * batchSize, totalRows);
+        const currentBatchSize = batchEnd - batchStart;
 
         console.log(
-          `[addBulkRows] Batch ${batch + 1}/${batches}: Inserting rows ${batchStart} to ${batchEnd - 1}`,
+          `[addBulkRows] Batch ${batch + 1}/${batches}: Inserting ${currentBatchSize} rows`,
         );
 
-        const rowsToInsert = [];
-
-        for (let i = batchStart; i < batchEnd; i++) {
-          rowsToInsert.push({
-            tableId: input.tableId,
-            createdAt: new Date(),
-            updatedAt: null,
-          });
-        }
+        const rowsToInsert = Array.from({ length: currentBatchSize }, () => ({
+          tableId: input.tableId,
+          createdAt: new Date(),
+          updatedAt: null,
+        }));
 
         // Insert rows and get their IDs back
         const insertedRows = await ctx.db
           .insert(rows)
           .values(rowsToInsert)
           .returning();
+
         console.log(`[addBulkRows] Inserted ${insertedRows.length} rows`);
 
-        // Now create cells for each inserted row
-        const cellsToInsert = [];
-
-        for (const row of insertedRows) {
-          for (const column of tableColumns) {
-            const value = faker.person.firstName();
-
-            cellsToInsert.push({
-              rowId: row.id,
-              columnId: column.id,
-              value: value,
-              updatedAt: null,
-            });
-          }
-        }
+        // Prepare cells for batch insert
+        const cellsToInsert = insertedRows.flatMap((row) =>
+          tableColumns.map((column) => ({
+            rowId: row.id,
+            columnId: column.id,
+            value: faker.person.firstName(),
+            updatedAt: null,
+          })),
+        );
 
         console.log(
           `[addBulkRows] Inserting ${cellsToInsert.length} cells (${tableColumns.length} columns × ${insertedRows.length} rows)`,
         );
 
-        // Batch insert cells
-        await ctx.db.insert(cells).values(cellsToInsert);
-        console.log(`[addBulkRows] Batch ${batch + 1} complete`);
+        // Batch insert cells - split into smaller chunks if needed
+        const cellBatchSize = 5000;
+        for (let i = 0; i < cellsToInsert.length; i += cellBatchSize) {
+          const cellBatch = cellsToInsert.slice(i, i + cellBatchSize);
+          await ctx.db.insert(cells).values(cellBatch);
+        }
+
+        totalInserted += insertedRows.length;
+        console.log(
+          `[addBulkRows] Batch ${batch + 1} complete. Total: ${totalInserted}/${totalRows}`,
+        );
       }
 
       console.log(
-        `[addBulkRows] Successfully inserted ${totalRows} rows with their cells`,
+        `[addBulkRows] Successfully inserted ${totalInserted} rows with their cells`,
       );
 
-      return { inserted: totalRows };
+      return { inserted: totalInserted };
     }),
 });

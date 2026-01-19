@@ -75,6 +75,9 @@ export default function TablePage() {
 
   useEffect(() => {
     if (filters.length && isFetching) setIsFiltering(true);
+    if (sorting.length && isFetching) setIsFiltering(true);
+
+    if (!filters.length && !isFetching) setIsFiltering(false);
     if (!isFetching) setIsFiltering(false);
   }, [filters.length, isFetching, setIsFiltering]);
 

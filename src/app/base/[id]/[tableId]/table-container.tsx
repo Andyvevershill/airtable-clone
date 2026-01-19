@@ -181,7 +181,6 @@ export default function TableContainer({
               <div className="inset-0 z-10 flex h-full w-full items-center justify-center bg-slate-100">
                 <div className="flex flex-col items-center justify-center gap-6 text-gray-600">
                   <LuLoaderPinwheel size={22} className="animate-spin" />
-                  <p className="text-sm text-gray-600">Filtering fields...</p>
                 </div>
               </div>
             ) : rowsWithCells.length === 0 && columnFilters.length > 0 ? (
