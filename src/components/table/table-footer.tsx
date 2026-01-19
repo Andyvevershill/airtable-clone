@@ -20,7 +20,7 @@ export function TableFooter({
       <tr>
         <td
           colSpan={columns.length + 1}
-          className="pointer h-8 border border-gray-200 bg-white p-0"
+          className="pointer h-8 border border-t-0 border-l-0 border-gray-200 bg-white p-0"
         >
           <AddRowButton
             tableId={tableId}

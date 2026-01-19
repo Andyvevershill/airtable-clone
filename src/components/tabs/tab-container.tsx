@@ -36,7 +36,7 @@ export default function TabContainer({ base }: Props) {
       style={tabStyle}
     >
       <div className="flex h-8 w-full flex-row items-center">
-        {tables.map((table) => {
+        {tables.map((table, index) => {
           const isActive = table.id === tableId;
 
           return (
@@ -51,7 +51,7 @@ export default function TabContainer({ base }: Props) {
                   void utils.column.getColumns.prefetch({ tableId: table.id });
                 }
               }}
-              className={`relative flex h-full items-center gap-2 rounded-t-sm px-4 py-1 text-[13px] transition-colors after:absolute after:top-1/2 after:right-0 after:h-1/3 after:w-px after:-translate-y-1/2 after:bg-[var(--tab-hover-darken)] ${
+              className={`relative flex h-full items-center gap-2 px-4 py-1 text-[13px] transition-colors after:absolute after:top-1/2 after:right-0 after:h-1/3 after:w-px after:-translate-y-1/2 after:bg-[var(--tab-hover-darken)] ${isActive && index === 0 ? "rounded-tr-sm" : "rounded-t-sm"} ${
                 isActive
                   ? "bg-white font-normal after:hidden"
                   : "text-gray-500 hover:bg-[var(--tab-hover-darken)]"

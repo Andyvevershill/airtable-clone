@@ -24,6 +24,8 @@ export function TableBody({
   matchedCellIdSet,
   matchedRowIndexSet,
 }: TableBodyProps) {
+  const visibleColumns = table.getVisibleFlatColumns();
+
   return (
     <tbody
       style={{
@@ -34,7 +36,53 @@ export function TableBody({
       {rowVirtualizer.getVirtualItems().map((virtualRow) => {
         const rows = table.getRowModel().rows;
         const tanstackRow = rows[virtualRow.index];
-        if (!tanstackRow) return null;
+
+        if (!tanstackRow) {
+          return (
+            <tr
+              key={`skeleton-${virtualRow.index}`}
+              data-index={virtualRow.index}
+              className="w-full"
+              style={{
+                position: "absolute",
+                transform: `translateY(${virtualRow.start}px)`,
+                height: ROW_HEIGHT,
+              }}
+            >
+              {/* FAKE GUTTER CELL */}
+              <td
+                className="border-t-0 border-b border-gray-200 p-0"
+                style={{
+                  width: GUTTER_WIDTH,
+                  minWidth: GUTTER_WIDTH,
+                }}
+              >
+                <Skeleton className="ml-2 h-3 w-8 rounded-sm" />
+              </td>
+
+              {/* SKELETON CELLS FOR ALL COLUMNS */}
+              {visibleColumns.map((column, index) => (
+                <td
+                  key={column.id}
+                  className={cn(
+                    "overflow-hidden border border-t-0 border-gray-200 px-2",
+                    index === 0 && "border-l-0",
+                  )}
+                  style={{
+                    minWidth: MIN_COL_WIDTH,
+                    width: column.getSize(),
+                    height: ROW_HEIGHT,
+                    maxWidth: column.getSize(),
+                  }}
+                >
+                  <div className="flex h-full items-center">
+                    <Skeleton className="h-3 w-full max-w-[90%] rounded-sm" />
+                  </div>
+                </td>
+              ))}
+            </tr>
+          );
+        }
 
         return (
           <tr
@@ -51,7 +99,7 @@ export function TableBody({
             {/* FAKE GUTTER CELL */}
             <td
               className={cn(
-                "border-t border-b border-gray-200 p-0 text-xs text-gray-500",
+                "border-t-0 border-b border-gray-200 p-0 text-xs text-gray-500",
                 matchedRowIndexSet.has(virtualRow.index) && "bg-[#FFF3D3]",
               )}
               style={{
@@ -63,46 +111,6 @@ export function TableBody({
             </td>
 
             {tanstackRow.getVisibleCells().map((cell, index) => {
-              const rows = table.getRowModel().rows;
-              const tanstackRow = rows[virtualRow.index];
-
-              const isBeyondLoadedRows = virtualRow.index >= rows.length;
-
-              // Unloaded page → skeleton
-              if (!tanstackRow && isBeyondLoadedRows) {
-                const visibleColumns = table.getVisibleFlatColumns();
-
-                return (
-                  <tr
-                    key={`skeleton-${virtualRow.index}`}
-                    data-index={virtualRow.index}
-                    className="w-full"
-                    style={{
-                      position: "absolute",
-                      transform: `translateY(${virtualRow.start}px)`,
-                      height: ROW_HEIGHT,
-                    }}
-                  >
-                    {visibleColumns.map((column) => (
-                      <td
-                        key={column.id}
-                        className="h-full w-full overflow-hidden border border-gray-200 p-0"
-                        style={{
-                          minWidth: MIN_COL_WIDTH,
-                          width: column.getSize(),
-                          height: ROW_HEIGHT,
-                          maxWidth: column.getSize(),
-                        }}
-                      >
-                        <div className="flex h-full w-full items-center justify-center">
-                          <Skeleton className="h-3 w-full max-w-[90%] rounded-sm p-0" />
-                        </div>
-                      </td>
-                    ))}
-                  </tr>
-                );
-              }
-
               const isActiveCell =
                 activeMatch?.type === "cell" && activeMatch.cellId === cell.id;
 
@@ -110,9 +118,8 @@ export function TableBody({
                 <td
                   key={cell.id}
                   data-cell-id={cell.id}
-                  //  UI styling for search/sort/filter results
                   className={cn(
-                    "overflow-hidden border border-gray-200 p-0 transition-colors",
+                    "overflow-hidden border border-t-0 border-gray-200 p-0 transition-colors",
                     index === 0 && "border-l-0",
                     cell.column.getIsFiltered() && "bg-[#ebfbec]",
                     cell.column.getIsSorted() &&

@@ -2,18 +2,29 @@
 
 import { useLoadingStore } from "@/app/stores/use-loading-store";
 import { useSavingStore } from "@/app/stores/use-saving-store";
-import type { View } from "@/server/db/schemas";
+import { type View } from "@/server/db/schemas";
 import { api } from "@/trpc/react";
+import { TooltipPortal } from "@radix-ui/react-tooltip";
+import type { User } from "better-auth";
 import { Star, TableCellsSplit } from "lucide-react";
 import { useState } from "react";
+import { GrGroup } from "react-icons/gr";
 import { PiDotsSixVerticalLight } from "react-icons/pi";
 import { EditViewDropdown } from "../dropdowns/edit-view-dropdown";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../ui/tooltip";
 import ViewEditMode from "../view/view-edit-mode";
+
 interface Props {
   setHoveredViewId: React.Dispatch<React.SetStateAction<string | null>>;
   setViews: React.Dispatch<React.SetStateAction<View[]>>;
   setEditViewId: React.Dispatch<React.SetStateAction<string | null>>;
 
+  user: User;
   view: View;
   views: View[];
   searchQuery: string;
@@ -26,12 +37,14 @@ export default function ViewButton({
   setViews,
   setEditViewId,
 
+  user,
   view,
   views,
   isHovered,
   isEditing,
 }: Props) {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [tooltipOpen, setTooltipOpen] = useState(false);
   const setIsSaving = useSavingStore((s) => s.setIsSaving);
   const { setIsLoadingView } = useLoadingStore();
 
@@ -90,6 +103,7 @@ export default function ViewButton({
     },
     onSettled: () => setIsSaving(false),
   });
+
   function handleSetActive() {
     if (view.isActive) return;
     setIsLoadingView(true);
@@ -100,72 +114,118 @@ export default function ViewButton({
   }
 
   return (
-    <div
-      onClick={handleSetActive}
-      onMouseEnter={() => setHoveredViewId(view.id)}
-      onMouseLeave={() => setHoveredViewId(null)}
-      onDoubleClick={(e) => {
-        e.stopPropagation();
-        setEditViewId(view.id);
-      }}
-      className={`pointer flex h-[32.25px] w-full items-center gap-2 rounded px-2 text-[13px] ${
-        view.isActive ? "bg-gray-100" : ""
-      }`}
-    >
-      <div className="mr-2 w-2">
-        {isHovered ? (
+    <TooltipProvider delayDuration={400}>
+      <Tooltip
+        open={openDropdownId ? false : undefined}
+        onOpenChange={setTooltipOpen}
+      >
+        <TooltipTrigger asChild>
           <div
             onClick={(e) => {
-              e.stopPropagation();
-              toggleFavouriteSidebar.mutate({
-                id: view.id,
-                isFavourite: view.isFavourite,
-              });
+              setTooltipOpen(false);
+              handleSetActive();
             }}
-            className="flex h-6 w-6 items-center justify-start rounded-md hover:bg-gray-100"
+            onMouseEnter={() => setHoveredViewId(view.id)}
+            onMouseLeave={() => setHoveredViewId(null)}
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              setTooltipOpen(false);
+              setEditViewId(view.id);
+            }}
+            className={`pointer flex h-[32.25px] w-full items-center gap-2 rounded px-2 text-[13px] ${
+              view.isActive ? "bg-gray-100" : "hover:bg-gray-100"
+            }`}
           >
-            <Star
-              size={16}
-              className={
-                view.isFavourite
-                  ? "fill-yellow-500 text-yellow-500"
-                  : "text-gray-800"
-              }
-            />
-          </div>
-        ) : (
-          <TableCellsSplit size={16} className="text-blue-500" />
-        )}
-      </div>
+            <div className="mr-2 w-2">
+              {isHovered ? (
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setTooltipOpen(false);
+                    toggleFavouriteSidebar.mutate({
+                      id: view.id,
+                      isFavourite: view.isFavourite,
+                    });
+                  }}
+                  className="flex h-6 w-6 items-center justify-start rounded-md hover:bg-gray-100"
+                >
+                  <Star
+                    size={16}
+                    className={
+                      view.isFavourite
+                        ? "fill-yellow-500 text-yellow-500"
+                        : "text-gray-800"
+                    }
+                  />
+                </div>
+              ) : (
+                <TableCellsSplit size={16} className="text-blue-500" />
+              )}
+            </div>
 
-      {isEditing ? (
-        <ViewEditMode
-          view={view}
-          setViews={setViews}
-          onDone={() => setEditViewId(null)}
-        />
-      ) : (
-        <div className="flex w-full items-center gap-2">
-          <span className="w-20 flex-1 truncate text-[13px] font-normal">
-            {view.name}
-          </span>
-
-          {(isHovered || openDropdownId === view.id) && (
-            <div className="mr-1 flex shrink-0 flex-row gap-1">
-              <EditViewDropdown
-                deleteDisabled={views.length === 1}
+            {isEditing ? (
+              <ViewEditMode
                 view={view}
                 setViews={setViews}
-                onRename={() => setEditViewId(view.id)}
-                onOpenChange={(open) =>
-                  setOpenDropdownId(open ? view.id : null)
-                }
+                onDone={() => setEditViewId(null)}
               />
-              <PiDotsSixVerticalLight size={14} className="hover:cursor-grab" />
+            ) : (
+              <div className="flex w-full items-center gap-2">
+                <span className="w-20 flex-1 truncate text-[13px] font-normal">
+                  {view.name}
+                </span>
+
+                {(isHovered || openDropdownId === view.id) && (
+                  <div className="mr-1 flex shrink-0 flex-row gap-1">
+                    <EditViewDropdown
+                      deleteDisabled={views.length === 1}
+                      view={view}
+                      setViews={setViews}
+                      onRename={() => setEditViewId(view.id)}
+                      onOpenChange={(open) => {
+                        setOpenDropdownId(open ? view.id : null);
+                        if (open) setTooltipOpen(false);
+                      }}
+                    />
+                    <PiDotsSixVerticalLight
+                      size={14}
+                      className="hover:cursor-grab"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </TooltipTrigger>
+        <TooltipPortal>
+          <TooltipContent
+            side="right"
+            className="ml-2 w-62 rounded-[3px] px-1.5"
+          >
+            <div className="flex flex-col">
+              <h1 className="mb-2 text-sm text-white">{view.name}</h1>
+              <p className="text-gray-300">Created by</p>
+              <div className="mb-2 flex flex-row items-center justify-start gap-1">
+                {user.name && (
+                  <p className="text text-[13px] text-white">{user.name}</p>
+                )}
+                {user.email && (
+                  <p className="text-[13px] text-gray-300">{user.email}</p>
+                )}
+              </div>
+              <p className="text-gray-300">editing</p>
+
+              <span className="flex flex-row items-start gap-1">
+                <GrGroup className="mt-[2px] shrink-0" size={14} />
+                <span className="text-[13px]">
+                  everyone can edit the view
+                  <br /> configuration
+                </span>
+              </span>
             </div>
-          )}
-        </div>
-      )}
-    </div>
+          </TooltipContent>
+        </TooltipPortal>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

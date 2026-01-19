@@ -266,14 +266,6 @@ export function Table({
           </div>
         </div>
       </div>
-
-      {/* RECORDS BAR - Outside the width-constrained div */}
-      <div className="sticky bottom-0 z-20 border-t border-gray-300 bg-white px-3 py-2">
-        <div className="text-xs text-gray-600">
-          {rowCount} {rowCount === 1 ? "record" : "records"}
-          {isFetchingNextPage && " – Loading more…"}
-        </div>
-      </div>
     </>
   );
 }

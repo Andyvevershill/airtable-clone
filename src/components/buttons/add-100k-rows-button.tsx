@@ -1,5 +1,6 @@
 import { useLoadingStore } from "@/app/stores/use-loading-store";
 import { api } from "@/trpc/react";
+import { toast } from "sonner";
 import { Button } from "../ui/button";
 
 interface Props {
@@ -14,6 +15,7 @@ export default function Add100kRowButton({ tableId }: Props) {
   const addRow = api.row.addBulkRows.useMutation({
     onMutate: () => {
       setIsLoading(true);
+      toast.warning("Adding 100k rows... This may take a few moments");
     },
     onSuccess: () => {
       // Invalidate rows query to get cells for new column
@@ -31,6 +33,7 @@ export default function Add100kRowButton({ tableId }: Props) {
   });
 
   const handleAddRow = () => {
+    console.log("adding");
     addRow.mutate({
       tableId,
       count: 100000,
@@ -44,7 +47,7 @@ export default function Add100kRowButton({ tableId }: Props) {
       title="Add 100k rows"
       onClick={handleAddRow}
     >
-      Add 100k rows
+      {addRow.isPending ? "Adding..." : "Add 100k rows"}
     </Button>
   );
 }

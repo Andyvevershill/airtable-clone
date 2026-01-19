@@ -26,6 +26,7 @@ import {
   type SortingState,
   type VisibilityState,
 } from "@tanstack/react-table";
+import type { User } from "better-auth";
 import { useEffect, useMemo, useState } from "react";
 import { LuLoaderPinwheel } from "react-icons/lu";
 import { Table } from "./table";
@@ -35,6 +36,7 @@ interface Props {
   columns: ColumnType[];
   rowCount: number;
   rowsWithCells: RowWithCells[];
+  user: User;
 
   fetchNextPage: () => void;
   hasNextPage?: boolean;
@@ -48,6 +50,7 @@ interface Props {
 }
 
 export default function TableContainer({
+  user,
   tableWithViews,
   columns,
   rowCount,
@@ -160,6 +163,7 @@ export default function TableContainer({
             <TableSidebar
               sidebarOpen={sidebarOpen}
               tableWithViews={tableWithViews}
+              user={user}
             />
           </div>
         )}
@@ -167,7 +171,7 @@ export default function TableContainer({
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="relative flex-1 overflow-auto">
             {isLoadingView ? (
-              <div className="inset-0 z-10 flex h-full w-full items-center justify-center bg-slate-100">
+              <div className="inset-0 z-10 flex h-full w-full flex-col items-center justify-center bg-slate-100">
                 <div className="flex flex-col items-center justify-center gap-6 text-gray-600">
                   <LuLoaderPinwheel size={22} className="animate-spin" />
                   <p className="text-sm text-gray-600">Loading this view...</p>
@@ -210,6 +214,14 @@ export default function TableContainer({
                 globalSearchMatches={globalSearchMatches}
               />
             )}
+          </div>
+
+          {/* RECORDS BAR - Inside the table's flex container */}
+          <div className="border-t border-gray-300 bg-white px-3 py-2">
+            <div className="text-xs text-gray-600">
+              {rowCount} {rowCount === 1 ? "record" : "records"}
+              {isFetchingNextPage && " – Loading more…"}
+            </div>
           </div>
         </div>
       </div>

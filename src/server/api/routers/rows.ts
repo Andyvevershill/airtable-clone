@@ -228,7 +228,7 @@ export const rowsRouter = createTRPCRouter({
             });
         }
 
-        // Return same shape as getRowsInfinite
+        // Return SAME shape as getRowsInfinite
         return {
           id: newRow.id,
           tableId: newRow.tableId,
@@ -286,7 +286,6 @@ export const rowsRouter = createTRPCRouter({
         for (let i = batchStart; i < batchEnd; i++) {
           rowsToInsert.push({
             tableId: input.tableId,
-            position: startPosition + i,
             createdAt: new Date(),
             updatedAt: null,
           });
@@ -304,10 +303,10 @@ export const rowsRouter = createTRPCRouter({
 
         for (const row of insertedRows) {
           for (const column of tableColumns) {
-            const value = faker.person.fullName();
+            const value = faker.person.firstName();
 
             cellsToInsert.push({
-              rowId: row.id, // Use the actual row ID from the inserted row
+              rowId: row.id,
               columnId: column.id,
               value: value,
               updatedAt: null,
