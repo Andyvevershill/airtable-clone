@@ -51,7 +51,7 @@ export function TableBody({
             {/* FAKE GUTTER CELL */}
             <td
               className={cn(
-                "border-t border-b border-gray-200 p-0 text-xs text-gray-500",
+                "border-t-0 border-b border-gray-200 p-0 text-xs text-gray-500",
                 matchedRowIndexSet.has(virtualRow.index) && "bg-[#FFF3D3]",
               )}
               style={{
@@ -112,7 +112,7 @@ export function TableBody({
                   data-cell-id={cell.id}
                   //  UI styling for search/sort/filter results
                   className={cn(
-                    "overflow-hidden border border-gray-200 p-0 transition-colors",
+                    "overflow-hidden border border-t-0 border-gray-200 p-0 transition-colors",
                     index === 0 && "border-l-0",
                     cell.column.getIsFiltered() && "bg-[#ebfbec]",
                     cell.column.getIsSorted() &&

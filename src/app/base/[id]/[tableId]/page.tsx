@@ -23,6 +23,8 @@ export default function TablePage() {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [filters, setFilters] = useState<ColumnFiltersState>([]);
 
+  const { data: user } = api.user.getUser.useQuery();
+
   const { data: tableWithViews, isLoading: tableWithViewsLoading } =
     api.table.getTableWithViews.useQuery({ tableId });
 
@@ -99,13 +101,14 @@ export default function TablePage() {
 
   if (isLoading) return null;
 
-  if (!tableWithViews || !columns || !rowsData) {
+  if (!tableWithViews || !columns || !rowsData || !user) {
     return <NoDataPage missingData="table data" />;
   }
 
   return (
     <TableContainer
       tableWithViews={tableWithViews}
+      user={user}
       columns={columns}
       rowCount={rowCount ?? 0}
       rowsWithCells={rowsWithCells}

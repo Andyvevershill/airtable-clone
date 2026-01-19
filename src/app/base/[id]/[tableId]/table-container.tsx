@@ -26,6 +26,7 @@ import {
   type SortingState,
   type VisibilityState,
 } from "@tanstack/react-table";
+import type { User } from "better-auth";
 import { useEffect, useMemo, useState } from "react";
 import { LuLoaderPinwheel } from "react-icons/lu";
 import { Table } from "./table";
@@ -35,6 +36,7 @@ interface Props {
   columns: ColumnType[];
   rowCount: number;
   rowsWithCells: RowWithCells[];
+  user: User;
 
   fetchNextPage: () => void;
   hasNextPage?: boolean;
@@ -48,6 +50,7 @@ interface Props {
 }
 
 export default function TableContainer({
+  user,
   tableWithViews,
   columns,
   rowCount,
@@ -160,6 +163,7 @@ export default function TableContainer({
             <TableSidebar
               sidebarOpen={sidebarOpen}
               tableWithViews={tableWithViews}
+              user={user}
             />
           </div>
         )}

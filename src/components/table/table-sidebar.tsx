@@ -1,6 +1,7 @@
 "use client";
 
 import type { TableWithViews } from "@/types";
+import type { User } from "better-auth";
 import { useState } from "react";
 import { CiSearch } from "react-icons/ci";
 import Add100kRowButton from "../buttons/add-100k-rows-button";
@@ -8,10 +9,11 @@ import ViewButton from "../buttons/view-button";
 import { CreateViewDropdown } from "../dropdowns/create-view-dropdown";
 import { Input } from "../ui/input";
 interface Props {
+  user: User;
   sidebarOpen: boolean;
   tableWithViews: TableWithViews;
 }
-export function TableSidebar({ tableWithViews, sidebarOpen }: Props) {
+export function TableSidebar({ user, tableWithViews, sidebarOpen }: Props) {
   const [views, setViews] = useState(tableWithViews.views);
   const [hoveredViewId, setHoveredViewId] = useState<string | null>(null);
   const [editViewId, setEditViewId] = useState<string | null>(null);
@@ -28,18 +30,18 @@ export function TableSidebar({ tableWithViews, sidebarOpen }: Props) {
       }`}
     >
       <div
-        className={`flex h-full flex-col justify-between gap-2 overflow-hidden transition-opacity ${
+        className={`flex h-full flex-col justify-between overflow-hidden transition-opacity ${
           sidebarOpen ? "opacity-100" : "opacity-0"
         }`}
       >
-        <div className="flex flex-col gap-2 px-2 py-1">
+        <div className="flex flex-col px-2 py-1">
           <CreateViewDropdown
             tableId={tableWithViews.id}
             viewLength={views.length}
             setViews={setViews}
           />
 
-          <div className="relative flex h-8 flex-1 items-center text-[13px]">
+          <div className="relative mb-2 flex h-8 flex-1 items-center text-[13px]">
             <CiSearch className="absolute left-2 text-gray-400" size={16} />
             <Input
               type="text"
@@ -57,6 +59,7 @@ export function TableSidebar({ tableWithViews, sidebarOpen }: Props) {
             return (
               <ViewButton
                 key={view.id}
+                user={user}
                 setHoveredViewId={setHoveredViewId}
                 setViews={setViews}
                 setEditViewId={setEditViewId}
