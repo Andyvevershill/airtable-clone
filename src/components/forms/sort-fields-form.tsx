@@ -68,11 +68,10 @@ export default function SortFieldsForm({
       },
     ];
   });
-
-  if (!columns) return null;
-
   // to update view with sorting when adding/removing
   const { updateViewSorting } = useViewUpdater();
+
+  if (!columns) return null;
 
   const getAvailableColumns = (currentRuleId: string) => {
     const currentColumnId = sortRules.find(
