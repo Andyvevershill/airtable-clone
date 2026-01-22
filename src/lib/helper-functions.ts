@@ -1,6 +1,8 @@
-import type { ColumnType } from "@/types";
+import type { FilterRule } from "@/components/forms/filter-fields-form";
+import type { ColumnType, TransformedRow } from "@/types";
 import type { FilterState, SortRule } from "@/types/view";
 import type {
+  Column,
   ColumnFiltersState,
   SortingState,
   VisibilityState,
@@ -113,4 +115,49 @@ export function applyViewToTableState(
   }
 
   callbacks.onColumnVisibilityChange(visibilityState);
+}
+
+// transforms the sorts inside the form so we can send them to update the views
+export function transformSortingToView(
+  newSorting: SortingState,
+  columns: Column<TransformedRow, unknown>[],
+): SortRule[] {
+  return newSorting.map((sort) => ({
+    columnId: sort.id,
+    direction: sort.desc ? ("desc" as const) : ("asc" as const),
+    type:
+      columns?.find((c) => c.id === sort.id)?.columnDef.meta?.dataType ===
+      "string"
+        ? ("string" as const)
+        : ("number" as const),
+  }));
+}
+
+// transforms the filters inside the form so we can send them to update the views
+
+export function transformFiltersToView(
+  filters: FilterRule[],
+  columns: Column<TransformedRow, unknown>[],
+) {
+  return filters
+    .filter((f) => f.fieldId && f.operator)
+    .map((f) => {
+      const columnType = columns.find((c) => c.id === f.fieldId)?.columnDef.meta
+        ?.dataType;
+
+      return {
+        columnId: f.fieldId!,
+        operator: f.operator! as
+          | "greaterThan"
+          | "lessThan"
+          | "contains"
+          | "notContains"
+          | "equals"
+          | "isEmpty"
+          | "isNotEmpty",
+        value: f.value,
+        type:
+          columnType === "string" ? ("string" as const) : ("number" as const),
+      };
+    });
 }

@@ -1,3 +1,5 @@
+import { useViewUpdater } from "@/hooks/use-view-updater";
+import { transformSortingToView } from "@/lib/helper-functions";
 import type { TransformedRow } from "@/types";
 import type { Column, SortingState } from "@tanstack/react-table";
 import { HelpCircle } from "lucide-react";
@@ -37,7 +39,6 @@ export default function SortFieldsForm({
   onApply,
 }: Props) {
   const [search, setSearch] = useState("");
-
   const [sortRules, setSortRules] = useState<SortRule[]>(() => {
     if (!columns || columns.length === 0) return [];
 
@@ -67,6 +68,10 @@ export default function SortFieldsForm({
       },
     ];
   });
+  // to update view with sorting when adding/removing
+  const { updateViewSorting } = useViewUpdater();
+
+  if (!columns) return null;
 
   const getAvailableColumns = (currentRuleId: string) => {
     const currentColumnId = sortRules.find(
@@ -121,6 +126,7 @@ export default function SortFieldsForm({
     }));
 
     onApply(newSorting);
+    updateViewSorting(transformSortingToView(newSorting, columns));
 
     if (!newRules.length) {
       onClose();
@@ -163,6 +169,7 @@ export default function SortFieldsForm({
     }));
 
     onApply(newSorting);
+    updateViewSorting(transformSortingToView(newSorting, columns));
     onClose();
   };
 

@@ -5,6 +5,10 @@ import { api } from "@/trpc/react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+//  I DO NOT THINK WE EVEN NEED THIS PAGE => DIRECT THEM STRIAGHT TO BASE/[id]/[tableId] !? ...
+
+// ... TOO SCARED TO DELETE IT THO
+
 export default function BaseByIdPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();

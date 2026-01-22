@@ -9,12 +9,8 @@ import { TableHeader } from "@/components/table/table-header";
 import { useTableKeyboardNavigation } from "@/hooks/use-table-keyboard-nav";
 import type { ColumnType } from "@/types/column";
 import type { TransformedRow } from "@/types/row";
-import type { GlobalSearchMatches } from "@/types/view";
-import type {
-  ColumnFiltersState,
-  SortingState,
-  Table,
-} from "@tanstack/react-table";
+import type { GlobalSearchMatches, QueryParams } from "@/types/view";
+import type { Table } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
@@ -40,13 +36,13 @@ interface Props {
   columns: ColumnType[];
   rowCount: number;
   transformedRows: TransformedRow[];
+  queryParams: QueryParams;
+  totalFilteredCount: number;
 
   fetchNextPage: () => void;
   hasNextPage?: boolean;
   isFetchingNextPage: boolean;
 
-  sorting: SortingState;
-  filters: ColumnFiltersState;
   globalSearchMatches: GlobalSearchMatches;
 }
 
@@ -58,11 +54,12 @@ export function Table({
   columns,
   rowCount,
   transformedRows,
+  queryParams,
+  totalFilteredCount,
+
   fetchNextPage,
   hasNextPage,
   isFetchingNextPage,
-  sorting,
-  filters,
   globalSearchMatches,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -87,8 +84,14 @@ export function Table({
     return () => observer.disconnect();
   }, []);
 
+  // this has been the cause of the optimistic row bug!!!!
+  // make sure we also increase the rowCount by 1 in addRowButton, so we can actually see the last optimistic row we created!!!!!
+  // we are having loads of white space of empty columns when filtering, this the fix?
   const isFiltering = table.getState().columnFilters.length > 0;
-  const effectiveRowCount = isFiltering ? transformedRows.length : rowCount;
+  const effectiveRowCount =
+    isFiltering && totalFilteredCount !== undefined
+      ? totalFilteredCount
+      : rowCount;
 
   const rowVirtualizer = useVirtualizer({
     count: effectiveRowCount,
@@ -265,11 +268,12 @@ export function Table({
               <TableFooter
                 tableId={tableId}
                 columns={columns}
-                sorting={sorting}
-                filters={filters}
                 notHydratedVirtualRows={notHydratedVirtualRows}
+                queryParams={queryParams}
+                effectiveRowCount={effectiveRowCount}
               />
             </table>
+            <div className="h-30"></div>
           </div>
         </div>
       </div>

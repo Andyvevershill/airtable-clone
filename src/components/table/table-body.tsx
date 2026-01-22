@@ -57,7 +57,7 @@ export function TableBody({
                   minWidth: GUTTER_WIDTH,
                 }}
               >
-                <Skeleton className="ml-2 h-3 w-8 rounded-sm" />
+                <Skeleton className="ml-6 h-3 w-8 rounded-sm" />
               </td>
 
               {/* SKELETON CELLS FOR ALL COLUMNS */}

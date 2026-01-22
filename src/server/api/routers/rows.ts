@@ -127,12 +127,18 @@ export const rowsRouter = createTRPCRouter({
 
       const finalWhere = and(...whereConditions);
 
+      const [countResult] = await ctx.db
+        .select({ count: sql<number>`count(*)` })
+        .from(rows)
+        .where(finalWhere);
+
+      const totalFilteredCount = countResult?.count ?? 0;
+
       // Get paginated row IDs with sorting
       const paginatedRows = await ctx.db
         .select({
           id: rows.id,
           tableId: rows.tableId,
-          position: rows.position,
         })
         .from(rows)
         .where(finalWhere)
@@ -159,7 +165,6 @@ export const rowsRouter = createTRPCRouter({
       const rowsWithCells = paginatedRows.map((row) => ({
         id: row.id,
         tableId: row.tableId,
-        position: row.position,
         cells: rowCells.filter((c) => c.rowId === row.id),
       }));
 
@@ -202,9 +207,12 @@ export const rowsRouter = createTRPCRouter({
         }
       }
 
+      // next cursor is undefined if there are no more rows - so we stop loading more. Otherwise we keep em coming
+
       return {
         items: rowsWithCells,
         searchMatches,
+        totalFilteredCount,
         nextCursor:
           paginatedRows.length === input.limit
             ? offset + input.limit

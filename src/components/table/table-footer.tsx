@@ -1,21 +1,21 @@
 import AddRowButton from "@/components/buttons/add-row-button";
-import type { ColumnType } from "@/types/column";
-import type { ColumnFiltersState, SortingState } from "@tanstack/react-table";
+import type { ColumnType } from "@/types";
+import type { QueryParams } from "@/types/view";
 
 interface TableFooterProps {
   tableId: string;
-  columns: ColumnType[];
-  sorting: SortingState;
-  filters: ColumnFiltersState;
+  queryParams: QueryParams;
   notHydratedVirtualRows: boolean;
+  columns: ColumnType[];
+  effectiveRowCount: number;
 }
 
 export function TableFooter({
   tableId,
   columns,
-  sorting,
-  filters,
+  queryParams,
   notHydratedVirtualRows,
+  effectiveRowCount,
 }: TableFooterProps) {
   return (
     <tfoot>
@@ -27,9 +27,9 @@ export function TableFooter({
           <AddRowButton
             notHydratedVirtualRows={notHydratedVirtualRows}
             tableId={tableId}
-            sorting={sorting}
-            filters={filters}
+            queryParams={queryParams}
             columns={columns}
+            rowCount={effectiveRowCount}
           />
         </td>
       </tr>

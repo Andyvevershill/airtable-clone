@@ -55,6 +55,30 @@ export const viewInputSchema = z.object({
 
 export type ViewInput = z.infer<typeof viewInputSchema>;
 
+// split up the 3 seperate types for the 3 different updates
+// this way keeps the updates small, and allows each form to manage own updates
+
+export const viewSortingUpdateSchema = z.object({
+  id: z.string(),
+  sorting: z.array(sortRuleSchema).optional().default([]),
+});
+
+export type ViewSortingUpdateInput = z.infer<typeof viewInputSchema>;
+
+export const viewFilteringUpdateSchema = z.object({
+  id: z.string(),
+  filters: z.array(filterRuleSchema).optional().default([]),
+});
+
+export type ViewFilteringUpdateInput = z.infer<typeof viewInputSchema>;
+
+export const viewHiddenUpdateSchema = z.object({
+  id: z.string(),
+  hidden: z.array(z.string()).optional().default([]),
+});
+
+export type ViewHiddenUpdateInput = z.infer<typeof viewInputSchema>;
+
 export type SearchMatch =
   | { type: "column"; columnId: string }
   | {
@@ -66,3 +90,5 @@ export type SearchMatch =
 export type GlobalSearchMatches = {
   matches: SearchMatch[];
 };
+
+export type QueryParams = z.infer<typeof getRowsInfiniteInput>;

@@ -1,20 +1,45 @@
 import { views } from "@/server/db/schemas";
-import { viewInputSchema } from "@/types/view";
+import {
+  viewFilteringUpdateSchema,
+  viewHiddenUpdateSchema,
+  viewSortingUpdateSchema,
+} from "@/types/view";
 import { eq } from "drizzle-orm";
 import z from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 
 export const viewRouter = createTRPCRouter({
-  updateView: protectedProcedure
-    .input(viewInputSchema)
+  updateViewFilters: protectedProcedure
+    .input(viewFilteringUpdateSchema)
     .mutation(async ({ ctx, input }) => {
       return await ctx.db
         .update(views)
         .set({
           id: input.id,
-          name: input.name,
           filters: input.filters,
+        })
+        .where(eq(views.id, input.id));
+    }),
+
+  updateViewSorting: protectedProcedure
+    .input(viewSortingUpdateSchema)
+    .mutation(async ({ ctx, input }) => {
+      return await ctx.db
+        .update(views)
+        .set({
+          id: input.id,
           sorting: input.sorting,
+        })
+        .where(eq(views.id, input.id));
+    }),
+
+  updateViewHidden: protectedProcedure
+    .input(viewHiddenUpdateSchema)
+    .mutation(async ({ ctx, input }) => {
+      return await ctx.db
+        .update(views)
+        .set({
+          id: input.id,
           hidden: input.hidden,
         })
         .where(eq(views.id, input.id));
