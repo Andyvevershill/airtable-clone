@@ -39,9 +39,6 @@ export default function SortFieldsForm({
   onApply,
 }: Props) {
   const [search, setSearch] = useState("");
-
-  if (!columns) return;
-
   const [sortRules, setSortRules] = useState<SortRule[]>(() => {
     if (!columns || columns.length === 0) return [];
 
@@ -71,6 +68,8 @@ export default function SortFieldsForm({
       },
     ];
   });
+
+  if (!columns) return null;
 
   // to update view with sorting when adding/removing
   const { updateViewSorting } = useViewUpdater();
