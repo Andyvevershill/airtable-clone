@@ -1,88 +1,65 @@
-import {
-  translateFiltersState,
-  translateSortingState,
-} from "@/lib/helper-functions";
+import { useViewStore } from "@/app/stores/use-view-store";
 import { api } from "@/trpc/react";
-import type { ColumnType } from "@/types/column";
-import type { ViewInput } from "@/types/view";
-import type {
-  ColumnFiltersState,
-  SortingState,
-  VisibilityState,
-} from "@tanstack/react-table";
-import isEqual from "fast-deep-equal";
-import { useEffect, useMemo, useRef } from "react";
+import type { FilterState, SortRule } from "@/types/view";
+import type { VisibilityState } from "@tanstack/react-table";
 
-interface ViewState {
-  sorting: SortingState;
-  columnFilters: ColumnFiltersState;
-  columnVisibility: VisibilityState;
-}
+export function useViewUpdater() {
+  const { activeViewId, setSavingView } = useViewStore();
 
-export function useViewUpdater(
-  viewId: string,
-  tableId: string,
-  state: ViewState,
-  columns: ColumnType[],
-) {
-  const utils = api.useUtils();
-
-  const updateView = api.view.updateView.useMutation({
-    onSuccess: () => {
-      void utils.table.getTableWithViews.invalidate({ tableId });
-    },
-    onError: (err) => {
-      console.error(
-        "%c[view:update] ERROR",
-        "color:#dc2626;font-weight:bold",
-        err,
-      );
-    },
+  const updateSorting = api.view.updateViewSorting.useMutation({
+    // onMutate: () => {
+    //   setSavingView(true);
+    // },
+    // onSuccess: () => {
+    //   setSavingView(false);
+    // },
+  });
+  const updateFilters = api.view.updateViewFilters.useMutation({
+    // onMutate: () => {
+    //   setSavingView(true);
+    // },
+    // onSuccess: () => {
+    //   setSavingView(false);
+    // },
+  });
+  const updateHidden = api.view.updateViewHidden.useMutation({
+    // onMutate: () => {
+    //   setSavingView(true);
+    // },
+    // onSuccess: () => {
+    //   setSavingView(false);
+    // },
   });
 
-  const nextViewInput: ViewInput = useMemo(() => {
-    const payload = {
-      id: viewId,
-      sorting: translateSortingState(state.sorting, columns),
-      filters: translateFiltersState(state.columnFilters, columns),
-      hidden: Object.keys(state.columnVisibility).filter(
-        (columnId) => state.columnVisibility[columnId] === false,
+  const updateViewSorting = (sorting: SortRule[]) => {
+    updateSorting.mutate({
+      id: activeViewId,
+      sorting,
+    });
+  };
+
+  const updateViewFilters = (filters: FilterState[]) => {
+    updateFilters.mutate({
+      id: activeViewId,
+      filters,
+    });
+  };
+
+  const updateViewHidden = (
+    columnVisibility: VisibilityState,
+    activeView: string,
+  ) => {
+    updateHidden.mutate({
+      id: activeView,
+      hidden: Object.keys(columnVisibility).filter(
+        (columnId) => columnVisibility[columnId] === false,
       ),
-    };
+    });
+  };
 
-    return payload;
-  }, [
-    viewId,
-    state.sorting,
-    state.columnFilters,
-    state.columnVisibility,
-    columns,
-  ]);
-
-  const lastCommittedRef = useRef<ViewInput | null>(null);
-  const lastViewIdRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!viewId) {
-      return;
-    }
-
-    if (lastViewIdRef.current !== viewId) {
-      lastViewIdRef.current = viewId;
-      lastCommittedRef.current = nextViewInput;
-      return;
-    }
-
-    if (!lastCommittedRef.current) {
-      lastCommittedRef.current = nextViewInput;
-      return;
-    }
-
-    if (isEqual(lastCommittedRef.current, nextViewInput)) {
-      return;
-    }
-
-    lastCommittedRef.current = nextViewInput;
-    updateView.mutate(nextViewInput);
-  }, [nextViewInput, viewId, updateView]);
+  return {
+    updateViewSorting,
+    updateViewFilters,
+    updateViewHidden,
+  };
 }

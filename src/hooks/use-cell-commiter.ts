@@ -2,17 +2,14 @@
 
 import { useSavingStore } from "@/app/stores/use-saving-store";
 import { api } from "@/trpc/react";
-import type { getRowsInfiniteInput } from "@/types/view";
+import type { QueryParams } from "@/types/view";
 import { useCallback } from "react";
-import type { z } from "zod";
-
-type RowsQueryInput = z.infer<typeof getRowsInfiniteInput>;
 
 interface Params {
-  rowsQueryInput: RowsQueryInput;
+  queryParams: QueryParams;
 }
 
-export function useCellCommitter({ rowsQueryInput }: Params) {
+export function useCellCommitter({ queryParams }: Params) {
   const setIsSaving = useSavingStore((s) => s.setIsSaving);
   const utils = api.useUtils();
 
@@ -21,13 +18,13 @@ export function useCellCommitter({ rowsQueryInput }: Params) {
       setIsSaving(true);
 
       // Cancel ongoing fetches for THIS exact query
-      await utils.row.getRowsInfinite.cancel(rowsQueryInput);
+      await utils.row.getRowsInfinite.cancel(queryParams);
 
       const previousData =
-        utils.row.getRowsInfinite.getInfiniteData(rowsQueryInput);
+        utils.row.getRowsInfinite.getInfiniteData(queryParams);
 
       // Optimistically update only the affected cell
-      utils.row.getRowsInfinite.setInfiniteData(rowsQueryInput, (old) => {
+      utils.row.getRowsInfinite.setInfiniteData(queryParams, (old) => {
         if (!old) return old;
 
         return {
@@ -55,7 +52,7 @@ export function useCellCommitter({ rowsQueryInput }: Params) {
     onError: (_err, _vars, ctx) => {
       if (ctx?.previousData) {
         utils.row.getRowsInfinite.setInfiniteData(
-          rowsQueryInput,
+          queryParams,
           ctx.previousData,
         );
       }

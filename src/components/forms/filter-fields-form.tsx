@@ -8,6 +8,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useViewUpdater } from "@/hooks/use-view-updater";
+import { transformFiltersToView } from "@/lib/helper-functions";
 import type { TransformedRow } from "@/types";
 import type { Column, ColumnFiltersState } from "@tanstack/react-table";
 import { HelpCircle } from "lucide-react";
@@ -17,12 +19,12 @@ import { AiOutlinePlus } from "react-icons/ai";
 import { PiDotsSixVertical } from "react-icons/pi";
 import { RiDeleteBinLine } from "react-icons/ri";
 
-interface FilterRule {
+export type FilterRule = {
   id: string;
   fieldId: string | null;
   operator: string | null;
   value: string | number | null;
-}
+};
 
 interface Props {
   columns: Column<TransformedRow, unknown>[];
@@ -38,6 +40,8 @@ export default function FilterFieldsForm({
   onClose,
 }: Props) {
   const { setIsFiltering } = useLoadingStore();
+  const [searchColumn, setSearchColumn] = useState("");
+  const [searchConditions, setSearchConditions] = useState("");
   const [filters, setFilters] = useState<FilterRule[]>(() => {
     if (!currentFilters.length) {
       return [];
@@ -72,8 +76,7 @@ export default function FilterFieldsForm({
     });
   });
 
-  const [searchColumn, setSearchColumn] = useState("");
-  const [searchConditions, setSearchConditions] = useState("");
+  const { updateViewFilters } = useViewUpdater();
 
   const getConditions = (fieldId: string | null) => {
     const column = columns.find((c) => c.id === fieldId);
@@ -81,17 +84,17 @@ export default function FilterFieldsForm({
 
     if (type === "number") {
       return [
-        { value: "greaterThan", label: ">" },
-        { value: "lessThan", label: "<" },
-        { value: "equals", label: "=" },
+        { value: "greaterThan" as const, label: ">" },
+        { value: "lessThan" as const, label: "<" },
+        { value: "equals" as const, label: "=" },
       ];
     } else {
       return [
-        { value: "contains", label: "contains" },
-        { value: "notContains", label: "does not contain" },
-        { value: "equals", label: "equals" },
-        { value: "isEmpty", label: "is empty" },
-        { value: "isNotEmpty", label: "is not empty" },
+        { value: "contains" as const, label: "contains" },
+        { value: "notContains" as const, label: "does not contain" },
+        { value: "equals" as const, label: "equals" },
+        { value: "isEmpty" as const, label: "is empty" },
+        { value: "isNotEmpty" as const, label: "is not empty" },
       ];
     }
   };
@@ -128,6 +131,9 @@ export default function FilterFieldsForm({
               },
       }));
 
+    // update view with change to filters
+    updateViewFilters(transformFiltersToView(filters, columns));
+
     onApply(validFilters);
   };
 
@@ -144,6 +150,9 @@ export default function FilterFieldsForm({
   };
 
   const handleApply = () => {
+    if (!columns) return;
+    if (!filters.length || !filters) return;
+
     const validFilters: ColumnFiltersState = filters
       .filter((f) => f.fieldId && f.operator)
       .map((f) => ({
@@ -153,6 +162,9 @@ export default function FilterFieldsForm({
           value: f.operator ? f.value : null,
         },
       }));
+
+    // save changes to view
+    updateViewFilters(transformFiltersToView(filters, columns));
 
     setIsFiltering(true);
     onApply(validFilters);

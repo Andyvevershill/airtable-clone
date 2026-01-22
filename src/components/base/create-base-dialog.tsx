@@ -27,7 +27,7 @@ export default function CreateBaseDialog() {
 
     // Now redirect to the new base
     setIsSaving(false);
-    router.push(`/base/${res.base.id}`);
+    router.push(`/base/${res.base.id}/${res.table.id}`);
   }
 
   return (

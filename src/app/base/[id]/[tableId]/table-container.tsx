@@ -1,7 +1,7 @@
 "use client";
 
 import { useLoadingStore } from "@/app/stores/use-loading-store";
-import { useGlobalSearchStore } from "@/app/stores/use-search-store";
+import { useViewStore } from "@/app/stores/use-view-store";
 import {
   generateColumnDefinitions,
   transformRowsToTanStackFormat,
@@ -10,14 +10,10 @@ import { TableSidebar } from "@/components/table/table-sidebar";
 import { TableToolbar } from "@/components/table/table-toolbar";
 import { useCellCommitter } from "@/hooks/use-cell-commiter";
 import { useViewUpdater } from "@/hooks/use-view-updater";
-import {
-  applyViewToTableState,
-  translateFiltersState,
-  translateSortingState,
-} from "@/lib/helper-functions";
+import { applyViewToTableState } from "@/lib/helper-functions";
 import type { RowWithCells, TableWithViews } from "@/types";
 import type { ColumnType } from "@/types/column";
-import type { GlobalSearchMatches } from "@/types/view";
+import type { GlobalSearchMatches, QueryParams } from "@/types/view";
 import {
   getCoreRowModel,
   useReactTable,
@@ -34,9 +30,11 @@ import { Table } from "./table";
 interface Props {
   tableWithViews: TableWithViews;
   columns: ColumnType[];
-  rowCount: number;
   rowsWithCells: RowWithCells[];
   user: User;
+  queryParams: QueryParams;
+  rowCount: number;
+  totalFilteredCount: number;
 
   fetchNextPage: () => void;
   hasNextPage?: boolean;
@@ -52,12 +50,16 @@ interface Props {
 export default function TableContainer({
   user,
   tableWithViews,
+  queryParams,
   columns,
   rowCount,
   rowsWithCells,
+  totalFilteredCount,
+
   fetchNextPage,
   hasNextPage,
   isFetchingNextPage,
+
   sorting,
   onSortingChange,
   columnFilters,
@@ -65,10 +67,11 @@ export default function TableContainer({
   globalSearchMatches,
 }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { globalSearch } = useGlobalSearchStore();
   const { isLoadingView, isFiltering, setIsLoadingView } = useLoadingStore();
   const [columnVisibility, onColumnVisibilityChange] =
     useState<VisibilityState>({});
+  const { setActiveViewId, activeViewId } = useViewStore();
+  const { updateViewHidden } = useViewUpdater();
 
   const activeView = useMemo(
     () => tableWithViews.views.find((v) => v.isActive),
@@ -76,7 +79,9 @@ export default function TableContainer({
   );
 
   useEffect(() => {
-    if (!activeView?.id) return;
+    if (!activeView) return;
+
+    setActiveViewId(activeView.id);
 
     applyViewToTableState(activeView, {
       onSortingChange,
@@ -84,26 +89,19 @@ export default function TableContainer({
       onColumnVisibilityChange,
     });
 
-    const MIN_DELAY = 200;
-    const timer = setTimeout(() => {
-      setIsLoadingView(false);
-    }, MIN_DELAY);
-
-    return () => clearTimeout(timer);
+    setIsLoadingView(false);
   }, [
-    activeView?.id,
+    activeView,
     onSortingChange,
     onColumnFiltersChange,
     onColumnVisibilityChange,
     setIsLoadingView,
   ]);
 
-  useViewUpdater(
-    activeView?.id ?? "",
-    tableWithViews.id,
-    { sorting, columnFilters, columnVisibility },
-    columns,
-  );
+  useEffect(() => {
+    if (!activeView) return;
+    updateViewHidden(columnVisibility, activeView?.id);
+  }, [activeView, columnVisibility]);
 
   // Memoize transformed data instead of using local state
   const tableData = useMemo(
@@ -111,21 +109,7 @@ export default function TableContainer({
     [rowsWithCells],
   );
 
-  // Memoize query input for cell committer
-  const rowsQueryInput = useMemo(
-    () => ({
-      tableId: tableWithViews.id,
-      limit: 5000,
-      sorting: translateSortingState(sorting, columns),
-      filters: translateFiltersState(columnFilters, columns),
-      globalSearch: globalSearch || undefined,
-    }),
-    [tableWithViews.id, sorting, columnFilters, columns, globalSearch],
-  );
-
-  const { commitCell } = useCellCommitter({
-    rowsQueryInput,
-  });
+  const { commitCell } = useCellCommitter({ queryParams });
 
   const tanstackColumns = useMemo(() => {
     return generateColumnDefinitions(columns, commitCell);
@@ -201,21 +185,21 @@ export default function TableContainer({
             ) : (
               <Table
                 table={table}
+                queryParams={queryParams}
                 tableId={tableWithViews.id}
                 rowCount={rowCount}
                 transformedRows={tableData}
                 columns={columns}
+                totalFilteredCount={totalFilteredCount}
                 fetchNextPage={fetchNextPage}
                 hasNextPage={hasNextPage}
                 isFetchingNextPage={isFetchingNextPage}
-                sorting={sorting}
-                filters={columnFilters}
                 globalSearchMatches={globalSearchMatches}
               />
             )}
           </div>
 
-          {/* RECORDS BAR - Inside the table's flex container */}
+          {/* RECORDS BAR - Inside the table's container */}
           <div className="border-t border-gray-300 bg-white px-3 py-2">
             <div className="text-xs text-gray-600">
               {rowCount} {rowCount === 1 ? "record" : "records"}

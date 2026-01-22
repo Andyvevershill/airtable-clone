@@ -1,132 +1,96 @@
-import type { InfiniteData } from "@tanstack/react-query";
-import type { ColumnFiltersState, SortingState } from "@tanstack/react-table";
-import { type inferRouterOutputs } from "@trpc/server";
+"use client";
+
+import { cn } from "@/lib/utils";
+import { api } from "@/trpc/react";
+import type { ColumnType, RowWithCells } from "@/types";
+import type { QueryParams } from "@/types/view";
 import { memo, useCallback } from "react";
 import { AiOutlinePlus } from "react-icons/ai";
 
-import { useGlobalSearchStore } from "@/app/stores/use-search-store";
-import {
-  translateFiltersState,
-  translateSortingState,
-} from "@/lib/helper-functions";
-import { cn } from "@/lib/utils";
-import type { AppRouter } from "@/server/api/root";
-import { api } from "@/trpc/react";
-import type { ColumnType } from "@/types";
-
-type RouterOutput = inferRouterOutputs<AppRouter>;
-type RowsPage = RouterOutput["row"]["getRowsInfinite"];
-type InfiniteRowsData = InfiniteData<RowsPage, number | null>;
-type Row = RowsPage["items"][number];
-
 interface Props {
+  queryParams: QueryParams;
   tableId: string;
-  sorting: SortingState;
-  filters: ColumnFiltersState;
-  columns: ColumnType[];
   notHydratedVirtualRows: boolean;
+  columns: ColumnType[];
+  rowCount: number;
 }
 
 function AddRowButton({
+  queryParams,
   tableId,
-  sorting,
-  filters,
-  columns,
   notHydratedVirtualRows,
+  columns,
+  rowCount,
 }: Props) {
-  const { globalSearch } = useGlobalSearchStore();
   const utils = api.useUtils();
 
-  const queryKey = {
-    tableId,
-    limit: 3000,
-    sorting: translateSortingState(sorting, columns),
-    filters: translateFiltersState(filters, columns),
-    globalSearch,
-  };
-
   const addRow = api.row.addRow.useMutation({
-    /* ───────── Optimistic add ───────── */
     onMutate: async (newRow) => {
-      await utils.row.getRowsInfinite.cancel(queryKey);
+      // Cancel ALL queries to prevent stale data from overwriting our optimistic update
+      await utils.row.getRowsInfinite.cancel(queryParams);
+      await utils.row.getRowCount.cancel({ tableId });
 
-      const previousData = utils.row.getRowsInfinite.getInfiniteData(queryKey);
+      const previousData =
+        utils.row.getRowsInfinite.getInfiniteData(queryParams);
+      const previousCount = Number(rowCount);
 
-      utils.row.getRowsInfinite.setInfiniteData(
-        queryKey,
-        (old: InfiniteRowsData | undefined) => {
-          if (!old?.pages?.[0]) return old;
+      if (!previousData?.pages?.[0]) {
+        return { previousData, rowId: newRow.id, previousCount };
+      }
 
-          const firstPage = old.pages[0];
+      const optimisticRow: RowWithCells = {
+        id: newRow.id,
+        tableId,
+        cells: columns.map((col) => ({
+          id: `${col.id}_${newRow.id}`,
+          rowId: newRow.id,
+          columnId: col.id,
+          value: null,
+        })),
+      };
 
-          const optimisticRow: Row = {
-            id: newRow.id,
-            tableId,
-            position: firstPage.items.length,
-            cells: [],
-          };
+      utils.row.getRowsInfinite.setInfiniteData(queryParams, (old) => {
+        if (!old) return old;
 
-          return {
-            ...old,
-            pages: [
-              {
-                ...firstPage,
-                items: [...firstPage.items, optimisticRow],
-              },
-              ...old.pages.slice(1),
-            ],
-          };
-        },
-      );
+        const updatedPages = [...old.pages];
+        const lastPage = old.pages[old.pages.length - 1];
 
-      return { previousData, rowId: newRow.id };
+        if (!lastPage) return old;
+
+        updatedPages[old.pages.length - 1] = {
+          ...lastPage,
+          items: [...lastPage.items, optimisticRow],
+          searchMatches: lastPage.searchMatches ?? { matches: [] },
+          totalFilteredCount: lastPage.totalFilteredCount + 1,
+        };
+
+        return { ...old, pages: updatedPages };
+      });
+
+      const newCount = previousCount + 1;
+      utils.row.getRowCount.setData({ tableId }, newCount);
+
+      return { previousData, rowId: newRow.id, previousCount };
     },
 
-    /* ───────── Rollback ───────── */
     onError: (_err, _vars, ctx) => {
       if (ctx?.previousData) {
-        utils.row.getRowsInfinite.setInfiniteData(queryKey, ctx.previousData);
+        utils.row.getRowsInfinite.setInfiniteData(
+          queryParams,
+          ctx.previousData,
+        );
       }
-    },
-
-    /* ───────── Replace optimistic row ───────── */
-    onSuccess: (serverRow, _vars, ctx) => {
-      if (!ctx?.rowId) return;
-
-      utils.row.getRowsInfinite.setInfiniteData(
-        queryKey,
-        (old: InfiniteRowsData | undefined) => {
-          if (!old?.pages?.[0]) return old;
-
-          const firstPage = old.pages[0];
-
-          const items = firstPage.items.map((row) =>
-            row.id === ctx.rowId ? serverRow : row,
-          );
-
-          return {
-            ...old,
-            pages: [{ ...firstPage, items }, ...old.pages.slice(1)],
-          };
-        },
-      );
-
-      /* keep count in sync */
-      const updated = utils.row.getRowsInfinite.getInfiniteData(queryKey);
-
-      const count =
-        updated?.pages.reduce((sum, p) => sum + p.items.length, 0) ?? 0;
-
-      utils.row.getRowCount.setData({ tableId }, count);
+      if (ctx?.previousCount !== undefined) {
+        utils.row.getRowCount.setData({ tableId }, ctx.previousCount);
+      }
     },
   });
 
   const handleClick = useCallback(() => {
-    addRow.mutate({
-      id: crypto.randomUUID(),
-      tableId,
-    });
-  }, [addRow, tableId]);
+    if (notHydratedVirtualRows) return;
+
+    addRow.mutate({ id: crypto.randomUUID(), tableId });
+  }, [addRow, tableId, notHydratedVirtualRows]);
 
   return (
     <button
@@ -134,7 +98,7 @@ function AddRowButton({
       title={
         notHydratedVirtualRows
           ? "Please wait until all rows finish loading"
-          : undefined
+          : "Add row"
       }
       className={cn(
         "flex h-full w-full items-center justify-start pl-2",

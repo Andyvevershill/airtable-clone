@@ -18,7 +18,3 @@ type RouterOutput = inferRouterOutputs<AppRouter>;
 type GetRowsInfiniteOutput = RouterOutput["row"]["getRowsInfinite"];
 
 type RowFromServer = GetRowsInfiniteOutput["items"][number];
-
-type RowWithClientState = RowFromServer & {
-  __optimistic?: boolean;
-};

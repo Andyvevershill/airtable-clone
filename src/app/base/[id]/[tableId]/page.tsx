@@ -8,6 +8,7 @@ import {
   translateSortingState,
 } from "@/lib/helper-functions";
 import { api } from "@/trpc/react";
+import type { QueryParams } from "@/types/view";
 import { keepPreviousData } from "@tanstack/react-query";
 import type { ColumnFiltersState, SortingState } from "@tanstack/react-table";
 import { useParams } from "next/navigation";
@@ -19,34 +20,53 @@ export default function TablePage() {
   const { setIsLoading, setIsFiltering } = useLoadingStore();
   const { globalSearch, setGlobalSearchLength, setIsSearching } =
     useGlobalSearchStore();
-
   const [sorting, setSorting] = useState<SortingState>([]);
   const [filters, setFilters] = useState<ColumnFiltersState>([]);
 
+  // need this for View card data (email + name)
   const { data: user } = api.user.getUser.useQuery();
 
+  // basic data - mostly for the views + table name to display in tab
   const { data: tableWithViews, isLoading: tableWithViewsLoading } =
     api.table.getTableWithViews.useQuery({ tableId });
 
   const { data: columns, isLoading: columnsLoading } =
     api.column.getColumns.useQuery({ tableId });
 
+  // Memoize columns to prevent reference changes
+  const stableColumns = useMemo(
+    () => columns,
+    [columns?.length, columns?.map((c) => c.id).join(",")],
+  );
+
   const { data: rowCount, isLoading: countLoading } =
     api.row.getRowCount.useQuery({ tableId });
 
-  const queryParams = useMemo(
-    () => ({
+  // this is the key that allows us to get into the getRowsInfinite and optimistically update the data
+  // memoised to stop us recalculating every render - as this wad driving me mad
+  const queryParams: QueryParams = useMemo(() => {
+    const translatedSorting = translateSortingState(
+      sorting,
+      stableColumns ?? [],
+    );
+    const translatedFilters = translateFiltersState(
+      filters,
+      stableColumns ?? [],
+    );
+    const params = {
       tableId,
       limit: 3000,
-      sorting: translateSortingState(sorting, columns ?? []),
-      filters: translateFiltersState(filters, columns ?? []),
+      sorting: translatedSorting,
+      filters: translatedFilters,
       globalSearch,
-    }),
-    [tableId, sorting, filters, columns, globalSearch],
-  );
+    };
+    return params;
+  }, [tableId, sorting, filters, stableColumns, globalSearch]);
 
   const {
     data: rowsData,
+
+    // nice functions we can use from infinite query:
     fetchNextPage,
     hasNextPage,
     isFetching,
@@ -54,39 +74,45 @@ export default function TablePage() {
     isLoading: rowsLoading,
   } = api.row.getRowsInfinite.useInfiniteQuery(queryParams, {
     getNextPageParam: (lastPage) => lastPage.nextCursor,
+
+    // we could probs remove below now as we display loading spinners immediatley after pressing filter/sort?
     placeholderData: keepPreviousData,
   });
 
   const isLoading =
-    tableWithViewsLoading ||
-    columnsLoading ||
-    countLoading ||
-    rowsLoading ||
-    rowCount === 0;
+    tableWithViewsLoading || columnsLoading || countLoading || rowsLoading;
 
   useEffect(() => {
     setIsLoading(isFetching || isLoading);
   }, [isFetching, isLoading, setIsLoading]);
 
-  const rowsWithCells = useMemo(
-    () => rowsData?.pages.flatMap((p) => p.items) ?? [],
-    [rowsData],
-  );
+  const rowsWithCells = useMemo(() => {
+    const rows = rowsData?.pages.flatMap((p) => p.items) ?? [];
+    return rows;
+  }, [rowsData]);
 
   useEffect(() => {
-    if (filters.length && isFetching) setIsFiltering(true);
-    if (sorting.length && isFetching) setIsFiltering(true);
+    // Only show filtering spinner when actively filtering/sorting (not paginating)
+    const isActivelyFiltering =
+      (filters.length > 0 || sorting.length > 0) &&
+      isFetching &&
+      !isFetchingNextPage;
 
-    if (!filters.length && !isFetching) setIsFiltering(false);
-    if (!isFetching) setIsFiltering(false);
-  }, [filters.length, isFetching, setIsFiltering]);
+    setIsFiltering(isActivelyFiltering);
+  }, [
+    filters.length,
+    sorting.length,
+    isFetching,
+    isFetchingNextPage,
+    setIsFiltering,
+  ]);
 
-  const globalSearchMatches = useMemo(
-    () => ({
+  const globalSearchMatches = useMemo(() => {
+    const matches = {
       matches: rowsData?.pages.flatMap((p) => p.searchMatches.matches) ?? [],
-    }),
-    [rowsData],
-  );
+    };
+    return matches;
+  }, [rowsData]);
 
   // Stop spinner when search completes (fetching stops AND we have search query)
   useEffect(() => {
@@ -104,15 +130,17 @@ export default function TablePage() {
 
   if (isLoading) return null;
 
-  if (!tableWithViews || !columns || !rowsData || !user) {
+  if (!tableWithViews || !stableColumns || !rowsData || !user) {
     return <NoDataPage missingData="table data" />;
   }
 
   return (
     <TableContainer
       tableWithViews={tableWithViews}
+      queryParams={queryParams}
       user={user}
-      columns={columns}
+      columns={stableColumns}
+      totalFilteredCount={rowsData?.pages[0]?.totalFilteredCount ?? 0}
       rowCount={rowCount ?? 0}
       rowsWithCells={rowsWithCells}
       fetchNextPage={fetchNextPage}
