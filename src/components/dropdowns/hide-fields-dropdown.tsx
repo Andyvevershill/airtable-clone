@@ -5,6 +5,7 @@ import {
   DropdownMenuContent,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { useViewUpdater } from "@/hooks/use-view-updater";
 import type { TransformedRow } from "@/types";
 import { DropdownMenuTrigger } from "@radix-ui/react-dropdown-menu";
 import type { Column } from "@tanstack/react-table";
@@ -22,6 +23,8 @@ export default function HideFieldsDropdown<TData>({
   columns,
 }: DataTableViewOptionsProps<TData>) {
   const [search, setSearch] = useState("");
+  const { updateViewHidden } = useViewUpdater();
+  const [hiddenFields, setHiddenFields] = useState<string[]>([]);
 
   const numberOfHiddenCols = columns.filter(
     (col) => !col.getIsVisible(),
@@ -34,11 +37,36 @@ export default function HideFieldsDropdown<TData>({
 
   const hideAllColumns = () => {
     columns.forEach((column) => column.toggleVisibility(false));
+
+    const allFields = columns.map((col) => col.id);
+
+    setHiddenFields(allFields);
+    updateViewHidden(allFields);
   };
 
   const showAllColumns = () => {
     columns.forEach((column) => column.toggleVisibility(true));
+
+    setHiddenFields([]);
+    updateViewHidden([]);
   };
+
+  function toggleColumnVisibility(column: Column<TransformedRow, unknown>) {
+    console.log("toggling!");
+    column.toggleVisibility(!column.getIsVisible());
+
+    setHiddenFields((prev) => {
+      if (prev.includes(column.id)) {
+        return prev.filter((id) => id !== column.id);
+      } else {
+        return [...prev, column.id];
+      }
+    });
+
+    console.log("setting hidden filed IDs", hiddenFields);
+
+    updateViewHidden(hiddenFields);
+  }
 
   return (
     <DropdownMenu>
@@ -68,7 +96,6 @@ export default function HideFieldsDropdown<TData>({
             type="text"
             value={search}
             onChange={(e) => {
-              console.log("🔍 Search changed:", e.target.value);
               setSearch(e.target.value);
             }}
             placeholder="Find a field"
@@ -90,9 +117,7 @@ export default function HideFieldsDropdown<TData>({
               <div onClick={(e) => e.stopPropagation()}>
                 <Toggle
                   checked={column.getIsVisible()}
-                  onChange={(value) => {
-                    column.toggleVisibility(value);
-                  }}
+                  onChange={() => toggleColumnVisibility(column)}
                 />
               </div>
 
@@ -100,9 +125,7 @@ export default function HideFieldsDropdown<TData>({
                 className="flex flex-1 cursor-pointer flex-row items-center gap-2"
                 onClick={(e) => {
                   e.stopPropagation();
-                  const newValue = !column.getIsVisible();
-
-                  column.toggleVisibility(newValue);
+                  toggleColumnVisibility(column);
                 }}
               >
                 {dataType === "number" ? (

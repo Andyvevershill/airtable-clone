@@ -63,21 +63,23 @@ export const viewSortingUpdateSchema = z.object({
   sorting: z.array(sortRuleSchema).optional().default([]),
 });
 
-export type ViewSortingUpdateInput = z.infer<typeof viewInputSchema>;
+export type ViewSortingUpdateInput = z.infer<typeof viewSortingUpdateSchema>;
 
 export const viewFilteringUpdateSchema = z.object({
   id: z.string(),
   filters: z.array(filterRuleSchema).optional().default([]),
 });
 
-export type ViewFilteringUpdateInput = z.infer<typeof viewInputSchema>;
+export type ViewFilteringUpdateInput = z.infer<
+  typeof viewFilteringUpdateSchema
+>;
 
 export const viewHiddenUpdateSchema = z.object({
   id: z.string(),
   hidden: z.array(z.string()).optional().default([]),
 });
 
-export type ViewHiddenUpdateInput = z.infer<typeof viewInputSchema>;
+export type ViewHiddenUpdateInput = z.infer<typeof viewHiddenUpdateSchema>;
 
 export type SearchMatch =
   | { type: "column"; columnId: string }

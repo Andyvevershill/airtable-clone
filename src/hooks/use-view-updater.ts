@@ -1,34 +1,37 @@
 import { useViewStore } from "@/app/stores/use-view-store";
 import { api } from "@/trpc/react";
 import type { FilterState, SortRule } from "@/types/view";
-import type { VisibilityState } from "@tanstack/react-table";
 
 export function useViewUpdater() {
   const { activeViewId, setSavingView } = useViewStore();
 
   const updateSorting = api.view.updateViewSorting.useMutation({
-    // onMutate: () => {
-    //   setSavingView(true);
-    // },
-    // onSuccess: () => {
-    //   setSavingView(false);
-    // },
+    onMutate: () => {
+      setSavingView(true);
+    },
+    onSuccess: () => {
+      setSavingView(false);
+    },
   });
+
   const updateFilters = api.view.updateViewFilters.useMutation({
-    // onMutate: () => {
-    //   setSavingView(true);
-    // },
-    // onSuccess: () => {
-    //   setSavingView(false);
-    // },
+    onMutate: () => {
+      setSavingView(true);
+    },
+    onSuccess: () => {
+      setSavingView(false);
+    },
   });
+
   const updateHidden = api.view.updateViewHidden.useMutation({
-    // onMutate: () => {
-    //   setSavingView(true);
-    // },
-    // onSuccess: () => {
-    //   setSavingView(false);
-    // },
+    onMutate: () => {
+      setSavingView(true);
+      console.log("updating hidden fields");
+    },
+    onSuccess: () => {
+      setSavingView(false);
+      console.log("saved successfully ");
+    },
   });
 
   const updateViewSorting = (sorting: SortRule[]) => {
@@ -45,15 +48,10 @@ export function useViewUpdater() {
     });
   };
 
-  const updateViewHidden = (
-    columnVisibility: VisibilityState,
-    activeView: string,
-  ) => {
+  const updateViewHidden = (hidden: string[]) => {
     updateHidden.mutate({
-      id: activeView,
-      hidden: Object.keys(columnVisibility).filter(
-        (columnId) => columnVisibility[columnId] === false,
-      ),
+      id: activeViewId,
+      hidden,
     });
   };
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useLoadingStore } from "@/app/stores/use-loading-store";
-import { useSavingStore } from "@/app/stores/use-saving-store";
+import { useViewStore } from "@/app/stores/use-view-store";
 import { type View } from "@/server/db/schemas";
 import { api } from "@/trpc/react";
 import { TooltipPortal } from "@radix-ui/react-tooltip";
@@ -9,7 +9,7 @@ import type { User } from "better-auth";
 import { Star, TableCellsSplit } from "lucide-react";
 import { useState } from "react";
 import { GrGroup } from "react-icons/gr";
-import { PiDotsSixVerticalLight } from "react-icons/pi";
+import { PiDotsSixVerticalLight, PiSpinnerThin } from "react-icons/pi";
 import { EditViewDropdown } from "../dropdowns/edit-view-dropdown";
 import {
   Tooltip,
@@ -44,15 +44,14 @@ export default function ViewButton({
   isEditing,
 }: Props) {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
-  const [tooltipOpen, setTooltipOpen] = useState(false);
-  const setIsSaving = useSavingStore((s) => s.setIsSaving);
+  const { setSavingView } = useViewStore();
   const { setIsLoadingView } = useLoadingStore();
+  const { savingView, activeViewId } = useViewStore();
 
   const utils = api.useUtils();
 
   const toggleFavouriteSidebar = api.view.toggleFavourite.useMutation({
     onMutate: ({ id, isFavourite }) => {
-      setIsSaving(true);
       setViews((prev) =>
         prev.map((v) =>
           v.id === id ? { ...v, isFavourite: !isFavourite } : v,
@@ -69,13 +68,10 @@ export default function ViewButton({
         prev.map((v) => (v.id === id ? { ...v, isFavourite } : v)),
       );
     },
-    onSettled: () => setIsSaving(false),
   });
 
   const handleActiveChange = api.view.setActive.useMutation({
     onMutate: ({ id }) => {
-      setIsSaving(true);
-
       // Snapshot previous state for rollback
       const previousViews = views;
 
@@ -101,7 +97,6 @@ export default function ViewButton({
         setViews(context.previousViews);
       }
     },
-    onSettled: () => setIsSaving(false),
   });
 
   function handleSetActive() {
@@ -115,21 +110,16 @@ export default function ViewButton({
 
   return (
     <TooltipProvider delayDuration={400}>
-      <Tooltip
-        open={openDropdownId ? false : undefined}
-        onOpenChange={setTooltipOpen}
-      >
+      <Tooltip open={openDropdownId ? false : undefined}>
         <TooltipTrigger asChild>
           <div
             onClick={(e) => {
-              setTooltipOpen(false);
               handleSetActive();
             }}
             onMouseEnter={() => setHoveredViewId(view.id)}
             onMouseLeave={() => setHoveredViewId(null)}
             onDoubleClick={(e) => {
               e.stopPropagation();
-              setTooltipOpen(false);
               setEditViewId(view.id);
             }}
             className={`pointer flex h-[32.25px] w-full items-center gap-2 rounded px-2 text-[13px] ${
@@ -141,7 +131,6 @@ export default function ViewButton({
                 <div
                   onClick={(e) => {
                     e.stopPropagation();
-                    setTooltipOpen(false);
                     toggleFavouriteSidebar.mutate({
                       id: view.id,
                       isFavourite: view.isFavourite,
@@ -175,6 +164,13 @@ export default function ViewButton({
                   {view.name}
                 </span>
 
+                {savingView && activeViewId === view.id && (
+                  <div className="flex shrink-0 flex-row items-center justify-end gap-1 text-gray-400">
+                    <PiSpinnerThin size={12} className="animate-spin" />
+                    <p className="text-xs">Saving...</p>
+                  </div>
+                )}
+
                 {(isHovered || openDropdownId === view.id) && (
                   <div className="mr-1 flex shrink-0 flex-row gap-1">
                     <EditViewDropdown
@@ -184,7 +180,6 @@ export default function ViewButton({
                       onRename={() => setEditViewId(view.id)}
                       onOpenChange={(open) => {
                         setOpenDropdownId(open ? view.id : null);
-                        if (open) setTooltipOpen(false);
                       }}
                     />
                     <PiDotsSixVerticalLight

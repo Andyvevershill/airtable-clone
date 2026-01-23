@@ -1,5 +1,6 @@
 "use client";
 
+import { useLoadingStore } from "@/app/stores/use-loading-store";
 import { useSavingStore } from "@/app/stores/use-saving-store";
 import {
   DropdownMenu,
@@ -38,6 +39,9 @@ export function EditViewDropdown({
   onOpenChange,
 }: Props) {
   const setIsSaving = useSavingStore((s) => s.setIsSaving);
+  const { setIsLoadingView } = useLoadingStore();
+
+  const utils = api.useUtils();
 
   const toggleFavourite = api.view.toggleFavourite.useMutation({
     onMutate: () => {
@@ -53,7 +57,7 @@ export function EditViewDropdown({
 
   const deleteView = api.view.deleteById.useMutation({
     onMutate: () => {
-      setIsSaving(true);
+      setIsLoadingView(true);
 
       setViews((prev) => {
         const remaining = prev.filter((v) => v.id !== view.id);
@@ -69,7 +73,10 @@ export function EditViewDropdown({
         return remaining;
       });
     },
-    onSettled: () => setIsSaving(false),
+
+    onSuccess: () => {
+      void utils.table.getTableWithViews.invalidate({ tableId: view.tableId });
+    },
   });
 
   const duplicate = api.view.duplicateView.useMutation({

@@ -71,7 +71,7 @@ export function TableToolbar({ table, sideBarState: [open, setOpen] }: Props) {
           <Button
             variant="ghost"
             size="sm"
-            className="pointer gap-1 rounded-xs"
+            className="pointer h-6.5 gap-1 rounded-xs"
             style={{ fontWeight: 350 }}
           >
             <PanelsTopLeft />

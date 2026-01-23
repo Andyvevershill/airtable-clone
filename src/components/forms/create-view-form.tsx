@@ -1,6 +1,6 @@
 "use client";
 
-import { useSavingStore } from "@/app/stores/use-saving-store";
+import { useLoadingStore } from "@/app/stores/use-loading-store";
 import type { View } from "@/server/db/schemas";
 import { api } from "@/trpc/react";
 import { CircleStar } from "lucide-react";
@@ -25,13 +25,13 @@ export function CreateViewForm({
   viewLength,
 }: Props) {
   const [viewName, setViewName] = useState<string>(`Grid ${viewLength + 1}`);
-  const setIsSaving = useSavingStore((s) => s.setIsSaving);
+  const { setIsLoadingView } = useLoadingStore();
 
   const utils = api.useUtils();
 
   const createView = api.view.createView.useMutation({
     onMutate: ({ viewId, name: viewName, tableId }) => {
-      setIsSaving(true);
+      setIsLoadingView(true);
 
       setViews((prev) => {
         //  deactivate any currently-active view
@@ -61,9 +61,6 @@ export function CreateViewForm({
     onSuccess: () => {
       void utils.table.getTableWithViews.invalidate({ tableId });
       setViewName("");
-    },
-    onSettled: () => {
-      setIsSaving(false);
     },
   });
 

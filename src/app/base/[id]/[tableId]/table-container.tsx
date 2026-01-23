@@ -9,7 +9,6 @@ import {
 import { TableSidebar } from "@/components/table/table-sidebar";
 import { TableToolbar } from "@/components/table/table-toolbar";
 import { useCellCommitter } from "@/hooks/use-cell-commiter";
-import { useViewUpdater } from "@/hooks/use-view-updater";
 import { applyViewToTableState } from "@/lib/helper-functions";
 import type { RowWithCells, TableWithViews } from "@/types";
 import type { ColumnType } from "@/types/column";
@@ -70,8 +69,7 @@ export default function TableContainer({
   const { isLoadingView, isFiltering, setIsLoadingView } = useLoadingStore();
   const [columnVisibility, onColumnVisibilityChange] =
     useState<VisibilityState>({});
-  const { setActiveViewId, activeViewId } = useViewStore();
-  const { updateViewHidden } = useViewUpdater();
+  const { setActiveViewId } = useViewStore();
 
   const activeView = useMemo(
     () => tableWithViews.views.find((v) => v.isActive),
@@ -97,11 +95,6 @@ export default function TableContainer({
     onColumnVisibilityChange,
     setIsLoadingView,
   ]);
-
-  useEffect(() => {
-    if (!activeView) return;
-    updateViewHidden(columnVisibility, activeView?.id);
-  }, [activeView, columnVisibility]);
 
   // Memoize transformed data instead of using local state
   const tableData = useMemo(
