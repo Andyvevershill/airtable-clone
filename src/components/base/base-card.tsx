@@ -1,5 +1,6 @@
 "use client";
 
+import { useViewStore } from "@/app/stores/use-view-store";
 import { getLastAccessed } from "@/lib/utils";
 import { api } from "@/trpc/react";
 import type { BaseWithTables } from "@/types/base";
@@ -19,6 +20,7 @@ export default function BaseCard({ base }: props) {
   const [editMode, setEditMode] = useState(false);
   const [baseName, setBaseName] = useState(base.name);
   const [isFavourite, setIsFavourite] = useState(base.isFavourite);
+  const { reset } = useViewStore();
 
   const router = useRouter();
   const utils = api.useUtils();
@@ -26,6 +28,7 @@ export default function BaseCard({ base }: props) {
 
   function handleRedirect() {
     void updateLastAccessed.mutate({ id: base.id });
+    reset();
     router.push(`/base/${base.id}`);
   }
 

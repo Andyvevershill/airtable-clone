@@ -1,5 +1,6 @@
 "use client";
 
+import { useViewStore } from "@/app/stores/use-view-store";
 import { darkenColour, lightenColour } from "@/lib/utils";
 import { api } from "@/trpc/react";
 import type { BaseWithTables } from "@/types/base";
@@ -17,6 +18,7 @@ interface Props {
 
 export default function TabContainer({ base }: Props) {
   const { tableId } = useParams<{ tableId: string }>();
+  const { reset } = useViewStore();
   const utils = api.useUtils();
 
   const [tables, setTables] = useState<{ id: string; name: string }[]>(
@@ -43,6 +45,7 @@ export default function TabContainer({ base }: Props) {
             <Link
               key={table.id}
               href={`/base/${base.id}/${table.id}`}
+              onClick={reset}
               onMouseEnter={() => {
                 if (!isActive) {
                   void utils.table.getTableWithViews.prefetch({
