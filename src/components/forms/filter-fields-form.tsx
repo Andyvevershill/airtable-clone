@@ -18,6 +18,12 @@ import { useMemo, useState } from "react";
 import { AiOutlinePlus } from "react-icons/ai";
 import { PiDotsSixVertical } from "react-icons/pi";
 import { RiDeleteBinLine } from "react-icons/ri";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../ui/tooltip";
 
 export type FilterRule = {
   id: string;
@@ -132,7 +138,7 @@ export default function FilterFieldsForm({
       }));
 
     // update view with change to filters
-    updateViewFilters(transformFiltersToView(filters, columns));
+    updateViewFilters(transformFiltersToView(newFilters, columns));
 
     onApply(validFilters);
   };
@@ -399,13 +405,30 @@ export default function FilterFieldsForm({
             Cancel
           </button>
 
-          <button
-            disabled={isApplyDisabled}
-            onClick={handleApply}
-            className="pointer h-7 rounded-xs bg-[#166ee1] px-3 text-[13px] text-white hover:bg-[#1557b8]"
-          >
-            Apply
-          </button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <button
+                    disabled={isApplyDisabled}
+                    onClick={handleApply}
+                    className="pointer h-7 rounded-xs bg-[#166ee1] px-3 text-[13px] text-white hover:bg-[#1557b8] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#166ee1]"
+                  >
+                    Apply
+                  </button>
+                </span>
+              </TooltipTrigger>
+              {isApplyDisabled && (
+                <TooltipContent side="top">
+                  <p className="text-xs">
+                    {filters.length === 0
+                      ? "Add at least one filter condition"
+                      : "Please select a field and operator for all filters"}
+                  </p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
     </div>

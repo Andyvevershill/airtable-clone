@@ -52,20 +52,25 @@ export default function HideFieldsDropdown<TData>({
   };
 
   function toggleColumnVisibility(column: Column<TransformedRow, unknown>) {
-    console.log("toggling!");
-    column.toggleVisibility(!column.getIsVisible());
+    // Toggle first
+    const isCurrentlyVisible = column.getIsVisible();
+    column.toggleVisibility(!isCurrentlyVisible);
 
-    setHiddenFields((prev) => {
-      if (prev.includes(column.id)) {
-        return prev.filter((id) => id !== column.id);
-      } else {
-        return [...prev, column.id];
-      }
+    // Calculate new hidden state based on what the column WILL BE after toggle
+    const willBeHidden = isCurrentlyVisible; // If currently visible, will be hidden after toggle
+
+    setHiddenFields((prevHidden) => {
+      const newHidden = willBeHidden
+        ? [...prevHidden, column.id]
+        : prevHidden.filter((id) => id !== column.id);
+
+      console.log("setting hidden field IDs", newHidden);
+
+      // Call updateViewHidden with the new value
+      updateViewHidden(newHidden);
+
+      return newHidden;
     });
-
-    console.log("setting hidden filed IDs", hiddenFields);
-
-    updateViewHidden(hiddenFields);
   }
 
   return (

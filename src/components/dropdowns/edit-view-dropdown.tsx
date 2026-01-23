@@ -2,6 +2,7 @@
 
 import { useLoadingStore } from "@/app/stores/use-loading-store";
 import { useSavingStore } from "@/app/stores/use-saving-store";
+import { useViewStore } from "@/app/stores/use-view-store";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,60 +41,186 @@ export function EditViewDropdown({
 }: Props) {
   const setIsSaving = useSavingStore((s) => s.setIsSaving);
   const { setIsLoadingView } = useLoadingStore();
+  const { setActiveView } = useViewStore();
 
   const utils = api.useUtils();
 
   const toggleFavourite = api.view.toggleFavourite.useMutation({
-    onMutate: () => {
+    onMutate: async ({ id, isFavourite }) => {
       setIsSaving(true);
+
+      await utils.table.getTableWithViews.cancel({ tableId: view.tableId });
+
+      const previousData = utils.table.getTableWithViews.getData({
+        tableId: view.tableId,
+      });
+
+      utils.table.getTableWithViews.setData(
+        { tableId: view.tableId },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            views: old.views.map((v) =>
+              v.id === id ? { ...v, isFavourite: !isFavourite } : v,
+            ),
+          };
+        },
+      );
+
       setViews((prev) =>
         prev.map((v) =>
-          v.id === view.id ? { ...v, isFavourite: !v.isFavourite } : v,
+          v.id === id ? { ...v, isFavourite: !isFavourite } : v,
         ),
       );
+
+      return { previousData };
     },
     onSettled: () => setIsSaving(false),
+    onError: (_err, _variables, context) => {
+      if (context?.previousData) {
+        utils.table.getTableWithViews.setData(
+          { tableId: view.tableId },
+          context.previousData,
+        );
+        setViews(context.previousData.views);
+      }
+    },
   });
 
   const deleteView = api.view.deleteById.useMutation({
-    onMutate: () => {
+    onMutate: async () => {
       setIsLoadingView(true);
 
-      setViews((prev) => {
-        const remaining = prev.filter((v) => v.id !== view.id);
+      await utils.table.getTableWithViews.cancel({ tableId: view.tableId });
 
-        // If the deleted view was active, activate the first remaining one
-        if (view.isActive && remaining.length > 0) {
-          return remaining.map((v, index) => ({
+      const previousData = utils.table.getTableWithViews.getData({
+        tableId: view.tableId,
+      });
+
+      const remaining =
+        previousData?.views.filter((v) => v.id !== view.id) ?? [];
+      let newActiveView: View | null = null;
+
+      // Update cache
+      utils.table.getTableWithViews.setData(
+        { tableId: view.tableId },
+        (old) => {
+          if (!old) return old;
+
+          const filteredViews = old.views.filter((v) => v.id !== view.id);
+
+          // If deleted view was active, make first remaining view active
+          if (view.isActive && filteredViews.length > 0) {
+            const firstView = filteredViews[0];
+            if (firstView) {
+              newActiveView = {
+                id: firstView.id,
+                name: firstView.name,
+                createdAt: firstView.createdAt,
+                isFavourite: firstView.isFavourite,
+                tableId: firstView.tableId,
+                isActive: true,
+                filters: firstView.filters,
+                sorting: firstView.sorting,
+                hidden: firstView.hidden,
+              };
+            }
+
+            return {
+              ...old,
+              views: filteredViews.map((v, index) => ({
+                ...v,
+                isActive: index === 0,
+              })),
+            };
+          }
+
+          return {
+            ...old,
+            views: filteredViews,
+          };
+        },
+      );
+
+      // Update local state
+      setViews((prev) => {
+        const filtered = prev.filter((v) => v.id !== view.id);
+
+        if (view.isActive && filtered.length > 0) {
+          return filtered.map((v, index) => ({
             ...v,
             isActive: index === 0,
           }));
         }
 
-        return remaining;
+        return filtered;
       });
-    },
 
+      // Set new active view in store
+      if (newActiveView) {
+        setActiveView(newActiveView);
+      }
+
+      return { previousData };
+    },
     onSuccess: () => {
       void utils.table.getTableWithViews.invalidate({ tableId: view.tableId });
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.previousData) {
+        utils.table.getTableWithViews.setData(
+          { tableId: view.tableId },
+          context.previousData,
+        );
+        setViews(context.previousData.views);
+      }
     },
   });
 
   const duplicate = api.view.duplicateView.useMutation({
-    onMutate: ({ newId, name }) => {
+    onMutate: async ({ newId, name }) => {
       setIsSaving(true);
-      setViews((prev) => [
-        ...prev,
-        {
-          ...view,
-          id: newId,
-          name,
-          isFavourite: false,
-          isActive: false,
+
+      await utils.table.getTableWithViews.cancel({ tableId: view.tableId });
+
+      const previousData = utils.table.getTableWithViews.getData({
+        tableId: view.tableId,
+      });
+
+      const duplicatedView: View = {
+        ...view,
+        id: newId,
+        name,
+        isFavourite: false,
+        isActive: false,
+      };
+
+      utils.table.getTableWithViews.setData(
+        { tableId: view.tableId },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            views: [...old.views, duplicatedView],
+          };
         },
-      ]);
+      );
+
+      setViews((prev) => [...prev, duplicatedView]);
+
+      return { previousData };
     },
     onSettled: () => setIsSaving(false),
+    onError: (_err, _variables, context) => {
+      if (context?.previousData) {
+        utils.table.getTableWithViews.setData(
+          { tableId: view.tableId },
+          context.previousData,
+        );
+        setViews(context.previousData.views);
+      }
+    },
   });
 
   return (
@@ -152,7 +279,7 @@ export function EditViewDropdown({
           className={cn(deleteDisabled && "opacity-50 hover:bg-none")}
           onSelect={(e) => {
             if (deleteDisabled) {
-              e.preventDefault(); // Prevent the dropdown from closing
+              e.preventDefault();
             }
           }}
         >

@@ -1,6 +1,7 @@
 "use client";
 
 import { useLoadingStore } from "@/app/stores/use-loading-store";
+import { useViewStore } from "@/app/stores/use-view-store";
 import type { View } from "@/server/db/schemas";
 import { api } from "@/trpc/react";
 import { CircleStar } from "lucide-react";
@@ -26,46 +27,75 @@ export function CreateViewForm({
 }: Props) {
   const [viewName, setViewName] = useState<string>(`Grid ${viewLength + 1}`);
   const { setIsLoadingView } = useLoadingStore();
+  const { setActiveView } = useViewStore();
 
   const utils = api.useUtils();
 
   const createView = api.view.createView.useMutation({
-    onMutate: ({ viewId, name: viewName, tableId }) => {
+    onMutate: async ({ viewId, name: viewName, tableId }) => {
       setIsLoadingView(true);
 
+      await utils.table.getTableWithViews.cancel({ tableId });
+
+      const previousData = utils.table.getTableWithViews.getData({ tableId });
+
+      const newView: View = {
+        id: viewId,
+        tableId,
+        name: viewName,
+        createdAt: new Date(),
+        isFavourite: false,
+        isActive: true,
+        filters: null,
+        sorting: null,
+        hidden: null,
+      };
+
+      // Update cache
+      utils.table.getTableWithViews.setData({ tableId }, (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          views: [
+            ...old.views.map((v) => ({ ...v, isActive: false })),
+            newView,
+          ],
+        };
+      });
+
+      // Update local state
       setViews((prev) => {
-        //  deactivate any currently-active view
         const deactivated = prev.map((v) =>
           v.isActive ? { ...v, isActive: false } : v,
         );
-
-        // append the new active view at the bottom
-        return [
-          ...deactivated,
-          {
-            id: viewId,
-            tableId,
-            name: viewName,
-            createdAt: new Date(),
-            isFavourite: false,
-            isActive: true,
-            filters: null,
-            sorting: null,
-            hidden: null,
-          },
-        ];
+        return [...deactivated, newView];
       });
-      onSuccess();
-    },
 
+      // Set as active view in store
+      setActiveView(newView);
+
+      onSuccess();
+
+      return { previousData };
+    },
     onSuccess: () => {
       void utils.table.getTableWithViews.invalidate({ tableId });
       setViewName("");
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.previousData) {
+        utils.table.getTableWithViews.setData(
+          { tableId },
+          context.previousData,
+        );
+        setViews(context.previousData.views);
+      }
     },
   });
 
   const handleCreateView = () => {
     if (!viewName.trim()) return;
+
     createView.mutate({
       viewId: crypto.randomUUID(),
       name: viewName,
