@@ -2,48 +2,99 @@
 
 import { useLoadingStore } from "@/app/stores/use-loading-store";
 import { useGlobalSearchStore } from "@/app/stores/use-search-store";
+import { useViewStore } from "@/app/stores/use-view-store";
 import NoDataPage from "@/components/no-data-page";
 import {
+  applyViewToTableState,
   translateFiltersState,
   translateSortingState,
 } from "@/lib/helper-functions";
 import { api } from "@/trpc/react";
 import type { QueryParams } from "@/types/view";
-import { keepPreviousData } from "@tanstack/react-query";
-import type { ColumnFiltersState, SortingState } from "@tanstack/react-table";
+import type {
+  ColumnFiltersState,
+  SortingState,
+  VisibilityState,
+} from "@tanstack/react-table";
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import TableContainer from "./table-container";
 
 export default function TablePage() {
   const { tableId } = useParams<{ tableId: string }>();
-  const { setIsLoading, setIsFiltering } = useLoadingStore();
+  const { setIsLoading, setIsFiltering, setIsLoadingView } = useLoadingStore();
   const { globalSearch, setGlobalSearchLength, setIsSearching } =
     useGlobalSearchStore();
+  const { activeView, setActiveView } = useViewStore();
+
   const [sorting, setSorting] = useState<SortingState>([]);
   const [filters, setFilters] = useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
-  // need this for View card data (email + name)
-  const { data: user } = api.user.getUser.useQuery();
+  const { data: user } = api.user.getUser.useQuery(undefined, {
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
 
-  // basic data - mostly for the views + table name to display in tab
   const { data: tableWithViews, isLoading: tableWithViewsLoading } =
-    api.table.getTableWithViews.useQuery({ tableId });
+    api.table.getTableWithViews.useQuery(
+      { tableId },
+      {
+        staleTime: 10 * 60 * 1000,
+        gcTime: 10 * 60 * 1000,
+        refetchInterval: 10 * 60 * 1000,
+        refetchIntervalInBackground: false,
+      },
+    );
 
   const { data: columns, isLoading: columnsLoading } =
-    api.column.getColumns.useQuery({ tableId });
+    api.column.getColumns.useQuery(
+      { tableId },
+      {
+        staleTime: Infinity,
+        gcTime: 10 * 60 * 1000,
+      },
+    );
 
-  // Memoize columns to prevent reference changes
+  const { data: rowCount, isLoading: countLoading } =
+    api.row.getRowCount.useQuery(
+      { tableId },
+      {
+        staleTime: Infinity,
+        gcTime: 10 * 60 * 1000,
+      },
+    );
+
   const stableColumns = useMemo(
     () => columns,
     [columns?.length, columns?.map((c) => c.id).join(",")],
   );
 
-  const { data: rowCount, isLoading: countLoading } =
-    api.row.getRowCount.useQuery({ tableId });
+  useEffect(() => {
+    if (!tableWithViews?.views) return;
+    if (activeView !== null) return;
 
-  // this is the key that allows us to get into the getRowsInfinite and optimistically update the data
-  // memoised to stop us recalculating every render - as this wad driving me mad
+    const serverActiveView = tableWithViews.views.find((v) => v.isActive);
+    if (serverActiveView) {
+      setActiveView(serverActiveView);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tableWithViews?.views]);
+
+  useEffect(() => {
+    if (!activeView) return;
+
+    startTransition(() => {
+      applyViewToTableState(activeView, {
+        onSortingChange: setSorting,
+        onColumnFiltersChange: setFilters,
+        onColumnVisibilityChange: setColumnVisibility,
+      });
+    });
+
+    setIsLoadingView(false);
+  }, [activeView?.id, setIsLoadingView]);
+
   const queryParams: QueryParams = useMemo(() => {
     const translatedSorting = translateSortingState(
       sorting,
@@ -53,20 +104,18 @@ export default function TablePage() {
       filters,
       stableColumns ?? [],
     );
-    const params = {
+
+    return {
       tableId,
-      limit: 3000,
+      limit: 200,
       sorting: translatedSorting,
       filters: translatedFilters,
       globalSearch,
     };
-    return params;
   }, [tableId, sorting, filters, stableColumns, globalSearch]);
 
   const {
     data: rowsData,
-
-    // nice functions we can use from infinite query:
     fetchNextPage,
     hasNextPage,
     isFetching,
@@ -74,9 +123,8 @@ export default function TablePage() {
     isLoading: rowsLoading,
   } = api.row.getRowsInfinite.useInfiniteQuery(queryParams, {
     getNextPageParam: (lastPage) => lastPage.nextCursor,
-
-    // we could probs remove below now as we display loading spinners immediatley after pressing filter/sort?
-    placeholderData: keepPreviousData,
+    placeholderData: (prev) => prev,
+    enabled: !!activeView && !!stableColumns,
   });
 
   const isLoading =
@@ -87,12 +135,10 @@ export default function TablePage() {
   }, [isFetching, isLoading, setIsLoading]);
 
   const rowsWithCells = useMemo(() => {
-    const rows = rowsData?.pages.flatMap((p) => p.items) ?? [];
-    return rows;
+    return rowsData?.pages.flatMap((p) => p.items) ?? [];
   }, [rowsData]);
 
   useEffect(() => {
-    // Only show filtering spinner when actively filtering/sorting (not paginating)
     const isActivelyFiltering =
       (filters.length > 0 || sorting.length > 0) &&
       isFetching &&
@@ -108,13 +154,11 @@ export default function TablePage() {
   ]);
 
   const globalSearchMatches = useMemo(() => {
-    const matches = {
+    return {
       matches: rowsData?.pages.flatMap((p) => p.searchMatches.matches) ?? [],
     };
-    return matches;
   }, [rowsData]);
 
-  // Stop spinner when search completes (fetching stops AND we have search query)
   useEffect(() => {
     if (globalSearch && !isFetching) {
       setGlobalSearchLength(globalSearchMatches.matches.length);
@@ -150,6 +194,8 @@ export default function TablePage() {
       onSortingChange={setSorting}
       columnFilters={filters}
       onColumnFiltersChange={setFilters}
+      columnVisibility={columnVisibility}
+      onColumnVisibilityChange={setColumnVisibility}
       globalSearchMatches={globalSearchMatches}
     />
   );

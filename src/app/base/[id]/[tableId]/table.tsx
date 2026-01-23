@@ -177,24 +177,42 @@ export function Table({
     if (!scrollElement) return;
 
     const checkPrefetch = () => {
-      if (!hasNextPage || isFetchingNextPage) return;
+      console.log("🔍 [Table] checkPrefetch called", {
+        hasNextPage,
+        isFetchingNextPage,
+        transformedRowsLength: transformedRows.length,
+      });
+
+      if (!hasNextPage || isFetchingNextPage) {
+        console.log("⏸️ [Table] Skipping - no next page or already fetching");
+        return;
+      }
 
       const items = rowVirtualizer.getVirtualItems();
       if (items.length < 5) return;
 
-      const lastIndex = items[items.length - 1]?.index ?? 0;
-      const prefetchThreshold = transformedRows.length - 7500;
+      const lastVisibleIndex = items[items.length - 1]?.index ?? 0;
 
-      if (lastIndex >= prefetchThreshold) {
-        if (lastFetchedIndex.current !== lastIndex) {
-          lastFetchedIndex.current = lastIndex;
+      const prefetchThreshold = transformedRows.length - 50;
+
+      console.log("📏 [Table] Prefetch check:", {
+        lastVisibleIndex,
+        prefetchThreshold,
+        transformedRowsLength: transformedRows.length,
+        shouldFetch: lastVisibleIndex >= prefetchThreshold,
+      });
+
+      if (lastVisibleIndex >= prefetchThreshold) {
+        if (lastFetchedIndex.current !== lastVisibleIndex) {
+          lastFetchedIndex.current = lastVisibleIndex;
+          console.log("🚀 [Table] Fetching next page!");
           fetchNextPage();
         }
       }
     };
 
-    checkPrefetch();
-    const throttledCheck = throttle(checkPrefetch, 150);
+    // ✅ FIX: Only check on scroll, NOT immediately
+    const throttledCheck = throttle(checkPrefetch, 300); // Increased throttle
     scrollElement.addEventListener("scroll", throttledCheck);
 
     return () => {
@@ -202,12 +220,11 @@ export function Table({
     };
   }, [
     rowVirtualizer,
-    transformedRows.length,
+    // ❌ REMOVE transformedRows.length from dependencies
     hasNextPage,
     isFetchingNextPage,
     fetchNextPage,
   ]);
-
   useEffect(() => {
     lastFetchedIndex.current = -1;
   }, [transformedRows.length]);

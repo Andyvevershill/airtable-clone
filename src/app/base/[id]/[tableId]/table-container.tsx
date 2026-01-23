@@ -1,7 +1,6 @@
 "use client";
 
 import { useLoadingStore } from "@/app/stores/use-loading-store";
-import { useViewStore } from "@/app/stores/use-view-store";
 import {
   generateColumnDefinitions,
   transformRowsToTanStackFormat,
@@ -9,7 +8,7 @@ import {
 import { TableSidebar } from "@/components/table/table-sidebar";
 import { TableToolbar } from "@/components/table/table-toolbar";
 import { useCellCommitter } from "@/hooks/use-cell-commiter";
-import { applyViewToTableState } from "@/lib/helper-functions";
+import { useViewUpdater } from "@/hooks/use-view-updater";
 import type { RowWithCells, TableWithViews } from "@/types";
 import type { ColumnType } from "@/types/column";
 import type { GlobalSearchMatches, QueryParams } from "@/types/view";
@@ -22,7 +21,7 @@ import {
   type VisibilityState,
 } from "@tanstack/react-table";
 import type { User } from "better-auth";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { LuLoaderPinwheel } from "react-icons/lu";
 import { Table } from "./table";
 
@@ -43,6 +42,8 @@ interface Props {
   onSortingChange: OnChangeFn<SortingState>;
   columnFilters: ColumnFiltersState;
   onColumnFiltersChange: OnChangeFn<ColumnFiltersState>;
+  columnVisibility: VisibilityState;
+  onColumnVisibilityChange: OnChangeFn<VisibilityState>;
   globalSearchMatches: GlobalSearchMatches;
 }
 
@@ -63,40 +64,14 @@ export default function TableContainer({
   onSortingChange,
   columnFilters,
   onColumnFiltersChange,
+  columnVisibility,
+  onColumnVisibilityChange,
   globalSearchMatches,
 }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { isLoadingView, isFiltering, setIsLoadingView } = useLoadingStore();
-  const [columnVisibility, onColumnVisibilityChange] =
-    useState<VisibilityState>({});
-  const { setActiveViewId } = useViewStore();
+  const { isLoadingView, isFiltering } = useLoadingStore();
+  const { updateViewFilters } = useViewUpdater();
 
-  const activeView = useMemo(
-    () => tableWithViews.views.find((v) => v.isActive),
-    [tableWithViews.views],
-  );
-
-  useEffect(() => {
-    if (!activeView) return;
-
-    setActiveViewId(activeView.id);
-
-    applyViewToTableState(activeView, {
-      onSortingChange,
-      onColumnFiltersChange,
-      onColumnVisibilityChange,
-    });
-
-    setIsLoadingView(false);
-  }, [
-    activeView,
-    onSortingChange,
-    onColumnFiltersChange,
-    onColumnVisibilityChange,
-    setIsLoadingView,
-  ]);
-
-  // Memoize transformed data instead of using local state
   const tableData = useMemo(
     () => transformRowsToTanStackFormat(rowsWithCells),
     [rowsWithCells],
@@ -129,6 +104,11 @@ export default function TableContainer({
     () => [sidebarOpen, setSidebarOpen],
     [sidebarOpen],
   );
+
+  function handleClearFilters() {
+    onColumnFiltersChange([]);
+    updateViewFilters([]);
+  }
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-slate-100">
@@ -168,7 +148,7 @@ export default function TableContainer({
                   </h3>
 
                   <button
-                    onClick={() => onColumnFiltersChange([])}
+                    onClick={() => handleClearFilters()}
                     className="pointer mt-6 rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                   >
                     Clear filters
@@ -192,7 +172,6 @@ export default function TableContainer({
             )}
           </div>
 
-          {/* RECORDS BAR - Inside the table's container */}
           <div className="border-t border-gray-300 bg-white px-3 py-2">
             <div className="text-xs text-gray-600">
               {rowCount} {rowCount === 1 ? "record" : "records"}

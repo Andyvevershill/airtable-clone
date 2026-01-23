@@ -44,38 +44,85 @@ export default function ViewButton({
   isEditing,
 }: Props) {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
-  const { setSavingView } = useViewStore();
   const { setIsLoadingView } = useLoadingStore();
-  const { savingView, activeViewId } = useViewStore();
+  const { savingView, activeView, setActiveView } = useViewStore();
 
   const utils = api.useUtils();
 
   const toggleFavouriteSidebar = api.view.toggleFavourite.useMutation({
-    onMutate: ({ id, isFavourite }) => {
+    onMutate: async ({ id, isFavourite }) => {
+      await utils.table.getTableWithViews.cancel({ tableId: view.tableId });
+
+      const previousData = utils.table.getTableWithViews.getData({
+        tableId: view.tableId,
+      });
+
+      utils.table.getTableWithViews.setData(
+        { tableId: view.tableId },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            views: old.views.map((v) =>
+              v.id === id ? { ...v, isFavourite: !isFavourite } : v,
+            ),
+          };
+        },
+      );
+
       setViews((prev) =>
         prev.map((v) =>
           v.id === id ? { ...v, isFavourite: !isFavourite } : v,
         ),
       );
+
+      return { previousData };
     },
-    onSuccess: () => {
-      void utils.table.getTableWithViews.invalidate({
-        tableId: view.tableId,
-      });
-    },
-    onError: (_err, { id, isFavourite }) => {
+    onError: (_err, _variables, context) => {
+      if (context?.previousData) {
+        utils.table.getTableWithViews.setData(
+          { tableId: view.tableId },
+          context.previousData,
+        );
+      }
       setViews((prev) =>
-        prev.map((v) => (v.id === id ? { ...v, isFavourite } : v)),
+        prev.map((v) =>
+          v.id === _variables.id
+            ? { ...v, isFavourite: _variables.isFavourite }
+            : v,
+        ),
       );
     },
   });
 
   const handleActiveChange = api.view.setActive.useMutation({
-    onMutate: ({ id }) => {
-      // Snapshot previous state for rollback
-      const previousViews = views;
+    onMutate: async ({ id }) => {
+      await utils.table.getTableWithViews.cancel({ tableId: view.tableId });
 
-      // Set all views to inactive, then set the clicked view to active
+      const previousData = utils.table.getTableWithViews.getData({
+        tableId: view.tableId,
+      });
+
+      const latestView = previousData?.views.find((v) => v.id === id);
+
+      if (latestView) {
+        setActiveView(latestView);
+      }
+
+      utils.table.getTableWithViews.setData(
+        { tableId: view.tableId },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            views: old.views.map((v) => ({
+              ...v,
+              isActive: v.id === id,
+            })),
+          };
+        },
+      );
+
       setViews((prev) =>
         prev.map((v) => ({
           ...v,
@@ -83,25 +130,24 @@ export default function ViewButton({
         })),
       );
 
-      // Return context for rollback
-      return { previousViews };
-    },
-    onSuccess: () => {
-      void utils.table.getTableWithViews.invalidate({
-        tableId: view.tableId,
-      });
+      return { previousData };
     },
     onError: (_err, _variables, context) => {
-      // Revert to previous state on error
-      if (context?.previousViews) {
-        setViews(context.previousViews);
+      if (context?.previousData) {
+        utils.table.getTableWithViews.setData(
+          { tableId: view.tableId },
+          context.previousData,
+        );
+        setViews(context.previousData.views);
       }
     },
   });
 
   function handleSetActive() {
     if (view.isActive) return;
+
     setIsLoadingView(true);
+
     handleActiveChange.mutate({
       id: view.id,
       tableId: view.tableId,
@@ -164,7 +210,7 @@ export default function ViewButton({
                   {view.name}
                 </span>
 
-                {savingView && activeViewId === view.id && (
+                {savingView && activeView?.id === view.id && (
                   <div className="flex shrink-0 flex-row items-center justify-end gap-1 text-gray-400">
                     <PiSpinnerThin size={12} className="animate-spin" />
                     <p className="text-xs">Saving...</p>
