@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { api } from "@/trpc/react";
-import type { ColumnType, RowWithCells } from "@/types";
+import type { ColumnType, TransformedRow } from "@/types";
 import type { QueryParams } from "@/types/view";
 import { memo, useCallback } from "react";
 import { AiOutlinePlus } from "react-icons/ai";
@@ -38,15 +38,12 @@ function AddRowButton({
         return { previousData, rowId: newRow.id, previousCount };
       }
 
-      const optimisticRow: RowWithCells = {
-        id: newRow.id,
-        tableId,
-        cells: columns.map((col) => ({
-          id: `${col.id}_${newRow.id}`,
-          rowId: newRow.id,
-          columnId: col.id,
-          value: null,
-        })),
+      const optimisticRow: TransformedRow = {
+        _rowId: newRow.id,
+        _cells: Object.fromEntries(columns.map((col) => [col.id, null])),
+        _cellMap: Object.fromEntries(
+          columns.map((col) => [col.id, `${col.id}_${newRow.id}`]),
+        ),
       };
 
       utils.row.getRowsInfinite.setInfiniteData(queryParams, (old) => {
@@ -61,7 +58,9 @@ function AddRowButton({
           ...lastPage,
           items: [...lastPage.items, optimisticRow],
           searchMatches: lastPage.searchMatches ?? { matches: [] },
-          totalFilteredCount: lastPage.totalFilteredCount + 1,
+          totalFilteredCount: lastPage.totalFilteredCount
+            ? lastPage.totalFilteredCount + 1
+            : undefined,
         };
 
         return { ...old, pages: updatedPages };
