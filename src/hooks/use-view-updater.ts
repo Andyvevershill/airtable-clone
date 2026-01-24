@@ -10,12 +10,6 @@ export function useViewUpdater() {
     onMutate: async ({ sorting }) => {
       if (!activeView) return;
 
-      console.log(
-        "🔵 [useViewUpdater] onMutate - Updating sorting for view:",
-        activeView.name,
-      );
-      console.log("  Current sorting in activeView:", activeView.sorting);
-      console.log("  New sorting to save:", sorting);
       setSavingView(true);
 
       await utils.table.getTableWithViews.cancel({
@@ -26,17 +20,11 @@ export function useViewUpdater() {
         tableId: activeView.tableId,
       });
 
-      console.log(
-        "  Previous cache data:",
-        previousData?.views.find((v) => v.id === activeView.id)?.sorting,
-      );
-
       const updatedView = {
         ...activeView,
         sorting: sorting ?? null,
       };
       setActiveView(updatedView);
-      console.log("  ✅ Store updated with new sorting");
 
       utils.table.getTableWithViews.setData(
         { tableId: activeView.tableId },
@@ -50,18 +38,15 @@ export function useViewUpdater() {
           };
         },
       );
-      console.log("  ✅ React Query cache updated");
 
       return { previousData, previousSorting: activeView.sorting };
     },
     onSuccess: () => {
-      console.log("✅ [useViewUpdater] Sorting saved to server successfully");
       setSavingView(false);
     },
     onError: (_err, _variables, context) => {
       if (!activeView) return;
 
-      console.error("❌ [useViewUpdater] Failed to save sorting, rolling back");
       setSavingView(false);
 
       if (context?.previousSorting !== undefined) {
@@ -83,12 +68,6 @@ export function useViewUpdater() {
     onMutate: async ({ filters }) => {
       if (!activeView) return;
 
-      console.log(
-        "🔵 [useViewUpdater] onMutate - Updating filters for view:",
-        activeView.name,
-      );
-      console.log("  Current filters in activeView:", activeView.filters);
-      console.log("  New filters to save:", filters);
       setSavingView(true);
 
       await utils.table.getTableWithViews.cancel({
@@ -99,17 +78,11 @@ export function useViewUpdater() {
         tableId: activeView.tableId,
       });
 
-      console.log(
-        "  Previous cache data:",
-        previousData?.views.find((v) => v.id === activeView.id)?.filters,
-      );
-
       const updatedView = {
         ...activeView,
         filters: filters ?? null,
       };
       setActiveView(updatedView);
-      console.log("  ✅ Store updated with new filters");
 
       utils.table.getTableWithViews.setData(
         { tableId: activeView.tableId },
@@ -123,18 +96,15 @@ export function useViewUpdater() {
           };
         },
       );
-      console.log("  ✅ React Query cache updated");
 
       return { previousData, previousFilters: activeView.filters };
     },
     onSuccess: () => {
-      console.log("✅ [useViewUpdater] Filters saved to server successfully");
       setSavingView(false);
     },
     onError: (_err, _variables, context) => {
       if (!activeView) return;
 
-      console.error("❌ [useViewUpdater] Failed to save filters, rolling back");
       setSavingView(false);
 
       if (context?.previousFilters !== undefined) {
@@ -156,12 +126,6 @@ export function useViewUpdater() {
     onMutate: async ({ hidden }) => {
       if (!activeView) return;
 
-      console.log(
-        "🔵 [useViewUpdater] onMutate - Updating hidden columns for view:",
-        activeView.name,
-      );
-      console.log("  Current hidden in activeView:", activeView.hidden);
-      console.log("  New hidden to save:", hidden);
       setSavingView(true);
 
       await utils.table.getTableWithViews.cancel({
@@ -172,17 +136,11 @@ export function useViewUpdater() {
         tableId: activeView.tableId,
       });
 
-      console.log(
-        "  Previous cache data:",
-        previousData?.views.find((v) => v.id === activeView.id)?.hidden,
-      );
-
       const updatedView = {
         ...activeView,
         hidden: hidden ?? null,
       };
       setActiveView(updatedView);
-      console.log("  ✅ Store updated with new hidden columns");
 
       utils.table.getTableWithViews.setData(
         { tableId: activeView.tableId },
@@ -196,22 +154,15 @@ export function useViewUpdater() {
           };
         },
       );
-      console.log("  ✅ React Query cache updated");
 
       return { previousData, previousHidden: activeView.hidden };
     },
     onSuccess: () => {
-      console.log(
-        "✅ [useViewUpdater] Hidden columns saved to server successfully",
-      );
       setSavingView(false);
     },
     onError: (_err, _variables, context) => {
       if (!activeView) return;
 
-      console.error(
-        "❌ [useViewUpdater] Failed to save hidden columns, rolling back",
-      );
       setSavingView(false);
 
       if (context?.previousHidden !== undefined) {
@@ -237,7 +188,6 @@ export function useViewUpdater() {
       return;
     }
 
-    console.log("🟡 [useViewUpdater] updateViewSorting called with:", sorting);
     updateSorting.mutate({
       id: activeView.id,
       sorting,
@@ -264,7 +214,6 @@ export function useViewUpdater() {
       return;
     }
 
-    console.log("🟡 [useViewUpdater] updateViewHidden called with:", hidden);
     updateHidden.mutate({
       id: activeView.id,
       hidden,

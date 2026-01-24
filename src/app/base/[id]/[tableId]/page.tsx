@@ -65,10 +65,7 @@ export default function TablePage() {
       },
     );
 
-  const stableColumns = useMemo(
-    () => columns,
-    [columns?.length, columns?.map((c) => c.id).join(",")],
-  );
+  const stableColumns = useMemo(() => columns, [columns]);
 
   useEffect(() => {
     if (!tableWithViews?.views) return;
@@ -78,7 +75,6 @@ export default function TablePage() {
     if (serverActiveView) {
       setActiveView(serverActiveView);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tableWithViews?.views]);
 
   useEffect(() => {
@@ -107,7 +103,7 @@ export default function TablePage() {
 
     return {
       tableId,
-      limit: 200,
+      limit: 250,
       sorting: translatedSorting,
       filters: translatedFilters,
       globalSearch,
@@ -125,6 +121,7 @@ export default function TablePage() {
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     placeholderData: (prev) => prev,
     enabled: !!activeView && !!stableColumns,
+    refetchOnWindowFocus: false,
   });
 
   const isLoading =

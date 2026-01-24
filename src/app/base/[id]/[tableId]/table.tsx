@@ -33,7 +33,7 @@ interface Props {
   tableId: string;
   columns: ColumnType[];
   rowCount: number;
-  transformedRows: TransformedRow[];
+  rowsWithCells: TransformedRow[];
   queryParams: QueryParams;
   totalFilteredCount: number;
 
@@ -51,7 +51,7 @@ export function Table({
   tableId,
   columns,
   rowCount,
-  transformedRows,
+  rowsWithCells,
   queryParams,
   totalFilteredCount,
 
@@ -170,21 +170,15 @@ export function Table({
 
     const timeoutId = setTimeout(scrollToMatch, 50);
     return () => clearTimeout(timeoutId);
-  }, [activeMatch, activeMatchIndex, transformedRows, rowVirtualizer]);
+  }, [activeMatch, activeMatchIndex, rowsWithCells, rowVirtualizer]);
 
   useEffect(() => {
     const scrollElement = scrollRef.current;
     if (!scrollElement) return;
 
     const checkPrefetch = () => {
-      console.log("🔍 [Table] checkPrefetch called", {
-        hasNextPage,
-        isFetchingNextPage,
-        transformedRowsLength: transformedRows.length,
-      });
-
+      // ✅ Early exit if already fetching or no more pages
       if (!hasNextPage || isFetchingNextPage) {
-        console.log("⏸️ [Table] Skipping - no next page or already fetching");
         return;
       }
 
@@ -192,15 +186,7 @@ export function Table({
       if (items.length < 5) return;
 
       const lastVisibleIndex = items[items.length - 1]?.index ?? 0;
-
-      const prefetchThreshold = transformedRows.length - 50;
-
-      console.log("📏 [Table] Prefetch check:", {
-        lastVisibleIndex,
-        prefetchThreshold,
-        transformedRowsLength: transformedRows.length,
-        shouldFetch: lastVisibleIndex >= prefetchThreshold,
-      });
+      const prefetchThreshold = rowsWithCells.length - 200;
 
       if (lastVisibleIndex >= prefetchThreshold) {
         if (lastFetchedIndex.current !== lastVisibleIndex) {
@@ -211,8 +197,7 @@ export function Table({
       }
     };
 
-    // ✅ FIX: Only check on scroll, NOT immediately
-    const throttledCheck = throttle(checkPrefetch, 300); // Increased throttle
+    const throttledCheck = throttle(checkPrefetch, 300);
     scrollElement.addEventListener("scroll", throttledCheck);
 
     return () => {
@@ -220,18 +205,19 @@ export function Table({
     };
   }, [
     rowVirtualizer,
-    // ❌ REMOVE transformedRows.length from dependencies
     hasNextPage,
     isFetchingNextPage,
     fetchNextPage,
+    rowsWithCells.length,
   ]);
+
   useEffect(() => {
     lastFetchedIndex.current = -1;
-  }, [transformedRows.length]);
+  }, [rowsWithCells.length]);
 
   const { handleTableKeyDown } = useTableKeyboardNavigation({
     tableRef,
-    totalRows: transformedRows.length,
+    totalRows: rowsWithCells.length,
     totalCols: columns.length + 1,
   });
 

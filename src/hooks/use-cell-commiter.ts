@@ -32,12 +32,12 @@ export function useCellCommitter({ queryParams }: Params) {
           pages: old.pages.map((page) => ({
             ...page,
             items: page.items.map((row) => {
-              if (row.id !== rowId) return row;
+              if (row._rowId !== rowId) return row;
 
               return {
                 ...row,
-                cells: {
-                  ...row.cells,
+                _cells: {
+                  ...row._cells,
                   [columnId]: value,
                 },
               };

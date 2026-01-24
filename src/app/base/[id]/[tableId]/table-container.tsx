@@ -1,15 +1,12 @@
 "use client";
 
 import { useLoadingStore } from "@/app/stores/use-loading-store";
-import {
-  generateColumnDefinitions,
-  transformRowsToTanStackFormat,
-} from "@/components/columns/generate-column-definitions";
+import { generateColumnDefinitions } from "@/components/columns/generate-column-definitions";
 import { TableSidebar } from "@/components/table/table-sidebar";
 import { TableToolbar } from "@/components/table/table-toolbar";
 import { useCellCommitter } from "@/hooks/use-cell-commiter";
 import { useViewUpdater } from "@/hooks/use-view-updater";
-import type { RowWithCells, TableWithViews } from "@/types";
+import type { TableWithViews, TransformedRow } from "@/types";
 import type { ColumnType } from "@/types/column";
 import type { GlobalSearchMatches, QueryParams } from "@/types/view";
 import {
@@ -28,7 +25,7 @@ import { Table } from "./table";
 interface Props {
   tableWithViews: TableWithViews;
   columns: ColumnType[];
-  rowsWithCells: RowWithCells[];
+  rowsWithCells: TransformedRow[];
   user: User;
   queryParams: QueryParams;
   rowCount: number;
@@ -72,11 +69,6 @@ export default function TableContainer({
   const { isLoadingView, isFiltering } = useLoadingStore();
   const { updateViewFilters } = useViewUpdater();
 
-  const tableData = useMemo(
-    () => transformRowsToTanStackFormat(rowsWithCells),
-    [rowsWithCells],
-  );
-
   const { commitCell } = useCellCommitter({ queryParams });
 
   const tanstackColumns = useMemo(() => {
@@ -84,7 +76,7 @@ export default function TableContainer({
   }, [columns, commitCell]);
 
   const table = useReactTable({
-    data: tableData,
+    data: rowsWithCells,
     columns: tanstackColumns,
     getCoreRowModel: getCoreRowModel(),
     getRowId: (row) => row._rowId,
@@ -161,7 +153,7 @@ export default function TableContainer({
                 queryParams={queryParams}
                 tableId={tableWithViews.id}
                 rowCount={rowCount}
-                transformedRows={tableData}
+                rowsWithCells={rowsWithCells}
                 columns={columns}
                 totalFilteredCount={totalFilteredCount}
                 fetchNextPage={fetchNextPage}

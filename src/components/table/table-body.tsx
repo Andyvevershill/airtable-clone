@@ -86,7 +86,7 @@ export function TableBody({
 
         return (
           <tr
-            key={tanstackRow.id}
+            key={tanstackRow.original._rowId}
             data-index={virtualRow.index}
             ref={(node) => rowVirtualizer.measureElement(node)}
             className="w-full hover:bg-gray-50"
