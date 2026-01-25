@@ -33,7 +33,7 @@ interface Props {
   tableId: string;
   columns: ColumnType[];
   rowCount: number;
-  rowsWithCells: TransformedRow[];
+  transformedRows: TransformedRow[];
   queryParams: QueryParams;
   totalFilteredCount: number;
 
@@ -51,7 +51,7 @@ export function Table({
   tableId,
   columns,
   rowCount,
-  rowsWithCells,
+  transformedRows,
   queryParams,
   totalFilteredCount,
 
@@ -170,7 +170,7 @@ export function Table({
 
     const timeoutId = setTimeout(scrollToMatch, 50);
     return () => clearTimeout(timeoutId);
-  }, [activeMatch, activeMatchIndex, rowsWithCells, rowVirtualizer]);
+  }, [activeMatch, activeMatchIndex, transformedRows, rowVirtualizer]);
 
   useEffect(() => {
     const scrollElement = scrollRef.current;
@@ -186,7 +186,7 @@ export function Table({
       if (items.length < 5) return;
 
       const lastVisibleIndex = items[items.length - 1]?.index ?? 0;
-      const prefetchThreshold = rowsWithCells.length - 200;
+      const prefetchThreshold = transformedRows.length - 200;
 
       if (lastVisibleIndex >= prefetchThreshold) {
         if (lastFetchedIndex.current !== lastVisibleIndex) {
@@ -208,16 +208,16 @@ export function Table({
     hasNextPage,
     isFetchingNextPage,
     fetchNextPage,
-    rowsWithCells.length,
+    transformedRows.length,
   ]);
 
   useEffect(() => {
     lastFetchedIndex.current = -1;
-  }, [rowsWithCells.length]);
+  }, [transformedRows.length]);
 
   const { handleTableKeyDown } = useTableKeyboardNavigation({
     tableRef,
-    totalRows: rowsWithCells.length,
+    totalRows: transformedRows.length,
     totalCols: columns.length + 1,
   });
 

@@ -171,7 +171,7 @@ export default function TablePage() {
 
   if (isLoading) return null;
 
-  if (!tableWithViews || !stableColumns || !rowsData || !user) {
+  if (!tableWithViews || !stableColumns || !rowsWithCells || !user) {
     return <NoDataPage missingData="table data" />;
   }
 

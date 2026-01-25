@@ -1,3 +1,4 @@
+import type { RowWithCells, TransformedRow } from "@/types";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -80,4 +81,29 @@ export function darkenColour(hexColor: string, opacity = 0.12) {
   const b = parseInt(hex.substring(4, 6), 16);
 
   return `rgba(${r}, ${g}, ${b}, ${opacity * 0.25})`;
+}
+
+export function transformRowsToTanStackFormat(
+  rows: RowWithCells[],
+): TransformedRow[] {
+  return rows.map((row) => {
+    const transformedRow: TransformedRow = {
+      _rowId: row.id,
+      _cells: {},
+      _cellMap: {},
+    };
+
+    if (!row.cells) return transformedRow;
+
+    // Handle BOTH array and object shapes with proper typing
+    const cellsArray: { id: string; columnId: string; value: string | null }[] =
+      Array.isArray(row.cells) ? row.cells : Object.values(row.cells);
+
+    for (const cell of cellsArray) {
+      transformedRow._cells[cell.columnId] = cell.value;
+      transformedRow._cellMap[cell.columnId] = cell.id;
+    }
+
+    return transformedRow;
+  });
 }

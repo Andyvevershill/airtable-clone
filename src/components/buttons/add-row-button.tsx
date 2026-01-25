@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { api } from "@/trpc/react";
-import type { ColumnType, TransformedRow } from "@/types";
+import type { ColumnType, RowWithCells } from "@/types";
 import type { QueryParams } from "@/types/view";
 import { memo, useCallback } from "react";
 import { AiOutlinePlus } from "react-icons/ai";
@@ -26,7 +26,7 @@ function AddRowButton({
 
   const addRow = api.row.addRow.useMutation({
     onMutate: async (newRow) => {
-      // Cancel ALL queries to prevent stale data from overwriting  optimistic update
+      // Cancel ALL queries to prevent stale data from overwriting our optimistic update
       await utils.row.getRowsInfinite.cancel(queryParams);
       await utils.row.getRowCount.cancel({ tableId });
 
@@ -38,12 +38,15 @@ function AddRowButton({
         return { previousData, rowId: newRow.id, previousCount };
       }
 
-      const optimisticRow: TransformedRow = {
-        _rowId: newRow.id,
-        _cells: Object.fromEntries(columns.map((col) => [col.id, null])),
-        _cellMap: Object.fromEntries(
-          columns.map((col) => [col.id, `${col.id}_${newRow.id}`]),
-        ),
+      const optimisticRow: RowWithCells = {
+        id: newRow.id,
+        tableId,
+        cells: columns.map((col) => ({
+          id: `${col.id}_${newRow.id}`,
+          rowId: newRow.id,
+          columnId: col.id,
+          value: null,
+        })),
       };
 
       utils.row.getRowsInfinite.setInfiniteData(queryParams, (old) => {
@@ -59,8 +62,8 @@ function AddRowButton({
           items: [...lastPage.items, optimisticRow],
           searchMatches: lastPage.searchMatches ?? { matches: [] },
           totalFilteredCount: lastPage.totalFilteredCount
-            ? lastPage.totalFilteredCount + 1
-            : undefined,
+            ? lastPage.items.length + 1
+            : 0,
         };
 
         return { ...old, pages: updatedPages };

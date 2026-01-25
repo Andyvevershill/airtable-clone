@@ -7,6 +7,10 @@ const rowSchema = z.object({
 
 export type Row = z.infer<typeof rowSchema>;
 
+export type RowWithCells = Row & {
+  cells: { id: string; columnId: string; value: string | null }[];
+};
+
 export type TransformedRow = {
   _rowId: string;
   _cells: Record<string, string | null>;

@@ -65,16 +65,17 @@ export function CreateColumnSubmenu({
                 ...page,
                 items: page.items.map((row) => ({
                   ...row,
-                  // ✅ Add new column to _cells (value = null)
-                  _cells: {
-                    ...row._cells,
-                    [newColumn.id]: null,
-                  },
-                  // ✅ Add new column to _cellMap (temporary cell ID)
-                  _cellMap: {
-                    ...row._cellMap,
-                    [newColumn.id]: `${newColumn.id}_${row._rowId}`,
-                  },
+                  cells: [
+                    ...row.cells,
+                    {
+                      id: crypto.randomUUID(),
+                      rowId: row.id,
+                      columnId: newColumn.id,
+                      value: null,
+                      createdAt: new Date(),
+                      updatedAt: new Date(),
+                    },
+                  ],
                 })),
               })),
             };

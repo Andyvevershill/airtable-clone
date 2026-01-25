@@ -6,7 +6,8 @@ import { TableSidebar } from "@/components/table/table-sidebar";
 import { TableToolbar } from "@/components/table/table-toolbar";
 import { useCellCommitter } from "@/hooks/use-cell-commiter";
 import { useViewUpdater } from "@/hooks/use-view-updater";
-import type { TableWithViews, TransformedRow } from "@/types";
+import { transformRowsToTanStackFormat } from "@/lib/utils";
+import type { RowWithCells, TableWithViews } from "@/types";
 import type { ColumnType } from "@/types/column";
 import type { GlobalSearchMatches, QueryParams } from "@/types/view";
 import {
@@ -25,7 +26,7 @@ import { Table } from "./table";
 interface Props {
   tableWithViews: TableWithViews;
   columns: ColumnType[];
-  rowsWithCells: TransformedRow[];
+  rowsWithCells: RowWithCells[];
   user: User;
   queryParams: QueryParams;
   rowCount: number;
@@ -71,12 +72,17 @@ export default function TableContainer({
 
   const { commitCell } = useCellCommitter({ queryParams });
 
+  const transformedRows = useMemo(
+    () => transformRowsToTanStackFormat(rowsWithCells),
+    [rowsWithCells],
+  );
+
   const tanstackColumns = useMemo(() => {
     return generateColumnDefinitions(columns, commitCell);
   }, [columns, commitCell]);
 
   const table = useReactTable({
-    data: rowsWithCells,
+    data: transformedRows,
     columns: tanstackColumns,
     getCoreRowModel: getCoreRowModel(),
     getRowId: (row) => row._rowId,
@@ -153,7 +159,7 @@ export default function TableContainer({
                 queryParams={queryParams}
                 tableId={tableWithViews.id}
                 rowCount={rowCount}
-                rowsWithCells={rowsWithCells}
+                transformedRows={transformedRows}
                 columns={columns}
                 totalFilteredCount={totalFilteredCount}
                 fetchNextPage={fetchNextPage}
