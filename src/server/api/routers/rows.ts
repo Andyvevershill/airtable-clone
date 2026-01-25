@@ -181,6 +181,23 @@ export const rowsRouter = createTRPCRouter({
 
       if (globalSearch?.trim()) {
         const term = globalSearch.trim().toLowerCase();
+
+        const columnHeaders = await ctx.db
+          .select({
+            id: columns.id,
+          })
+          .from(columns)
+          .where(
+            and(eq(columns.tableId, tableId), ilike(columns.name, `%${term}%`)),
+          );
+
+        const dataToPush = columnHeaders.map((column) => ({
+          type: "column" as const,
+          columnId: column.id,
+        }));
+
+        matches.push(...dataToPush);
+
         items.forEach((row, idx) => {
           row.cells.forEach((cell) => {
             if (cell.value && String(cell.value).toLowerCase().includes(term)) {
