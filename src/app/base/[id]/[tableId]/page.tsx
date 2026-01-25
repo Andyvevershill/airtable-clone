@@ -17,7 +17,7 @@ import type {
   VisibilityState,
 } from "@tanstack/react-table";
 import { useParams } from "next/navigation";
-import { startTransition, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import TableContainer from "./table-container";
 
 export default function TablePage() {
@@ -71,7 +71,9 @@ export default function TablePage() {
     if (!tableWithViews?.views) return;
     if (activeView !== null) return;
 
-    const serverActiveView = tableWithViews.views.find((v) => v.isActive);
+    // a bug when we delete the last view so none is active - fallback to assign a view
+    const serverActiveView =
+      tableWithViews.views.find((v) => v.isActive) ?? tableWithViews.views[0];
     if (serverActiveView) {
       setActiveView(serverActiveView);
     }
@@ -80,14 +82,12 @@ export default function TablePage() {
   useEffect(() => {
     if (!activeView) return;
 
-    startTransition(() => {
-      applyViewToTableState(
-        activeView,
-        setSorting,
-        setFilters,
-        setColumnVisibility,
-      );
-    });
+    applyViewToTableState(
+      activeView,
+      setSorting,
+      setFilters,
+      setColumnVisibility,
+    );
 
     setIsLoadingView(false);
   }, [activeView?.id, setIsLoadingView]);

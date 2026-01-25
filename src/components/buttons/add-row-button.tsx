@@ -69,6 +69,7 @@ function AddRowButton({
         return { ...old, pages: updatedPages };
       });
 
+      //  important!! if we do not increase the row count by 1, we never see this row. Thevirtual rows only show x length - we need to increase x by 1 for this row
       const newCount = previousCount + 1;
       utils.row.getRowCount.setData({ tableId }, newCount);
 

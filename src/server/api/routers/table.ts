@@ -3,7 +3,7 @@ import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { cells, columns, rows, tables, views } from "@/server/db/schemas/bases";
 import { faker } from "@faker-js/faker";
 import { TRPCError } from "@trpc/server";
-import { desc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 export const tableRouter = createTRPCRouter({
@@ -75,17 +75,6 @@ export const tableRouter = createTRPCRouter({
       return result;
     }),
 
-  // List all tables for current user (sorted by most recently accessed)
-  getAll: protectedProcedure
-    .input(z.object({ baseId: z.string() }))
-    .query(async ({ ctx, input }) => {
-      return await ctx.db
-        .select()
-        .from(tables)
-        .where(eq(tables.baseId, input.baseId))
-        .orderBy(desc(tables.lastAccessedAt));
-    }),
-
   // update name
   updateNameById: protectedProcedure
     .input(z.object({ tableId: z.string(), name: z.string() }))
@@ -97,17 +86,13 @@ export const tableRouter = createTRPCRouter({
         .returning();
 
       if (!table) {
-        throw new Error("Table not found");
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Table not found",
+        });
       }
 
       return table;
-    }),
-
-  // delete table
-  deleteById: protectedProcedure
-    .input(z.object({ id: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      await ctx.db.delete(tables).where(eq(tables.id, input.id)).returning();
     }),
 
   getTableWithViews: protectedProcedure
@@ -115,6 +100,10 @@ export const tableRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const table = await ctx.db.query.tables.findFirst({
         where: eq(tables.id, input.tableId),
+        columns: {
+          id: true,
+          name: true,
+        },
         with: {
           views: {
             orderBy: (views, { asc }) => [asc(views.createdAt)],
