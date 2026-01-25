@@ -95,11 +95,7 @@ export function transformRowsToTanStackFormat(
 
     if (!row.cells) return transformedRow;
 
-    // Handle BOTH array and object shapes with proper typing
-    const cellsArray: { id: string; columnId: string; value: string | null }[] =
-      Array.isArray(row.cells) ? row.cells : Object.values(row.cells);
-
-    for (const cell of cellsArray) {
+    for (const cell of row.cells) {
       transformedRow._cells[cell.columnId] = cell.value;
       transformedRow._cellMap[cell.columnId] = cell.id;
     }
