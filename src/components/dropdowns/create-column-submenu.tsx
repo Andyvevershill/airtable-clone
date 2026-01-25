@@ -48,79 +48,30 @@ export function CreateColumnSubmenu({
         ];
       });
 
-      const previousRows = utils.row.getRowsInfinite.getInfiniteData({
-        tableId,
-        limit: 250,
-      });
-
-      if (previousRows) {
-        utils.row.getRowsInfinite.setInfiniteData(
-          { tableId, limit: 250 },
-          (old) => {
-            if (!old) return old;
-
-            return {
-              ...old,
-              pages: old.pages.map((page) => ({
-                ...page,
-                items: page.items.map((row) => ({
-                  ...row,
-                  cells: [
-                    ...row.cells,
-                    {
-                      id: crypto.randomUUID(),
-                      rowId: row.id,
-                      columnId: newColumn.id,
-                      value: null,
-                      createdAt: new Date(),
-                      updatedAt: new Date(),
-                    },
-                  ],
-                })),
-              })),
-            };
-          },
-        );
-      }
-
-      return { previousColumns, previousRows };
+      return { previousColumns };
     },
-    onError: (err, variables, context) => {
+    onError: (_err, _variables, context) => {
       if (context?.previousColumns) {
         utils.column.getColumns.setData({ tableId }, context.previousColumns);
       }
-      if (context?.previousRows) {
-        utils.row.getRowsInfinite.setInfiniteData(
-          { tableId, limit: 250 },
-          context.previousRows,
-        );
-      }
-      console.error("Failed to add column:", err);
       setIsSaving(false);
     },
-    onSuccess: async (data, variables) => {
-      if (variables.id !== data.id) {
-        await utils.column.getColumns.invalidate({ tableId });
-        await utils.row.getRowsInfinite.invalidate({ tableId });
-      }
+    onSuccess: async () => {
       setIsSaving(false);
-    },
-    onSettled: () => {
-      setIsSaving(false);
+      setColumnName("");
     },
   });
 
   function handleCreateColumn() {
-    const newId = crypto.randomUUID();
-
-    addColumn.mutate({
-      id: newId,
+    const newColumn = {
+      id: crypto.randomUUID(),
       tableId,
       type: selectedField,
       name: columnName || "Untitled column",
-    });
+    };
 
-    setColumnName("");
+    addColumn.mutate(newColumn);
+
     handleResetAll();
   }
 

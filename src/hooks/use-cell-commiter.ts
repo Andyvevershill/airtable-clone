@@ -11,6 +11,7 @@ interface Params {
 
 export function useCellCommitter({ queryParams }: Params) {
   const setIsSaving = useSavingStore((s) => s.setIsSaving);
+
   const utils = api.useUtils();
 
   const mutation = api.cell.upsertCell.useMutation({
