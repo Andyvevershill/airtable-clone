@@ -4,6 +4,7 @@ import type { FilterState, SortRule } from "@/types/view";
 import type {
   Column,
   ColumnFiltersState,
+  OnChangeFn,
   SortingState,
   VisibilityState,
 } from "@tanstack/react-table";
@@ -56,7 +57,6 @@ export function translateFiltersState(
     .filter(Boolean) as FilterState[];
 }
 
-// trnsform BE view data to table readable data
 export function applyViewToTableState(
   activeView:
     | {
@@ -66,37 +66,29 @@ export function applyViewToTableState(
       }
     | null
     | undefined,
-  callbacks: {
-    onSortingChange: (
-      updater: SortingState | ((prev: SortingState) => SortingState),
-    ) => void;
-    onColumnFiltersChange: (
-      updater:
-        | ColumnFiltersState
-        | ((prev: ColumnFiltersState) => ColumnFiltersState),
-    ) => void;
-    onColumnVisibilityChange: (
-      updater: VisibilityState | ((prev: VisibilityState) => VisibilityState),
-    ) => void;
-  },
+  onSortingChange: OnChangeFn<SortingState>,
+  onColumnFiltersChange: OnChangeFn<ColumnFiltersState>,
+  onColumnVisibilityChange: OnChangeFn<VisibilityState>,
 ): void {
+  // first lets handle the case where there is no active view
+  // this means setting all the states to empty
   if (!activeView) {
-    callbacks.onSortingChange([]);
-    callbacks.onColumnFiltersChange([]);
-    callbacks.onColumnVisibilityChange({});
+    onSortingChange([]);
+    onColumnFiltersChange([]);
+    onColumnVisibilityChange({});
     return;
   }
 
-  // Sorting
+  // Apply sorting
   const sortingState: SortingState =
     activeView.sorting?.map((sort) => ({
       id: sort.columnId,
       desc: sort.direction === "desc",
     })) ?? [];
 
-  callbacks.onSortingChange(sortingState);
+  onSortingChange(sortingState);
 
-  // Filters
+  // Apply filters
   const filtersState: ColumnFiltersState =
     activeView.filters?.map((filter) => ({
       id: filter.columnId,
@@ -106,15 +98,16 @@ export function applyViewToTableState(
       },
     })) ?? [];
 
-  callbacks.onColumnFiltersChange(filtersState);
+  onColumnFiltersChange(filtersState);
 
+  // Apply visibility
   const visibilityState: VisibilityState = {};
 
   for (const colId of activeView.hidden ?? []) {
     visibilityState[colId] = false;
   }
 
-  callbacks.onColumnVisibilityChange(visibilityState);
+  onColumnVisibilityChange(visibilityState);
 }
 
 // transforms the sorts inside the form so we can send them to update the views

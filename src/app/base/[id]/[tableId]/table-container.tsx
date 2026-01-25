@@ -9,7 +9,7 @@ import { useViewUpdater } from "@/hooks/use-view-updater";
 import { transformRowsToTanStackFormat } from "@/lib/utils";
 import type { RowWithCells, TableWithViews } from "@/types";
 import type { ColumnType } from "@/types/column";
-import type { GlobalSearchMatches, QueryParams } from "@/types/view";
+import type { QueryParams, SearchMatch } from "@/types/view";
 import {
   getCoreRowModel,
   useReactTable,
@@ -42,7 +42,7 @@ interface Props {
   onColumnFiltersChange: OnChangeFn<ColumnFiltersState>;
   columnVisibility: VisibilityState;
   onColumnVisibilityChange: OnChangeFn<VisibilityState>;
-  globalSearchMatches: GlobalSearchMatches;
+  globalSearchMatches: SearchMatch[];
 }
 
 export default function TableContainer({

@@ -198,7 +198,7 @@ export const rowsRouter = createTRPCRouter({
 
       return {
         items,
-        searchMatches: { matches },
+        searchMatches: matches,
         totalFilteredCount,
         nextCursor,
       };

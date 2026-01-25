@@ -89,8 +89,4 @@ export type SearchMatch =
       rowIndex: number;
     };
 
-export type GlobalSearchMatches = {
-  matches: SearchMatch[];
-};
-
 export type QueryParams = z.infer<typeof getRowsInfiniteInput>;

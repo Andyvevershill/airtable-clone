@@ -81,11 +81,12 @@ export default function TablePage() {
     if (!activeView) return;
 
     startTransition(() => {
-      applyViewToTableState(activeView, {
-        onSortingChange: setSorting,
-        onColumnFiltersChange: setFilters,
-        onColumnVisibilityChange: setColumnVisibility,
-      });
+      applyViewToTableState(
+        activeView,
+        setSorting,
+        setFilters,
+        setColumnVisibility,
+      );
     });
 
     setIsLoadingView(false);
@@ -151,20 +152,18 @@ export default function TablePage() {
   ]);
 
   const globalSearchMatches = useMemo(() => {
-    return {
-      matches: rowsData?.pages.flatMap((p) => p.searchMatches.matches) ?? [],
-    };
+    return rowsData?.pages.flatMap((p) => p.searchMatches) ?? [];
   }, [rowsData]);
 
   useEffect(() => {
     if (globalSearch && !isFetching) {
-      setGlobalSearchLength(globalSearchMatches.matches.length);
+      setGlobalSearchLength(globalSearchMatches.length);
       setIsSearching(false);
     }
   }, [
     globalSearch,
     isFetching,
-    globalSearchMatches.matches.length,
+    globalSearchMatches.length,
     setGlobalSearchLength,
     setIsSearching,
   ]);
