@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import type { TransformedRow } from "@/types/row";
-import type { GlobalSearchMatches } from "@/types/view";
+import type { SearchMatch } from "@/types/view";
 import { flexRender, type Table } from "@tanstack/react-table";
 
 const MIN_COL_WIDTH = 175;
@@ -9,7 +9,7 @@ const GUTTER_WIDTH = 70;
 
 interface TableHeaderProps {
   table: Table<TransformedRow>;
-  activeMatch: GlobalSearchMatches["matches"][number] | undefined;
+  activeMatch: SearchMatch[][number] | undefined;
   matchedColumnIdSet: Set<string>;
 }
 

@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import type { TransformedRow } from "@/types/row";
-import type { GlobalSearchMatches } from "@/types/view";
+import type { SearchMatch } from "@/types/view";
 import { flexRender, type Table } from "@tanstack/react-table";
 import type { Virtualizer } from "@tanstack/react-virtual";
 import { Skeleton } from "../ui/skeleton";
@@ -12,7 +12,7 @@ const GUTTER_WIDTH = 70;
 interface TableBodyProps {
   rowVirtualizer: Virtualizer<HTMLDivElement, Element>;
   table: Table<TransformedRow>;
-  activeMatch: GlobalSearchMatches["matches"][number] | undefined;
+  activeMatch: SearchMatch[][number] | undefined;
   matchedCellIdSet: Set<string>;
   matchedRowIndexSet: Set<number>;
 }
