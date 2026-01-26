@@ -65,10 +65,6 @@ export function useEditableCell({
       return;
     }
 
-    if (next !== initialValue) {
-      onCommit(rowId, columnId, next, () => {});
-    }
-
     setIsEditing(false);
   };
 
