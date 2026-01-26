@@ -66,6 +66,12 @@ export function useEditableCell({
     }
 
     setIsEditing(false);
+
+    // Only commit if the value actually changed
+    if (next !== initialValue) {
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
+      onCommit(rowId, columnId, next, () => {});
+    }
   };
 
   const cancel = () => {
