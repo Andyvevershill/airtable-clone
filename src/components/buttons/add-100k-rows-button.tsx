@@ -54,7 +54,6 @@ export default function Add100kRowButton({ tableId }: Props) {
   });
 
   const handleAddRow = () => {
-    console.log("adding");
     addRow.mutate({
       tableId,
       count: 100000,

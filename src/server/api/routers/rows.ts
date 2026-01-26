@@ -339,14 +339,7 @@ export const rowsRouter = createTRPCRouter({
         }
 
         totalInserted += insertedRows.length;
-        console.log(
-          `[addBulkRows] Batch ${batch + 1} complete. Total: ${totalInserted}/${totalRows}`,
-        );
       }
-
-      console.log(
-        `[addBulkRows] Successfully inserted ${totalInserted} rows with their cells`,
-      );
 
       return { inserted: totalInserted };
     }),
