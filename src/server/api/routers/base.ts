@@ -128,7 +128,7 @@ export const baseRouter = createTRPCRouter({
           id: true,
           name: true,
           colour: true,
-          lastAccessedAt: true,
+          isFavourite: true,
         },
         with: {
           tables: {

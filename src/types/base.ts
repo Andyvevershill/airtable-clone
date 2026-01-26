@@ -8,7 +8,7 @@ const baseSchema = z.object({
 
   // icon: z.string().nullable(),
   colour: z.string(),
-  // isFavourite: z.boolean(),
+  isFavourite: z.boolean(),
 });
 
 export type Base = z.infer<typeof baseSchema>;
