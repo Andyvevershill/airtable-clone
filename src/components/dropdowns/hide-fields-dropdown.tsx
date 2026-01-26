@@ -64,8 +64,6 @@ export default function HideFieldsDropdown<TData>({
         ? [...prevHidden, column.id]
         : prevHidden.filter((id) => id !== column.id);
 
-      console.log("setting hidden field IDs", newHidden);
-
       // Call updateViewHidden with the new value
       updateViewHidden(newHidden);
 
@@ -77,7 +75,6 @@ export default function HideFieldsDropdown<TData>({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          onClick={() => console.log("🖱️ Hide fields button clicked")}
           className={`pointer flex h-6.5 flex-row items-center gap-1 rounded-xs border border-transparent p-2 text-[13px] ${
             numberOfHiddenCols > 0
               ? "bg-[#C4ECFF] text-gray-900 hover:border-2 hover:border-[#7FAFC4]"

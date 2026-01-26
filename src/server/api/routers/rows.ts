@@ -248,47 +248,21 @@ export const rowsRouter = createTRPCRouter({
             id: input.id,
             tableId: input.tableId,
           })
-          .returning();
+          .returning({ id: rows.id });
 
         if (!newRow) {
           throw new Error("Failed to create row");
         }
 
-        // Create cells
-        let createdCells: {
-          id: string;
-          rowId: string;
-          columnId: string;
-          value: string | null;
-        }[] = [];
-
         if (tableColumns.length > 0) {
-          createdCells = await tx
-            .insert(cells)
-            .values(
-              tableColumns.map((column) => ({
-                rowId: newRow.id,
-                columnId: column.id,
-                value: null,
-              })),
-            )
-            .returning({
-              id: cells.id,
-              rowId: cells.rowId,
-              columnId: cells.columnId,
-              value: cells.value,
-            });
+          await tx.insert(cells).values(
+            tableColumns.map((column) => ({
+              rowId: newRow.id,
+              columnId: column.id,
+              value: null,
+            })),
+          );
         }
-
-        return {
-          _rowId: newRow.id,
-          _cells: Object.fromEntries(
-            createdCells.map((cell) => [cell.columnId, cell.value]),
-          ),
-          _cellMap: Object.fromEntries(
-            createdCells.map((cell) => [cell.columnId, cell.id]),
-          ),
-        };
       });
     }),
 
@@ -365,14 +339,7 @@ export const rowsRouter = createTRPCRouter({
         }
 
         totalInserted += insertedRows.length;
-        console.log(
-          `[addBulkRows] Batch ${batch + 1} complete. Total: ${totalInserted}/${totalRows}`,
-        );
       }
-
-      console.log(
-        `[addBulkRows] Successfully inserted ${totalInserted} rows with their cells`,
-      );
 
       return { inserted: totalInserted };
     }),
