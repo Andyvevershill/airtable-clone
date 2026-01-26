@@ -13,20 +13,41 @@ export default function Add100kRowButton({ tableId }: Props) {
   const utils = api.useUtils();
 
   const addRow = api.row.addBulkRows.useMutation({
-    onMutate: () => {
+    onMutate: async ({ count }) => {
       setIsLoading(true);
-      toast.warning("Adding 100k rows... This may take a few moments");
-    },
-    onSuccess: () => {
-      // Invalidate rows query to get cells for new column
-      void utils.row.getRowsInfinite.invalidate({ tableId });
+      toast.warning(
+        `Adding ${count.toLocaleString()} rows... This may take a few moments`,
+      );
 
-      // invadlide row count
-      void utils.row.getRowCount.invalidate({ tableId });
+      // Cancel ongoing queries
+      await utils.row.getRowCount.cancel({ tableId });
+
+      // Get current count
+      const previousCount = utils.row.getRowCount.getData({ tableId });
+
+      // Optimistically update count
+      if (previousCount !== undefined) {
+        utils.row.getRowCount.setData({ tableId }, previousCount + count);
+      }
+
+      // Return context for rollback
+      return { previousCount };
     },
-    onError: (error) => {
-      console.error("Failed to add columns:", error);
+
+    onError: (error, _vars, context) => {
+      console.error("Failed to add rows:", error);
+
+      // Rollback on error
+      if (context?.previousCount !== undefined) {
+        utils.row.getRowCount.setData({ tableId }, context.previousCount);
+      }
     },
+
+    onSuccess: () => {
+      // Invalidate to get the actual new rows
+      void utils.row.getRowsInfinite.invalidate({ tableId });
+    },
+
     onSettled: () => {
       setIsLoading(false);
     },

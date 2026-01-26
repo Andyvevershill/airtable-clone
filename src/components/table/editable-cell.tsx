@@ -23,20 +23,20 @@ export default function EditableCell({
   onCellUpdate,
 }: Props) {
   const rowId = row.original._rowId;
-  const value = (getValue() as string | null) ?? "";
+  const cellValue = (getValue() as string | null) ?? "";
 
   const {
     isEditing,
     inputRef,
+    value,
     startEditing,
     commit,
     cancel,
     onChange,
     onKeyDown,
     onInputKeyDown,
-    displayValue,
   } = useEditableCell({
-    initialValue: value,
+    initialValue: cellValue,
     rowId,
     columnId,
     dataType,
@@ -55,9 +55,9 @@ export default function EditableCell({
       {isEditing ? (
         <input
           ref={inputRef}
-          defaultValue={displayValue ?? ""}
+          value={value}
+          autoFocus
           inputMode={isNumber ? "numeric" : "text"}
-          pattern={isNumber ? "[0-9.-]*" : undefined}
           onChange={(e) => onChange(e.target.value)}
           onBlur={commit}
           onKeyDown={(e) => {
@@ -81,7 +81,7 @@ export default function EditableCell({
             isNumber ? "justify-end" : ""
           }`}
         >
-          {displayValue}
+          {value}
         </div>
       )}
     </div>
