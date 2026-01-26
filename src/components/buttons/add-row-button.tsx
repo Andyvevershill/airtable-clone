@@ -38,19 +38,19 @@ function AddRowButton({
         return { previousData, rowId: newRow.id, previousCount };
       }
 
-      const optimisticRow: RowWithCells = {
-        id: newRow.id,
-        tableId,
-        cells: columns.map((col) => ({
-          id: `${col.id}_${newRow.id}`,
-          rowId: newRow.id,
-          columnId: col.id,
-          value: null,
-        })),
-      };
-
       utils.row.getRowsInfinite.setInfiniteData(queryParams, (old) => {
         if (!old) return old;
+
+        const optimisticRow: RowWithCells = {
+          id: newRow.id,
+          tableId,
+          cells: columns.map((col) => ({
+            id: `${col.id}_${newRow.id}`,
+            rowId: newRow.id,
+            columnId: col.id,
+            value: null,
+          })),
+        };
 
         const updatedPages = [...old.pages];
         const lastPage = old.pages[old.pages.length - 1];

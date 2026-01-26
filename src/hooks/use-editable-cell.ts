@@ -23,30 +23,30 @@ export function useEditableCell({
   onCommit,
 }: Params) {
   const [isEditing, setIsEditing] = useState(false);
+  const [displayValue, setDisplayValue] = useState(initialValue ?? "");
+  const [liveValue, setLiveValue] = useState(initialValue ?? "");
+  const [hasPendingCommit, setHasPendingCommit] = useState(false);
 
-  const initialRef = useRef<string | null>(initialValue ?? "");
-  const liveRef = useRef<string | null>(initialRef.current);
+  // Keep inputRef - we NEED this for DOM manipulation
   const inputRef = useRef<HTMLInputElement>(null);
-
-  const hasPendingCommit = useRef(false);
 
   const isNumber = dataType === "number";
 
-  /* ---------------- sync external updates safely ---------------- */
+  /* sync external updates safely */
 
   useEffect(() => {
     if (isEditing) return;
-    if (hasPendingCommit.current) return;
+    if (hasPendingCommit) return;
 
-    initialRef.current = initialValue ?? "";
-    liveRef.current = initialValue ?? "";
-  }, [initialValue, isEditing]);
+    setDisplayValue(initialValue ?? "");
+    setLiveValue(initialValue ?? "");
+  }, [initialValue, isEditing, hasPendingCommit]);
 
-  /* ---------------- helpers ---------------- */
+  /* helpers */
 
   const isValidNumber = (v: string) => v === "" || /^-?\d*\.?\d*$/.test(v);
 
-  /* ---------------- editing lifecycle ---------------- */
+  /* editing lifecycle */
 
   const startEditing = (seed?: string) => {
     setIsEditing(true);
@@ -56,7 +56,7 @@ export function useEditableCell({
 
       if (seed !== undefined) {
         inputRef.current.value = seed;
-        liveRef.current = seed;
+        setLiveValue(seed);
       }
 
       inputRef.current.focus();
@@ -67,35 +67,35 @@ export function useEditableCell({
   const commit = () => {
     if (!isEditing) return;
 
-    const next = liveRef.current?.trim() ?? null;
+    const next = liveValue.trim() || null;
 
     // numeric hard guard
     if (isNumber && next !== null && !isValidNumber(next)) {
       // reject commit → revert
-      liveRef.current = initialRef.current;
+      setLiveValue(displayValue);
       setIsEditing(false);
       return;
     }
 
-    if (next !== initialRef.current) {
-      hasPendingCommit.current = true;
+    if (next !== displayValue) {
+      setHasPendingCommit(true);
 
       onCommit(rowId, columnId, next, () => {
-        hasPendingCommit.current = false;
+        setHasPendingCommit(false);
       });
 
-      initialRef.current = next;
+      setDisplayValue(next ?? "");
     }
 
     setIsEditing(false);
   };
 
   const cancel = () => {
-    liveRef.current = initialRef.current;
+    setLiveValue(displayValue);
     setIsEditing(false);
   };
 
-  /* ---------------- keyboard handling (single source of truth) ---------------- */
+  /* keyboard handling (single source of truth) */
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (isEditing) return;
@@ -163,11 +163,11 @@ export function useEditableCell({
     }
   };
 
-  /* ---------------- input change ---------------- */
+  /* input change */
 
   const onChange = (v: string) => {
     if (isNumber && !isValidNumber(v)) return;
-    liveRef.current = v;
+    setLiveValue(v);
   };
 
   return {
@@ -179,6 +179,6 @@ export function useEditableCell({
     onKeyDown,
     onInputKeyDown,
     onChange,
-    displayValue: initialRef.current,
+    displayValue,
   };
 }
