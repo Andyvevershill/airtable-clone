@@ -21,7 +21,7 @@ export function DashboardTopNav({ user }: props) {
   const isLoading = useLoadingStore((state) => state.isLoading);
 
   return (
-    <div className="shadow-b relative z-100 flex h-[56px] w-full items-center justify-between border-b border-gray-200 bg-white px-4 shadow-xs">
+    <div className="shadow-b relative z-100 flex h-[56px] w-full items-center justify-between border-b border-gray-200 bg-white px-3 shadow-xs">
       {/* Left: sidebar trigger, logo */}
       <div className="flex items-center gap-2">
         <SidebarTrigger className="pointer" />
@@ -61,14 +61,14 @@ export function DashboardTopNav({ user }: props) {
         <div className="relative w-full">
           <Search
             size={16}
-            className="absolute top-1/2 left-3 -translate-y-1/2 text-gray-600"
+            className="absolute top-1/2 left-4 -translate-y-1/2 text-gray-500"
           />
           <input
             type="text"
             placeholder="Search... "
-            className="pointer h-8 w-[354px] rounded-full border border-gray-200 pr-3 pl-9 text-sm outline-none hover:shadow-md focus:border-gray-300 focus:bg-white"
+            className="pointer h-8.5 w-[360px] rounded-full border border-gray-200 pr-5 pl-10 text-sm text-[13px] shadow-xs outline-none hover:shadow-md focus:border-gray-300 focus:bg-white"
           />
-          <p className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-300">
+          <p className="absolute top-1/2 right-3 mr-2 -translate-y-1/2 text-[13px] text-gray-400">
             ⌘ K
           </p>
         </div>

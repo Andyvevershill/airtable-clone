@@ -1,14 +1,12 @@
 import { z } from "zod";
-import type { Table } from "./table";
 
 const baseSchema = z.object({
   id: z.string(),
   name: z.string(),
-
+  lastAccessedAt: z.date(),
   // icon: z.string().nullable(),
   colour: z.string(),
   isFavourite: z.boolean(),
-  lastAccessedAt: z.date(),
 });
 
 export type Base = z.infer<typeof baseSchema>;
@@ -21,6 +19,8 @@ export type BaseWithTables = Base & {
   }[];
 };
 
-export type BaseWithTabless = Base & {
-  tables: Table[];
+export type typeBaseWithTableIds = Base & {
+  tables: {
+    id: string;
+  }[];
 };

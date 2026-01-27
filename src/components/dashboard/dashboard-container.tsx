@@ -2,12 +2,12 @@
 
 import BaseContainer from "@/components/base/base-container";
 import DateRangeDropdownSelector from "@/components/dropdowns/date-range-dropdown-selector";
-import type { BaseWithTables } from "@/types/base";
+import type { typeBaseWithTableIds } from "@/types";
 import { useState } from "react";
 import SelectView from "./select-view";
 
 interface Props {
-  bases: BaseWithTables[];
+  bases: typeBaseWithTableIds[];
 }
 
 export default function DashboardContainer({ bases }: Props) {

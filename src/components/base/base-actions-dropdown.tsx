@@ -9,54 +9,111 @@ import {
   MenubarSeparator,
 } from "@/components/ui/menubar";
 import { api } from "@/trpc/react";
-import type { BaseWithTables } from "@/types/base";
+import type { typeBaseWithTableIds } from "@/types/base";
 import { MenubarTrigger } from "@radix-ui/react-menubar";
 import { Star } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { BsThreeDots } from "react-icons/bs";
 import { GoPencil } from "react-icons/go";
 import { RiDeleteBinLine } from "react-icons/ri";
 
 interface Props {
-  base: BaseWithTables;
-  favouriteState: [boolean, React.Dispatch<React.SetStateAction<boolean>>];
+  base: typeBaseWithTableIds;
   setEditMode: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export function BaseActionsDropdown({
-  base,
-  favouriteState,
-  setEditMode,
-}: Props) {
-  const router = useRouter();
+export function BaseActionsDropdown({ base, setEditMode }: Props) {
+  const utils = api.useUtils();
   const setIsSaving = useSavingStore((state) => state.setIsSaving);
 
-  const [isFavourite, setIsFavourite] = favouriteState;
-
   const toggleFavourite = api.base.updateFavouriteById.useMutation({
-    onMutate: () => {
+    onMutate: async ({ baseId, favourite }) => {
       setIsSaving(true);
+
+      // Cancel any outgoing refetches
+      await utils.base.getAll.cancel();
+      await utils.base.getAllFavourites.cancel();
+
+      // Snapshot the previous values
+      const previousBases = utils.base.getAll.getData();
+      const previousFavourites = utils.base.getAllFavourites.getData();
+
+      // Optimistically update both caches
+      utils.base.getAll.setData(undefined, (old) => {
+        if (!old) return old;
+        return old.map((b) =>
+          b.id === baseId ? { ...b, isFavourite: favourite } : b,
+        );
+      });
+
+      utils.base.getAllFavourites.setData(undefined, (old) => {
+        if (!old) return old;
+        return old.map((b) =>
+          b.id === baseId ? { ...b, isFavourite: favourite } : b,
+        );
+      });
+
+      return { previousBases, previousFavourites };
     },
-    onSuccess: () => {
-      router.refresh();
-    },
-    onError: () => {
-      // Rollback optimistic update on error
-      setIsFavourite((prev) => !prev);
+    onError: (err, variables, context) => {
+      // Rollback on error
+      if (context?.previousBases) {
+        utils.base.getAll.setData(undefined, context.previousBases);
+      }
+      if (context?.previousFavourites) {
+        utils.base.getAllFavourites.setData(
+          undefined,
+          context.previousFavourites,
+        );
+      }
     },
     onSettled: () => {
+      // Refetch to ensure consistency
+      void utils.base.getAll.invalidate();
+      void utils.base.getAllFavourites.invalidate();
       setIsSaving(false);
     },
   });
 
   const deleteBase = api.base.deleteById.useMutation({
-    onMutate: () => {
+    onMutate: async ({ id }) => {
       setIsSaving(true);
+
+      // Cancel outgoing refetches
+      await utils.base.getAll.cancel();
+      await utils.base.getAllFavourites.cancel();
+
+      // Snapshot previous values
+      const previousBases = utils.base.getAll.getData();
+      const previousFavourites = utils.base.getAllFavourites.getData();
+
+      // Optimistically remove from both caches
+      utils.base.getAll.setData(undefined, (old) => {
+        if (!old) return old;
+        return old.filter((b) => b.id !== id);
+      });
+
+      utils.base.getAllFavourites.setData(undefined, (old) => {
+        if (!old) return old;
+        return old.filter((b) => b.id !== id);
+      });
+
+      return { previousBases, previousFavourites };
     },
-    onSuccess: () => {
-      router.refresh();
+    onError: (err, variables, context) => {
+      // Rollback on error
+      if (context?.previousBases) {
+        utils.base.getAll.setData(undefined, context.previousBases);
+      }
+      if (context?.previousFavourites) {
+        utils.base.getAllFavourites.setData(
+          undefined,
+          context.previousFavourites,
+        );
+      }
     },
     onSettled: () => {
+      void utils.base.getAll.invalidate();
+      void utils.base.getAllFavourites.invalidate();
       setIsSaving(false);
     },
   });
@@ -66,12 +123,9 @@ export function BaseActionsDropdown({
   };
 
   const handleFavourite = () => {
-    const newFavouriteState = !isFavourite;
-    setIsFavourite(newFavouriteState);
-
     toggleFavourite.mutate({
       baseId: base.id,
-      favourite: newFavouriteState,
+      favourite: !base.isFavourite, // Use prop directly
     });
   };
 
@@ -84,12 +138,12 @@ export function BaseActionsDropdown({
             <MenubarTrigger asChild>
               <div
                 onClick={handleFavourite}
-                className="IC flex h-8 w-8 cursor-pointer rounded-md transition-transform hover:border-gray-400 hover:bg-gray-100 active:scale-95"
+                className="IC flex h-8 w-8 cursor-pointer rounded-md border border-gray-200 hover:shadow-sm"
               >
                 <Star
                   size={16}
                   className={
-                    isFavourite
+                    base.isFavourite // Use prop directly
                       ? "fill-yellow-500 text-yellow-500"
                       : "text-gray-400"
                   }
@@ -104,7 +158,7 @@ export function BaseActionsDropdown({
       <div className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
         <Menubar className="h-8 w-8 border-0 bg-transparent p-0">
           <MenubarMenu>
-            <MenubarTrigger className="pointer IC flex h-8 w-8 rounded-md transition-transform hover:border-gray-400 hover:bg-gray-100 active:scale-95">
+            <MenubarTrigger className="IC flex h-8 w-8 cursor-pointer rounded-md border border-gray-200 hover:shadow-sm">
               <BsThreeDots size={16} />
             </MenubarTrigger>
             <MenubarContent

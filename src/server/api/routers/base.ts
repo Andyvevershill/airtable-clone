@@ -109,7 +109,30 @@ export const baseRouter = createTRPCRouter({
         tables: {
           columns: {
             id: true,
-            name: true,
+          },
+        },
+      },
+    });
+  }),
+
+  getAllFavourites: protectedProcedure.query(async ({ ctx }) => {
+    return await ctx.db.query.bases.findMany({
+      where: and(
+        eq(bases.userId, ctx.session.user.id),
+        eq(bases.isFavourite, true),
+      ),
+      orderBy: [desc(bases.lastAccessedAt)],
+      columns: {
+        id: true,
+        name: true,
+        colour: true,
+        lastAccessedAt: true,
+        isFavourite: true,
+      },
+      with: {
+        tables: {
+          columns: {
+            id: true,
           },
         },
       },
