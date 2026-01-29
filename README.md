@@ -11,7 +11,9 @@ https://airtable.com/
 
 Tech: Next.js, TypeScript, React, Zustand, tRPC, Tailwind CSS, Tanstack, BetterAuth, shadcn/ui
 
-Database + Deployment: PostgreSQL with Drizzle ORM + Neon, Vercel
+Database: PostgreSQL with Drizzle ORM + Neon
+
+Deployed with Vercel
 
 ##  Important info
 
