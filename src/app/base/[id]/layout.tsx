@@ -1,9 +1,8 @@
-import { BaseTopNav } from "@/components/base-by-id/navigation/base-top-nav";
 import { BaseSideRail } from "@/components/base/base-side-rail";
-import TabContainer from "@/components/tabs/tab-container";
 import { getSession } from "@/server/better-auth/server";
-import { api } from "@/trpc/server";
+import { api, HydrateClient } from "@/trpc/server";
 import { redirect } from "next/navigation";
+import { BaseLayoutClient } from "./[tableId]/layout-client";
 
 export default async function Layout({
   children,
@@ -16,20 +15,21 @@ export default async function Layout({
   if (!session) redirect("/");
 
   const { id } = await params;
-  const base = await api.base.getById({ id });
-  if (!base) redirect("/");
+
+  // Prefetch on server for instant load
+  await api.base.getById.prefetch({ id });
 
   return (
-    <div className="flex h-screen w-full">
-      {/* Fixed left sidebar (56px) */}
-      <BaseSideRail user={session.user} />
+    <HydrateClient>
+      <div className="flex h-screen w-full">
+        {/* Fixed left sidebar (56px) */}
+        <BaseSideRail user={session.user} />
 
-      {/* Main content area */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <BaseTopNav base={base} />
-        <TabContainer base={base} />
-        <main className="relative flex-1 overflow-hidden">{children}</main>
+        {/* Main content area */}
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <BaseLayoutClient baseId={id}>{children}</BaseLayoutClient>
+        </div>
       </div>
-    </div>
+    </HydrateClient>
   );
 }

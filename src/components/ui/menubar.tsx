@@ -55,7 +55,10 @@ function MenubarTrigger({
   return (
     <MenubarPrimitive.Trigger
       data-slot="menubar-trigger"
-      className={className}
+      className={cn(
+        "focus-visible:ring-0 focus-visible:outline-none",
+        className,
+      )}
       {...props}
     />
   );

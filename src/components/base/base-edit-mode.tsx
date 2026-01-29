@@ -1,7 +1,6 @@
 import { useSavingStore } from "@/app/stores/use-saving-store";
 import { api } from "@/trpc/react";
 import type { typeBaseWithTableIds } from "@/types/base";
-import { useRouter } from "next/navigation";
 import { BiCoinStack } from "react-icons/bi";
 import { Input } from "../ui/input";
 
@@ -12,16 +11,17 @@ interface Props {
 }
 
 export default function BaseEditMode({ base, nameState, setEditMode }: Props) {
-  const router = useRouter();
   const setIsSaving = useSavingStore((state) => state.setIsSaving);
   const [baseName, setBaseName] = nameState;
+
+  const utils = api.useUtils();
 
   const renameBase = api.base.updateNameById.useMutation({
     onMutate: () => {
       setIsSaving(true);
     },
     onSuccess: () => {
-      router.refresh();
+      void utils.base.getAllFavourites.invalidate();
     },
     onSettled: () => {
       setIsSaving(false);

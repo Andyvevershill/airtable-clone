@@ -1,6 +1,7 @@
 "use client";
 
 import { AvatarLogOutDropdown } from "@/components/dropdowns/avatar-log-out-dropdown";
+import { showNotFunctionalToast } from "@/lib/utils";
 import { api } from "@/trpc/react";
 import type { User } from "@/types/users";
 import { ArrowLeft, Bell, Ellipsis, HelpCircle } from "lucide-react";
@@ -62,6 +63,7 @@ export function BaseSideRail({ user }: Props) {
               className="pointer flex h-11 w-11 items-center justify-center"
               onMouseEnter={() => setHoveredItem("ellipsis")}
               onMouseLeave={() => setHoveredItem(null)}
+              onClick={showNotFunctionalToast}
             >
               {hoveredItem === "ellipsis" ? (
                 <Ellipsis className="h-3 w-3" />
@@ -84,7 +86,10 @@ export function BaseSideRail({ user }: Props) {
         <ul className="flex flex-col items-center gap-1">
           {bottomItems.map((item) => (
             <li key={item.id}>
-              <button className="pointer flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100">
+              <button
+                className="pointer flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100"
+                onClick={showNotFunctionalToast}
+              >
                 <item.icon className="w-3.4 h-3.5" />
               </button>
             </li>

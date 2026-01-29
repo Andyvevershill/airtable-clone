@@ -34,12 +34,13 @@ export default function TabContainer({ base }: Props) {
 
   return (
     <div
-      className="flex flex-row items-center justify-between"
+      className="flex flex-row items-center justify-between border-b"
       style={tabStyle}
     >
       <div className="flex h-8 w-full flex-row items-center">
         {tables.map((table, index) => {
           const isActive = table.id === tableId;
+          const activeTabIndex = tables.findIndex((t) => t.id === tableId);
 
           return (
             <Link
@@ -51,14 +52,13 @@ export default function TabContainer({ base }: Props) {
                   void utils.table.getTableWithViews.prefetch({
                     tableId: table.id,
                   });
-                  void utils.column.getColumns.prefetch({ tableId: table.id });
                 }
               }}
-              className={`relative flex h-full items-center gap-2 px-4 py-1 text-[13px] transition-colors after:absolute after:top-1/2 after:right-0 after:h-1/3 after:w-px after:-translate-y-1/2 after:bg-[var(--tab-hover-darken)] ${isActive && index === 0 ? "rounded-tr-sm" : "rounded-t-sm"} ${
+              className={`relative flex h-full items-center gap-2 pr-3 pl-2.5 text-[13px] transition-colors after:absolute after:top-1/2 after:right-0 after:h-1/3 after:w-px after:-translate-y-1/2 after:bg-[var(--tab-hover-darken)] ${isActive && index === 0 ? "rounded-tr-[3px]" : "rounded-t-[3px]"} ${
                 isActive
-                  ? "bg-white font-normal after:hidden"
-                  : "text-gray-500 hover:bg-[var(--tab-hover-darken)]"
-              }`}
+                  ? "border-t border-r border-l bg-white py-1 font-normal before:absolute before:right-0 before:bottom-[-1px] before:left-0 before:z-10 before:h-[1px] before:bg-white after:hidden"
+                  : "py-1 text-gray-500 hover:bg-[var(--tab-hover-darken)]"
+              } ${activeTabIndex === index + 1 ? "after:hidden" : "hover:after:hidden"}`}
             >
               {table.name}
               {isActive && <RiArrowDownSLine size={16} />}

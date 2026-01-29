@@ -11,7 +11,7 @@ import {
 import type { BaseWithTables } from "@/types/base";
 import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { HiMagnifyingGlass } from "react-icons/hi2";
 import { RiArrowDownSLine } from "react-icons/ri";
 import { Input } from "../ui/input";
@@ -28,29 +28,25 @@ interface Props {
 export function TableTabDropdown({ base, activeTab, setTables }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filteredTables, setFilteredTables] = useState(base.tables);
 
   const router = useRouter();
+
+  const filteredTables = useMemo(() => {
+    const query = searchQuery.toLowerCase().trim();
+
+    if (!query) {
+      return base.tables;
+    }
+
+    return base.tables.filter((table) =>
+      table.name.toLowerCase().includes(query),
+    );
+  }, [searchQuery, base.tables]);
 
   function handleSearch() {
     console.log(searchQuery);
     setSearchQuery("");
   }
-
-  useEffect(() => {
-    const query = searchQuery.toLowerCase().trim();
-
-    if (!query) {
-      setFilteredTables(base.tables);
-      return;
-    }
-
-    const remainingTables = filteredTables.filter((field) =>
-      field.name.toLowerCase().includes(query),
-    );
-
-    setFilteredTables(remainingTables);
-  }, [searchQuery]);
 
   return (
     <div className="flex flex-row gap-1">

@@ -1,6 +1,5 @@
 "use client";
 
-import NoDataPage from "@/components/no-data-page";
 import { api } from "@/trpc/react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -26,9 +25,9 @@ export default function BaseByIdPage() {
 
   if (isLoading) return null;
 
-  if (!base?.tables?.length) {
-    return <NoDataPage missingData="tables" />;
-  }
+  // if (!base?.tables?.length) {
+  //   return <NoDataPage missingData="tables" />;
+  // }
 
   return null;
 }

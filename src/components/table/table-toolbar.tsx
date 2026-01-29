@@ -1,7 +1,9 @@
 "use client";
 
 import { useLoadingStore } from "@/app/stores/use-loading-store";
+import { useViewStore } from "@/app/stores/use-view-store";
 import { Button } from "@/components/ui/button";
+import { showNotFunctionalToast } from "@/lib/utils";
 import type { TransformedRow } from "@/types";
 import type { Table } from "@tanstack/react-table";
 import {
@@ -32,6 +34,7 @@ const items = [
 
 export function TableToolbar({ table, sideBarState: [open, setOpen] }: Props) {
   const { isLoadingView } = useLoadingStore();
+  const { activeView } = useViewStore();
 
   return (
     <div className="flex h-[47px] items-center justify-between border-b border-gray-200 bg-white px-3">
@@ -41,9 +44,14 @@ export function TableToolbar({ table, sideBarState: [open, setOpen] }: Props) {
           <CiMenuBurger />
         </button>
 
-        <Button variant="ghost" size="sm" className="pointer gap-2 rounded-xs">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="pointer gap-2 rounded-xs"
+          onClick={showNotFunctionalToast}
+        >
           <TableCellsSplit className="text-blue-500" />
-          <span className="text-[13px]">Grid view</span>
+          <span className="text-[13px]">{activeView?.name ?? "Grid view"}</span>
           <ChevronDown />
         </Button>
       </div>
@@ -73,6 +81,7 @@ export function TableToolbar({ table, sideBarState: [open, setOpen] }: Props) {
             size="sm"
             className="pointer h-6.5 gap-1 rounded-xs"
             style={{ fontWeight: 350 }}
+            onClick={showNotFunctionalToast}
           >
             <PanelsTopLeft />
             <span className="text-[13px]">Group</span>
@@ -86,6 +95,7 @@ export function TableToolbar({ table, sideBarState: [open, setOpen] }: Props) {
               variant="ghost"
               className="pointer h-6.5 rounded-xs"
               style={{ fontWeight: 450 }}
+              onClick={showNotFunctionalToast}
             >
               {item.icon}
               {item.text && <span className="text-[13px]">{item.text}</span>}

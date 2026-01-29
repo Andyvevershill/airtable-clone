@@ -1,3 +1,5 @@
+import { showNotFunctionalToast } from "@/lib/utils";
+
 interface Props {
   colour: string;
 }
@@ -11,6 +13,7 @@ export default function TopNavTabs({ colour }: Props) {
         <div
           key={tab}
           className="pointer mb-3 pb-4 text-[13px] font-normal text-gray-600 hover:text-gray-950"
+          onClick={showNotFunctionalToast}
           style={
             tab === "Data"
               ? {

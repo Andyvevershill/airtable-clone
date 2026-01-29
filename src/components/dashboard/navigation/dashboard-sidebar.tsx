@@ -15,6 +15,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { cn, showNotFunctionalToast } from "@/lib/utils";
 import { api } from "@/trpc/react";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
@@ -39,12 +40,10 @@ export function DashboardSidebar() {
   const { state, setOpen } = useSidebar();
   const [closeAfterHover, setCloseAfterHover] = useState(false);
 
-  // Fetch data on the client side
   const { data: favouriteBases = [], isLoading } =
     api.base.getAllFavourites.useQuery();
 
   function handleMouseEntry() {
-    // see if the initial status is collapsed, as we will want to collapse the side bar when leaving the mouse entry
     setCloseAfterHover(state === "collapsed");
     setOpen(true);
   }
@@ -62,42 +61,65 @@ export function DashboardSidebar() {
     >
       <SidebarContent className="flex-1 bg-white px-1 pl-1">
         <div className="h-12" />
+
         <SidebarGroup>
           <SidebarGroupContent>
             <div className="IC flex flex-col">
               <SidebarMenu>
-                <SidebarMenuItem className="pointer IC">
+                {/* Home */}
+                <SidebarMenuItem className="pointer">
                   <SidebarMenuButton asChild>
-                    <div className="h-[40px] rounded-xs bg-gray-100">
+                    <a
+                      className={cn(
+                        "flex h-[40px] items-center rounded-xs",
+                        state === "collapsed"
+                          ? "justify-center"
+                          : "justify-start bg-gray-100",
+                      )}
+                    >
                       <GoHome
                         className="shrink-0"
                         style={{ width: "20px", height: "20px" }}
                       />
                       <span className="text-[15px] font-medium">Home</span>
-                    </div>
+                    </a>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
-                <Collapsible defaultOpen>
-                  <CollapsibleTrigger>
-                    <div className="pointer flex h-[40px] w-[274px] flex-row items-center justify-between gap-2 rounded-xs px-2 hover:bg-gray-100">
-                      <div className="flex flex-row items-center gap-2">
-                        <CiStar
-                          className="shrink-0"
-                          style={{ width: "20px", height: "20px" }}
-                        />
-                        <span className="ml-[1px] text-[15px] font-medium">
-                          Starred
-                        </span>
-                      </div>
-                      <div className="flex h-[24px] w-[24px] items-center justify-center rounded-sm hover:bg-gray-200">
-                        <ChevronDown
-                          style={{ width: "16px", height: "16px" }}
-                          className="mr-1 ml-auto text-gray-500 transition-transform group-data-[state=open]/collapsible:rotate-180"
-                        />
-                      </div>
-                    </div>
+                {/* Starred */}
+                <Collapsible
+                  defaultOpen
+                  open={state === "collapsed" ? false : undefined}
+                >
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuItem className="pointer">
+                      <SidebarMenuButton asChild>
+                        <a
+                          className={cn(
+                            "flex h-[40px] items-center rounded-xs",
+                            state === "collapsed"
+                              ? "justify-center"
+                              : "justify-start",
+                          )}
+                        >
+                          <CiStar
+                            className="shrink-0"
+                            style={{ width: "20px", height: "20px" }}
+                          />
+                          <span className="text-[15px] font-medium">
+                            Starred
+                          </span>
+                          {state !== "collapsed" && (
+                            <ChevronDown
+                              style={{ width: "16px", height: "16px" }}
+                              className="ml-auto text-gray-500 transition-transform group-data-[state=open]/collapsible:rotate-180"
+                            />
+                          )}
+                        </a>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
                   </CollapsibleTrigger>
+
                   <CollapsibleContent>
                     <SidebarGroupContent className="mt-0">
                       {isLoading ? (
@@ -108,9 +130,9 @@ export function DashboardSidebar() {
                       ) : favouriteBases.length === 0 ? (
                         <NoFavBaseButton />
                       ) : (
-                        favouriteBases.map((favouriteBases) => (
-                          <div key={favouriteBases.id}>
-                            <BaseNavBarButton base={favouriteBases} />
+                        favouriteBases.map((base) => (
+                          <div key={base.id}>
+                            <BaseNavBarButton base={base} />
                           </div>
                         ))
                       )}
@@ -118,21 +140,37 @@ export function DashboardSidebar() {
                   </CollapsibleContent>
                 </Collapsible>
 
-                <SidebarMenuItem className="pointer IC">
-                  <SidebarMenuButton asChild>
-                    <div className="h-[40px] rounded-xs">
+                {/* Shared */}
+                <SidebarMenuItem className="pointer">
+                  <SidebarMenuButton asChild onClick={showNotFunctionalToast}>
+                    <a
+                      className={cn(
+                        "flex h-[40px] items-center rounded-xs",
+                        state === "collapsed"
+                          ? "justify-center"
+                          : "justify-start",
+                      )}
+                    >
                       <PiShare
                         className="shrink-0"
                         style={{ width: "20px", height: "20px" }}
                       />
                       <span className="text-[15px] font-medium">Shared</span>
-                    </div>
+                    </a>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
-                <SidebarMenuItem className="pointer IC">
-                  <SidebarMenuButton asChild>
-                    <div className="h-[40px] rounded-xs">
+                {/* Workspaces */}
+                <SidebarMenuItem className="pointer">
+                  <SidebarMenuButton asChild onClick={showNotFunctionalToast}>
+                    <a
+                      className={cn(
+                        "flex h-[40px] items-center rounded-xs",
+                        state === "collapsed"
+                          ? "translate-x-[2px] justify-center"
+                          : "justify-start",
+                      )}
+                    >
                       <HiOutlineUserGroup
                         className="shrink-0"
                         style={{ width: "20px", height: "20px" }}
@@ -140,14 +178,15 @@ export function DashboardSidebar() {
                       <span className="text-[15px] font-medium">
                         Workspaces
                       </span>
-                    </div>
+                    </a>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
             </div>
           </SidebarGroupContent>
         </SidebarGroup>
-        {/*  add a seperator when collapsed */}
+
+        {/* separator when collapsed */}
         {state === "collapsed" && (
           <div className="flex items-center justify-center">
             <div className="w-3/4 border-t border-gray-300" />
@@ -155,8 +194,7 @@ export function DashboardSidebar() {
         )}
       </SidebarContent>
 
-      {/*  seperator  */}
-
+      {/* Footer */}
       <SidebarGroup className="bg-white">
         <div className="mb-4 flex justify-center">
           <div className="w-4/5 border-t border-gray-300" />
@@ -169,9 +207,11 @@ export function DashboardSidebar() {
                 key={item.title}
                 className="pointer list-none p-0"
               >
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton asChild onClick={showNotFunctionalToast}>
                   <a
-                    className={`flex items-center rounded-xs ${state === "collapsed" ? "text-gray-400" : ""}`}
+                    className={`flex items-center rounded-xs ${
+                      state === "collapsed" ? "text-gray-400" : ""
+                    }`}
                   >
                     <item.icon
                       className="shrink-0"
@@ -184,7 +224,6 @@ export function DashboardSidebar() {
             ))}
           </SidebarMenu>
 
-          {/* want to show the create button only when expanded */}
           {state === "collapsed" ? (
             <CiSquarePlus
               className="mt-2"

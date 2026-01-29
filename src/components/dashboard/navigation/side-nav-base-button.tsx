@@ -2,6 +2,7 @@
 
 import { useSavingStore } from "@/app/stores/use-saving-store";
 import { useViewStore } from "@/app/stores/use-view-store";
+import { cn } from "@/lib/utils";
 import { api } from "@/trpc/react";
 import type { typeBaseWithTableIds } from "@/types/base";
 import { Star } from "lucide-react";
@@ -120,7 +121,12 @@ export default function BaseNavBarButton({ base }: props) {
         </div>
 
         <div className="relative flex flex-col items-start justify-center">
-          <h3 className="overflow-hidden text-[13px] text-gray-800">
+          <h3
+            className={cn(
+              "w-full truncate text-[13px] font-medium text-gray-800",
+              onHover ? "max-w-[130px]" : "max-w-[200px]",
+            )}
+          >
             {base.name}
           </h3>
         </div>
@@ -134,7 +140,7 @@ export default function BaseNavBarButton({ base }: props) {
           <p className="text-[11px] text-gray-400">App</p>
           <Star
             size={16}
-            className={`${base.isFavourite && "fill-yellow-500 text-yellow-500"}`} // Use prop directly
+            className={`${base.isFavourite && "fill-yellow-500 text-yellow-500"}`}
           />
           <PiDotsSixVerticalLight className="h-20 text-gray-800 hover:cursor-grab" />
         </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useViewStore } from "@/app/stores/use-view-store";
-import { getLastAccessed } from "@/lib/utils";
+import { cn, getLastAccessed } from "@/lib/utils";
 import { api } from "@/trpc/react";
 import type { typeBaseWithTableIds } from "@/types/base";
 import { Star } from "lucide-react";
@@ -77,7 +77,12 @@ export default function BaseCard({ base }: props) {
         />
       ) : (
         <div className="relative flex flex-col items-start justify-between py-2.75">
-          <h3 className="w-full truncate text-[13px] font-medium">
+          <h3
+            className={cn(
+              "w-full truncate text-[13px] font-medium",
+              onHover ? "max-w-[170px]" : "max-w-[200px]",
+            )}
+          >
             {baseName}
           </h3>
           {onHover ? (

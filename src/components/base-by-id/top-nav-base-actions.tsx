@@ -50,7 +50,6 @@ export function TopNavBaseActions({ base }: Props) {
       setIsSaving(true);
     },
     onSuccess: () => {
-      router.refresh();
       router.push("/dashboard");
     },
     onSettled: () => {
@@ -92,9 +91,7 @@ export function TopNavBaseActions({ base }: Props) {
   };
 
   const handleDelete = () => {
-    if (confirm(`Delete "${base.name}"?`)) {
-      deleteBase.mutate({ id: base.id });
-    }
+    deleteBase.mutate({ id: base.id });
   };
 
   const handleFavourite = () => {

@@ -9,15 +9,6 @@ interface props {
   base: Base;
 }
 
-{
-  /* {isSaving && (
-        <div className="flex flex-row gap-2">
-          <LuLoaderPinwheel size={16} className="animate-spin" />
-          <p className="text-xs text-gray-600">Saving...</p>
-        </div>
-      )} */
-}
-
 export function BaseTopNav({ base }: props) {
   return (
     <div className="shadow-b relative z-10 flex h-14 w-full items-center justify-between border-b border-gray-200 bg-white px-4 shadow-xs">

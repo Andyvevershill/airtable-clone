@@ -40,6 +40,7 @@ export function AddTableSubmenu({
     },
     onSuccess: () => {
       void utils.base.getById.invalidate({ id: baseId });
+      router.refresh();
     },
     onSettled: () => {
       setIsSaving(false);

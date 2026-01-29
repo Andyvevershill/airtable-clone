@@ -1,7 +1,6 @@
 import { useLoadingStore } from "@/app/stores/use-loading-store";
 import { api } from "@/trpc/react";
 import { toast } from "sonner";
-import { Button } from "../ui/button";
 
 interface Props {
   tableId: string;
@@ -64,13 +63,13 @@ export default function Add100kRowButton({ tableId }: Props) {
   };
 
   return (
-    <Button
-      className="pointer flex items-center justify-center rounded-xs text-[13px]"
-      variant="outline"
-      title="Add 100k rows"
+    <button
+      className="flex cursor-not-allowed items-center justify-center rounded-xs border-1 bg-slate-50 p-2 text-[12px]"
+      title="Only Andrew Hill has permssion to add 100k rows"
+      disabled={true}
       onClick={handleAddRow}
     >
       {addRow.isPending ? "Adding..." : "Add 100k rows"}
-    </Button>
+    </button>
   );
 }

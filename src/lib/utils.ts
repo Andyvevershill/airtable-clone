@@ -1,6 +1,7 @@
 import type { RowWithCells, TransformedRow } from "@/types";
 import { faker } from "@faker-js/faker";
 import { clsx, type ClassValue } from "clsx";
+import { toast } from "sonner";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
@@ -67,12 +68,18 @@ export function getLastAccessed(lastAccessed: Date): string {
   return "more than a year ago";
 }
 
-export function lightenColour(hexColor: string, opacity = 0.1) {
+export function lightenColour(hexColor: string, opacity = 0.2) {
   const hex = hexColor.replace("#", "");
   const r = parseInt(hex.substring(0, 2), 16);
   const g = parseInt(hex.substring(2, 4), 16);
   const b = parseInt(hex.substring(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+
+  // Brighten the color slightly
+  const brightenedR = Math.min(255, Math.round(r * 1.8));
+  const brightenedG = Math.min(255, Math.round(g * 1.8));
+  const brightenedB = Math.min(255, Math.round(b * 1.8));
+
+  return `rgba(${brightenedR}, ${brightenedG}, ${brightenedB}, ${opacity})`;
 }
 
 export function darkenColour(hexColor: string, opacity = 0.12) {
@@ -149,4 +156,8 @@ export function returnFakerData(type: string) {
   }
 
   return data;
+}
+
+export function showNotFunctionalToast() {
+  toast.warning("This feature is not functional in the demo app");
 }

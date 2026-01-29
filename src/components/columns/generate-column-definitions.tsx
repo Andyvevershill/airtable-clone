@@ -1,4 +1,4 @@
-import { DataTableColumnHeader } from "@/app/base/[id]/[tableId]/data-table-column-header";
+import { DataTableColumnHeader } from "@/app/base/[id]/[tableId]/table/data-table-column-header";
 import type { ColumnType } from "@/types/column";
 import type { TransformedRow } from "@/types/row";
 import type { CellContext, ColumnDef } from "@tanstack/react-table";

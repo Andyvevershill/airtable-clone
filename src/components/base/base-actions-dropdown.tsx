@@ -29,15 +29,13 @@ export function BaseActionsDropdown({ base, setEditMode }: Props) {
     onMutate: async ({ baseId, favourite }) => {
       setIsSaving(true);
 
-      // Cancel any outgoing refetches
+      // Cancel
       await utils.base.getAll.cancel();
-      await utils.base.getAllFavourites.cancel();
 
-      // Snapshot the previous values
+      // Snapshot
       const previousBases = utils.base.getAll.getData();
-      const previousFavourites = utils.base.getAllFavourites.getData();
 
-      // Optimistically update both caches
+      // Optimistically update
       utils.base.getAll.setData(undefined, (old) => {
         if (!old) return old;
         return old.map((b) =>
@@ -45,29 +43,16 @@ export function BaseActionsDropdown({ base, setEditMode }: Props) {
         );
       });
 
-      utils.base.getAllFavourites.setData(undefined, (old) => {
-        if (!old) return old;
-        return old.map((b) =>
-          b.id === baseId ? { ...b, isFavourite: favourite } : b,
-        );
-      });
-
-      return { previousBases, previousFavourites };
+      return { previousBases };
     },
     onError: (err, variables, context) => {
-      // Rollback on error
+      // Rollback
       if (context?.previousBases) {
         utils.base.getAll.setData(undefined, context.previousBases);
       }
-      if (context?.previousFavourites) {
-        utils.base.getAllFavourites.setData(
-          undefined,
-          context.previousFavourites,
-        );
-      }
     },
-    onSettled: () => {
-      // Refetch to ensure consistency
+    onSuccess: () => {
+      // Refetch
       void utils.base.getAll.invalidate();
       void utils.base.getAllFavourites.invalidate();
       setIsSaving(false);
@@ -78,37 +63,24 @@ export function BaseActionsDropdown({ base, setEditMode }: Props) {
     onMutate: async ({ id }) => {
       setIsSaving(true);
 
-      // Cancel outgoing refetches
+      // Cancel
       await utils.base.getAll.cancel();
-      await utils.base.getAllFavourites.cancel();
 
-      // Snapshot previous values
+      // Snapshot
       const previousBases = utils.base.getAll.getData();
-      const previousFavourites = utils.base.getAllFavourites.getData();
 
-      // Optimistically remove from both caches
+      // Optimistically remove
       utils.base.getAll.setData(undefined, (old) => {
         if (!old) return old;
         return old.filter((b) => b.id !== id);
       });
 
-      utils.base.getAllFavourites.setData(undefined, (old) => {
-        if (!old) return old;
-        return old.filter((b) => b.id !== id);
-      });
-
-      return { previousBases, previousFavourites };
+      return { previousBases };
     },
     onError: (err, variables, context) => {
       // Rollback on error
       if (context?.previousBases) {
         utils.base.getAll.setData(undefined, context.previousBases);
-      }
-      if (context?.previousFavourites) {
-        utils.base.getAllFavourites.setData(
-          undefined,
-          context.previousFavourites,
-        );
       }
     },
     onSettled: () => {
@@ -125,7 +97,7 @@ export function BaseActionsDropdown({ base, setEditMode }: Props) {
   const handleFavourite = () => {
     toggleFavourite.mutate({
       baseId: base.id,
-      favourite: !base.isFavourite, // Use prop directly
+      favourite: !base.isFavourite,
     });
   };
 
