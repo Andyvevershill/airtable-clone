@@ -1,5 +1,6 @@
 import { useLoadingStore } from "@/app/stores/use-loading-store";
 import { useSavingStore } from "@/app/stores/use-saving-store";
+import { showNotFunctionalToast } from "@/lib/utils";
 import { SquareArrowOutUpRight, Wand2 } from "lucide-react";
 import { LuLoaderPinwheel } from "react-icons/lu";
 import { VscHistory } from "react-icons/vsc";
@@ -28,12 +29,16 @@ export default function TopNavButtons({ colour }: Props) {
         </div>
       )}
       <div className="pointer flex flex-row gap-1 rounded-full hover:bg-gray-200">
-        <button className="pointer flex flex-row gap-1 rounded px-2 py-2">
+        <button
+          onClick={showNotFunctionalToast}
+          className="pointer flex flex-row gap-1 rounded px-2 py-2"
+        >
           <VscHistory size={16} />
         </button>
       </div>
 
       <Button
+        onClick={showNotFunctionalToast}
         variant="outline"
         className="pointer IC flex h-8 rounded-full border border-none border-gray-200 bg-gray-100 text-[13px] font-normal shadow-none hover:bg-gray-100"
       >
@@ -48,13 +53,12 @@ export default function TopNavButtons({ colour }: Props) {
         Launch
       </Button>
       <Button
+        onClick={showNotFunctionalToast}
         className="pointer hover:none IC flex h-7 w-15 rounded-md border border-none shadow-none"
         style={{ backgroundColor: colour }}
       >
         Share
       </Button>
-
-      {/* <AvatarLogOutDropdown user={user} /> */}
     </div>
   );
 }
