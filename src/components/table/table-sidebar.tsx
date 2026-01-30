@@ -5,6 +5,7 @@ import type { User } from "better-auth";
 import { useState } from "react";
 import { CiSearch } from "react-icons/ci";
 import Add100kRowButton from "../buttons/add-100k-rows-button";
+import Add1kRowButton from "../buttons/add-1k-rows-button";
 import ViewButton from "../buttons/view-button";
 import { CreateViewDropdown } from "../dropdowns/create-view-dropdown";
 import { Input } from "../ui/input";
@@ -72,9 +73,14 @@ export function TableSidebar({ user, tableWithViews, sidebarOpen }: Props) {
             );
           })}
         </div>
-
-        <div className="p-2">
-          <Add100kRowButton tableId={tableWithViews.id} />
+        <div className="mb-6 flex flex-col items-center">
+          <div className="flex p-2 text-xs text-gray-500">
+            <p>Rows will be added with fake data from faker.js</p>
+          </div>
+          <div className="flex w-full flex-row gap-2 p-2">
+            <Add1kRowButton tableId={tableWithViews.id} />
+            <Add100kRowButton tableId={tableWithViews.id} user={user} />
+          </div>
         </div>
       </div>
     </div>

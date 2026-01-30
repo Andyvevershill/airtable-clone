@@ -274,47 +274,34 @@ export const rowsRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const startTime = Date.now();
-      console.log(
-        `[addBulkRows] 🚀 Starting bulk insert of ${input.count} rows for table ${input.tableId}`,
-      );
-
       // 1. Fetch columns (once, outside loop) - NOT in a transaction
-      const columnsStartTime = Date.now();
       const tableColumns = await ctx.db.query.columns.findMany({
         where: eq(columns.tableId, input.tableId),
         orderBy: (columns, { asc }) => [asc(columns.position)],
         columns: {
           id: true,
           type: true,
+          name: true,
         },
       });
-      const columnsFetchTime = Date.now() - columnsStartTime;
+
       console.log(
-        `[addBulkRows] ✅ Found ${tableColumns.length} columns (took ${columnsFetchTime}ms)`,
+        `[addBulkRows] Found ${tableColumns.length} columns. Sample columns:`,
+        tableColumns.slice(0, 3).map((c) => ({ name: c.name, type: c.type })),
       );
 
       const totalRows = input.count;
       const rowBatchSize = 9500;
       const rowBatches = Math.ceil(totalRows / rowBatchSize);
 
-      console.log(
-        `[addBulkRows] 📊 Processing ${rowBatches} batch(es) of up to ${rowBatchSize} rows`,
-      );
-
       let totalInserted = 0;
       let lastError: Error | null = null;
 
       // Process each batch in its OWN transaction
       for (let batch = 0; batch < rowBatches; batch++) {
-        const batchStartTime = Date.now();
         const batchStart = batch * rowBatchSize;
         const batchEnd = Math.min((batch + 1) * rowBatchSize, totalRows);
         const currentBatchSize = batchEnd - batchStart;
-
-        console.log(
-          `[addBulkRows] 📦 Batch ${batch + 1}/${rowBatches}: ${currentBatchSize} rows (${batchStart}-${batchEnd})`,
-        );
 
         try {
           // Each batch gets its own transaction
@@ -332,23 +319,28 @@ export const rowsRouter = createTRPCRouter({
               .values(rowsToInsert)
               .returning({ id: rows.id });
 
-            console.log(
-              `[addBulkRows]   ✅ Inserted ${insertedRows.length} rows (${Date.now() - batchStartTime}ms so far)`,
-            );
-
             // Step 2: Generate faker data per column
-            const fakerStartTime = Date.now();
             const fakerDataByColumn = new Map<string, string[]>();
 
             for (const column of tableColumns) {
               fakerDataByColumn.set(
                 column.id,
-                generateBulkFakerData(column.type, currentBatchSize),
+                generateBulkFakerData(
+                  column.type,
+                  column.name,
+                  currentBatchSize,
+                ),
               );
             }
-            console.log(
-              `[addBulkRows]   ✅ Generated faker data (${Date.now() - fakerStartTime}ms)`,
-            );
+
+            // Log sample faker data for first 3 columns only
+            if (batch === 0) {
+              console.log(`[addBulkRows] Sample faker data (first 3 columns):`);
+              tableColumns.slice(0, 3).forEach((col) => {
+                const data = fakerDataByColumn.get(col.id);
+                console.log(`  ${col.name} (${col.type}):`, data?.slice(0, 2));
+              });
+            }
 
             // Step 3: Generate & insert cells incrementally + batch them
             const cellFlushSize = 12500;
@@ -383,57 +375,22 @@ export const rowsRouter = createTRPCRouter({
 
             // Execute all collected cell inserts in parallel
             if (cellInsertQueries.length > 0) {
-              const batchStart = Date.now();
               await Promise.all(cellInsertQueries);
-              const batchTime = Date.now() - batchStart;
-              console.log(
-                `[addBulkRows]   ✅ Executed ${cellInsertQueries.length} cell batches via Promise.all() (${batchTime}ms, ~${Math.round(
-                  (currentBatchSize * tableColumns.length) / (batchTime / 1000),
-                )} cells/sec)`,
-              );
             }
           });
 
           // If we get here, the transaction committed successfully
           totalInserted += currentBatchSize;
-
-          const batchTotalTime = Date.now() - batchStartTime;
-          console.log(
-            `[addBulkRows] ✅ Batch ${batch + 1}/${rowBatches} complete (${batchTotalTime}ms) — Progress: ${totalInserted}/${totalRows} (${Math.round(
-              (totalInserted / totalRows) * 100,
-            )}%)`,
-          );
         } catch (error) {
-          console.error(
-            `[addBulkRows] ❌ Batch ${batch + 1}/${rowBatches} failed:`,
-            error,
-          );
           lastError = error as Error;
           // Stop processing further batches
           break;
         }
       }
 
-      const totalTime = Date.now() - startTime;
-      const rowsPerSec =
-        totalInserted > 0 ? Math.round(totalInserted / (totalTime / 1000)) : 0;
-
       console.log(
-        `\n[addBulkRows] ${lastError ? "⚠️ PARTIAL COMPLETE" : "🎉 COMPLETE!"}`,
+        `[addBulkRows] Complete: ${totalInserted}/${totalRows} rows inserted`,
       );
-      console.log(
-        `[addBulkRows]   Total rows inserted: ${totalInserted}/${totalRows}`,
-      );
-      console.log(
-        `[addBulkRows]   Total time: ${(totalTime / 1000).toFixed(2)}s`,
-      );
-      if (rowsPerSec > 0) {
-        console.log(`[addBulkRows]   Average speed: ~${rowsPerSec} rows/sec`);
-      }
-
-      if (lastError) {
-        console.log(`[addBulkRows]   Error: ${lastError.message}`);
-      }
 
       return {
         inserted: totalInserted,

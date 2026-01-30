@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 interface Params {
   initialValue: string | null;
@@ -23,6 +24,7 @@ export function useEditableCell({
   onCommit,
 }: Params) {
   const [isEditing, setIsEditing] = useState(false);
+  const [numberErrorCount, setNumberErrorCount] = useState(0);
   const [value, setValue] = useState(initialValue ?? "");
   const [checked, setChecked] = useState<boolean>(
     initialValue === "true" ? true : false,
@@ -114,7 +116,16 @@ export function useEditableCell({
     }
 
     if (e.key.length !== 1) return;
-    if (isNumber && !isValidNumber(e.key)) return;
+    if (isNumber && !isValidNumber(e.key)) {
+      if (numberErrorCount < 5) {
+        console.log(numberErrorCount);
+        setNumberErrorCount((count) => count + 1);
+        toast.error("Only numeric input is allowed in this cell.");
+        return;
+      } else {
+        return;
+      }
+    }
 
     startEditing(e.key);
     e.preventDefault();

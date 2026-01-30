@@ -8,6 +8,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { showNotFunctionalToast } from "@/lib/utils";
 import { api } from "@/trpc/react";
 import { Plus } from "lucide-react";
 import Image from "next/image";
@@ -46,7 +47,10 @@ export default function CreateBaseDialog() {
         </DialogHeader>
         {/* Remove DialogDescription wrapper, just use a div */}
         <div className="flex-grid flex gap-2 p-4">
-          <div className="IC mt-1.5 hidden lg:flex">
+          <div
+            className="IC mt-1.5 hidden opacity-50 lg:flex"
+            onClick={showNotFunctionalToast}
+          >
             <Image
               src="/purple-build-an-app-image.png"
               alt="Login illustration"

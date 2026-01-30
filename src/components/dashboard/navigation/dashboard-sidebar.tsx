@@ -26,7 +26,7 @@ import { GoHome } from "react-icons/go";
 import { HiOutlineUserGroup } from "react-icons/hi2";
 import { LuPanelTopOpen } from "react-icons/lu";
 import { PiShare } from "react-icons/pi";
-import CreateBaseDialog from "../../base/create-base-dialog";
+import CreateBaseDialog from "../../dialogs/create-base-dialog";
 import NoFavBaseButton from "./no-favourite-bases";
 import BaseNavBarButton from "./side-nav-base-button";
 
