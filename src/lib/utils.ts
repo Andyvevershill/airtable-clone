@@ -116,32 +116,58 @@ export function transformRowsToTanStackFormat(
   });
 }
 
+// {
+//   notes: faker.lorem.sentence(),
+//   status: faker.helpers.arrayElement(['active', 'pending', 'completed', 'cancelled'])
+// }
+
 // generates faker data depending on what the column type is (bulk action)
-export function generateBulkFakerData(type: string, count: number) {
+export function generateBulkFakerData(
+  type: string,
+  columnName: string,
+  count: number,
+) {
   const data: string[] = [];
+  const lowerColumnName = columnName.toLowerCase();
+
   for (let i = 0; i < count; i++) {
-    switch (type) {
-      case "string":
-        data.push(faker.person.firstName());
-        break;
-      case "number":
-        data.push(faker.number.int({ max: 1000 }).toString());
-        break;
-      case "boolean":
-        data.push(faker.datatype.boolean().toString());
-        break;
-      default:
-        data.push("");
+    // Check column name first for special cases
+    if (lowerColumnName === "notes") {
+      data.push(faker.lorem.words({ min: 2, max: 3 }));
+    } else if (lowerColumnName === "status") {
+      data.push(
+        faker.helpers.arrayElement([
+          "active",
+          "pending",
+          "completed",
+          "cancelled",
+        ]),
+      );
+    } else {
+      // Then fall back to type
+      switch (type) {
+        case "string":
+          data.push(faker.person.firstName());
+          break;
+        case "number":
+          data.push(faker.number.int({ max: 1000 }).toString());
+          break;
+        case "boolean":
+          data.push(faker.datatype.boolean().toString());
+          break;
+        default:
+          data.push("");
+      }
     }
   }
   return data;
 }
 
 // generates faker data depending on what the column type is (single return)
-export function returnFakerData(type: string) {
+export function returnFakerData(type: string, columnName: string) {
   let data = "";
 
-  switch (type) {
+  switch (type || columnName?.toLowerCase()) {
     case "string":
       data = faker.person.firstName();
       break;
@@ -150,6 +176,17 @@ export function returnFakerData(type: string) {
       break;
     case "boolean":
       data = faker.datatype.boolean().toString();
+      break;
+    case "notes":
+      data = faker.lorem.sentence();
+      break;
+    case "status":
+      data = faker.helpers.arrayElement([
+        "active",
+        "pending",
+        "completed",
+        "cancelled",
+      ]);
       break;
     default:
       data = "string";

@@ -2,21 +2,20 @@
 
 import { useSavingStore } from "@/app/stores/use-saving-store";
 import {
-  Menubar,
-  MenubarContent,
-  MenubarItem,
-  MenubarMenu,
-  MenubarSeparator,
-} from "@/components/ui/menubar";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { api } from "@/trpc/react";
 import type { Base } from "@/types/base";
-import { MenubarTrigger } from "@radix-ui/react-menubar";
 import { Star } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { HiOutlineDotsHorizontal } from "react-icons/hi";
 import { MdKeyboardArrowDown } from "react-icons/md";
 import { RiDeleteBinLine } from "react-icons/ri";
-import { Input } from "../ui/input";
 
 interface Props {
   base: Base;
@@ -25,8 +24,9 @@ interface Props {
 export function TopNavBaseActions({ base }: Props) {
   const router = useRouter();
   const setIsSaving = useSavingStore((state) => state.setIsSaving);
+
   const [name, setName] = useState(base.name);
-  const [editingName, setEditingName] = useState(name);
+  const [editingName, setEditingName] = useState(base.name);
   const [isOpen, setIsOpen] = useState(false);
   const [isFavourite, setIsFavourite] = useState(base.isFavourite);
 
@@ -70,18 +70,20 @@ export function TopNavBaseActions({ base }: Props) {
   });
 
   const handleSave = () => {
-    if (editingName.trim() && editingName !== name) {
-      setName(editingName.trim());
+    const trimmed = editingName.trim();
+    if (trimmed && trimmed !== name) {
+      setName(trimmed);
       renameBase.mutate({
         baseId: base.id,
-        name: editingName.trim(),
+        name: trimmed,
       });
     }
     setIsOpen(false);
   };
 
-  const handleRenameSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
+      e.preventDefault();
       handleSave();
     }
   };
@@ -106,78 +108,74 @@ export function TopNavBaseActions({ base }: Props) {
 
   return (
     <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
-      <Menubar className="border-0 bg-transparent p-0 shadow-none">
-        <MenubarMenu>
-          <MenubarTrigger
-            className="border-0 bg-transparent p-0 shadow-none"
-            onClick={() => setIsOpen(!isOpen)}
-          >
+      <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+        <DropdownMenuTrigger asChild>
+          <div className="border-0 bg-transparent p-0 shadow-none">
             <div className="pointer flex flex-row items-center gap-2 leading-none">
               <div
                 className="IC flex h-8 w-8 rounded-md"
                 style={{ backgroundColor: base.colour }}
               >
                 <p className="text-md flex text-white capitalize">
-                  {base.name.slice(0, 2)}
+                  {name.slice(0, 2)}
                 </p>
               </div>
               <span className="text-[16px] font-medium">{name}</span>
               <MdKeyboardArrowDown size={18} />
             </div>
-          </MenubarTrigger>
+          </div>
+        </DropdownMenuTrigger>
 
-          <MenubarContent
-            className="z-50 w-100 rounded-sm p-4 text-sm"
-            align="start"
-            sideOffset={20}
-          >
-            {/* Rename input with star button */}
-            <div
-              className="mb-2 flex flex-row items-center gap-2"
-              onSelect={(e) => e.preventDefault()}
-            >
-              <Input
-                type="text"
-                value={editingName}
-                onChange={(e) => setEditingName(e.target.value)}
-                onKeyDown={handleRenameSubmit}
-                onBlur={handleBlur}
-                placeholder="Base name"
-                className="h-10 w-76 rounded-xs border border-none border-gray-300 bg-transparent text-sm shadow-none hover:bg-blue-50 focus-visible:border-blue-500 focus-visible:bg-blue-50 focus-visible:ring-1 focus-visible:ring-blue-200"
-                autoFocus
-                onClick={(e) => e.stopPropagation()}
-              />
+        <DropdownMenuContent
+          className="z-50 w-100 rounded-sm p-4 text-sm"
+          align="start"
+          sideOffset={20}
+          alignOffset={-10}
+        >
+          {/* Rename input with star button */}
+          <div className="mb-2 flex flex-row items-center gap-2">
+            <input
+              type="text"
+              value={editingName}
+              onChange={(e) => setEditingName(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onBlur={handleBlur}
+              placeholder="Base name"
+              className="h-[41px] w-76 rounded-xs border-none bg-transparent p-2 text-[20px] shadow-none transition-colors outline-none placeholder:text-gray-400 hover:bg-gray-100 focus-visible:border focus-visible:border-blue-500 focus-visible:bg-blue-50 focus-visible:ring-1 focus-visible:ring-blue-200 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={(e) => e.stopPropagation()}
+            />
 
-              {/* Favourite Star Button */}
-              <div
-                className="IC flex h-8 flex-1 cursor-pointer"
+            {/* Favourite Star Button */}
+            <div className="IC flex h-8 flex-1 cursor-pointer">
+              <Star
                 onClick={(e) => {
                   e.stopPropagation();
                   handleFavourite();
                 }}
-              >
-                <Star
-                  size={18}
-                  className={
-                    isFavourite
-                      ? "fill-yellow-500 text-yellow-500"
-                      : "text-gray-400"
-                  }
-                />
-              </div>
+                size={15}
+                className={
+                  isFavourite
+                    ? "fill-yellow-500 text-yellow-500"
+                    : "text-gray-600"
+                }
+              />
+              <HiOutlineDotsHorizontal
+                size={14}
+                className="ml-4 text-gray-600"
+              />
             </div>
+          </div>
 
-            <MenubarSeparator className="my-2" />
+          <DropdownMenuSeparator className="my-2" />
 
-            <MenubarItem
-              className="pointer hover:rounded-xs"
-              onSelect={handleDelete}
-            >
-              <RiDeleteBinLine className="mr-2" /> Delete
-            </MenubarItem>
-          </MenubarContent>
-        </MenubarMenu>
-      </Menubar>
+          <DropdownMenuItem
+            className="pointer hover:rounded-xs"
+            onClick={handleDelete}
+          >
+            <RiDeleteBinLine className="mr-2" /> Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }

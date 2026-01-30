@@ -8,7 +8,7 @@ import { Star } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { BiCoinStack } from "react-icons/bi";
-import { BaseActionsDropdown } from "./base-actions-dropdown";
+import { BaseActionsDropdown } from "../dropdowns/base-actions-dropdown";
 import BaseEditMode from "./base-edit-mode";
 
 interface props {

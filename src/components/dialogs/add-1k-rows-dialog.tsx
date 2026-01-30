@@ -1,15 +1,22 @@
+"use client";
+
 import { useLoadingStore } from "@/app/stores/use-loading-store";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { api } from "@/trpc/react";
-import type { User } from "@/types";
 import { toast } from "sonner";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import Add1kRowButton from "../buttons/add-1k-rows-button";
 
 interface Props {
   tableId: string;
-  user: User;
 }
 
-export default function Add100kRowButton({ tableId, user }: Props) {
+export default function Add1kRowDialog({ tableId }: Props) {
   const setIsLoading = useLoadingStore((state) => state.setIsLoading);
 
   const utils = api.useUtils();
@@ -18,16 +25,16 @@ export default function Add100kRowButton({ tableId, user }: Props) {
     onMutate: async ({ count }) => {
       setIsLoading(true);
       toast.warning(
-        `Adding ${count.toLocaleString()} rows... This may take a few moments`,
+        `Adding ${count.toLocaleString()} rows... This may take a little while.`,
       );
 
-      // Cancel ongoing queries
+      // Cancel
       await utils.row.getRowCount.cancel({ tableId });
 
-      // Get current count
+      // snapshot
       const previousCount = utils.row.getRowCount.getData({ tableId });
 
-      // Optimistically update count
+      // Optimistically update
       if (previousCount !== undefined) {
         utils.row.getRowCount.setData(
           { tableId },
@@ -39,11 +46,11 @@ export default function Add100kRowButton({ tableId, user }: Props) {
     },
 
     onError: (_error, _vars, context) => {
+      // rollback
       if (context?.previousCount !== undefined) {
         utils.row.getRowCount.setData({ tableId }, context.previousCount);
       }
 
-      // incase we have created x rows before the error happened, we need to invalidate the cache to see the new ones!
       void utils.row.getRowsInfinite.invalidate({ tableId });
       void utils.row.getRowCount.invalidate({ tableId });
     },
@@ -61,24 +68,31 @@ export default function Add100kRowButton({ tableId, user }: Props) {
   const handleAddRow = () => {
     addRow.mutate({
       tableId,
-      count: 100000,
+      count: 1000,
     });
   };
 
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          className="flex w-full cursor-not-allowed items-center justify-center rounded-xs border-1 bg-slate-50 p-2 text-[12px]"
-          disabled={true}
-          onClick={handleAddRow}
-        >
-          {addRow.isPending ? "Adding..." : "Add 100k rows"}
-        </button>
-      </TooltipTrigger>
-      <TooltipContent side="right">
-        {`Sorry ${user.name.split(" ")[0]}, only the creator can add 100k rows at a time`}
-      </TooltipContent>
-    </Tooltip>
+    <Dialog>
+      <DialogTrigger asChild>
+        <Add1kRowButton tableId={tableId} />
+      </DialogTrigger>
+      <DialogContent className="h-115 w-188">
+        <DialogHeader>
+          <DialogTitle className="mb-2 text-2xl">
+            Do you want to create 1,000 rows with fake data?
+          </DialogTitle>
+          <div className="m-0 border-t border-gray-200 p-0" />
+        </DialogHeader>
+        <div className="flex-grid flex gap-2 p-4">
+          <div className="IC mt-1.5 hidden h-220 w-340 cursor-pointer opacity-50 transition-transform duration-300 ease-out hover:scale-101 lg:flex">
+            testing here
+          </div>
+          <div className="IC hidden h-220 w-340 cursor-pointer transition-transform duration-300 ease-out hover:scale-101 lg:flex">
+            and testing here too
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

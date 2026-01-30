@@ -98,8 +98,6 @@ export function EditViewDropdown({
         tableId: view.tableId,
       });
 
-      const remaining =
-        previousData?.views.filter((v) => v.id !== view.id) ?? [];
       let newActiveView: View | null = null;
 
       // Update cache

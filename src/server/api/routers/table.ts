@@ -44,7 +44,11 @@ export const tableRouter = createTRPCRouter({
               position: col.position,
             })),
           )
-          .returning({ id: columns.id, type: columns.type });
+          .returning({
+            id: columns.id,
+            type: columns.type,
+            name: columns.name,
+          });
 
         // 4. Create the rows (position will auto-increment via serial)
         const rowValues = Array.from(
@@ -61,7 +65,7 @@ export const tableRouter = createTRPCRouter({
             cellsToCreate.push({
               rowId: row.id,
               columnId: column.id,
-              value: returnFakerData(column.type),
+              value: returnFakerData(column.type, column.name),
             });
           }
         }
@@ -118,5 +122,16 @@ export const tableRouter = createTRPCRouter({
       }
 
       return table;
+    }),
+
+  deleteTableById: protectedProcedure
+    .input(z.object({ tableId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db
+        .delete(tables)
+        .where(eq(tables.id, input.tableId))
+        .returning();
+
+      return { success: true };
     }),
 });
