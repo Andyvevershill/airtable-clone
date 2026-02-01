@@ -29,6 +29,16 @@ I have built this demo in ≈ three weeks so it's important to understand the fu
 6. Functionality => Filtering, sorting and searching are implimented through the backend for scalability of large datasets.
 7. Views => fully functional: rename, change active, duplicate, delete. Any changes to filtering/sorting/hidden fields, will automatically be saved to the view and preloaded into the table when reselecting this view.
 
+##  Additional features
+
+- Infinite scroll with cursor pagination - only fetches what you need as you scroll through data
+- Virtualised rendering with TanStack Table - renders visible rows only, so you can scroll through hundreds of thousands of rows without lag
+- Optimistic + Caching updates - UI responds instantly whilst changes sync in the background
+- End-to-end type safety with tRPC 
+- Create edit and save multiple Views for multiple tables, in multiple Bases
+- tab/table based routing system
+
+
 As a junior, feedback is priceless. If you have the time to play around with the app and look through the code, I would welcome any and all constructive criticism, Please reach out and message me on LinkedIn: https://www.linkedin.com/in/andrew-hill-90b920234/
 
 
