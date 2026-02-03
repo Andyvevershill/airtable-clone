@@ -32,11 +32,11 @@ export default async function LogInPage() {
 
           <p className="text-[15px]">Email</p>
 
-          <div className="mb-3 flex h-10 w-full cursor-text items-center justify-start rounded-sm border border-gray-200 text-gray-500">
+          <div className="mb-3 flex h-10 w-full cursor-text items-center justify-start rounded-sm border border-gray-200 text-gray-500 hover:cursor-not-allowed">
             <p className="ml-2.5 text-[15px]">Email address</p>
           </div>
 
-          <button className="pointer IC flex h-10 flex-row rounded-sm border border-gray-200 bg-[#8AAEF0] px-10 font-normal text-white shadow-xs transition hover:shadow-sm md:w-125">
+          <button className="IC flex h-10 flex-row rounded-sm border border-gray-200 bg-[#8AAEF0] px-10 font-normal text-white shadow-xs transition hover:cursor-not-allowed hover:shadow-sm md:w-125">
             Continue
           </button>
 
@@ -46,12 +46,12 @@ export default async function LogInPage() {
             <div className="flex-1"></div>
           </div>
 
-          <button className="pointer IC mb-2 flex h-10 flex-row rounded-sm border border-gray-200 bg-white px-10 text-[15px] text-black shadow-xs transition hover:shadow-sm md:w-125">
+          <button className="IC mb-2 flex h-10 flex-row rounded-sm border border-gray-200 bg-white px-10 text-[15px] text-black shadow-xs transition hover:cursor-not-allowed hover:shadow-sm md:w-125">
             Sign in with
             <span className="pl-1 font-[550]">Single sign on</span>
           </button>
           <GoogleSignInButton />
-          <button className="pointer IC flex h-10 flex-row rounded-sm border border-gray-200 bg-white px-10 text-[15px] text-black shadow-xs transition hover:shadow-sm md:w-125">
+          <button className="IC flex h-10 flex-row rounded-sm border border-gray-200 bg-white px-10 text-[15px] text-black shadow-xs transition hover:cursor-not-allowed hover:shadow-sm md:w-125">
             <FaApple className="h-5 w-5 pr-2 font-sans" />
             Continue with <span className="pl-1 font-[550]">Apple ID</span>
           </button>
