@@ -1,13 +1,23 @@
 import { useLoadingStore } from "@/app/stores/use-loading-store";
 import { api } from "@/trpc/react";
+import type { QueryParams } from "@/types/view";
 import { toast } from "sonner";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 interface Props {
   tableId: string;
+  rowCount: number;
+  queryParams: QueryParams;
 }
 
-export default function Add1kRowButton({ tableId }: Props) {
+export default function Add1kRowButton({
+  queryParams,
+  tableId,
+  rowCount,
+}: Props) {
   const setIsLoading = useLoadingStore((state) => state.setIsLoading);
+
+  const limitReached = rowCount >= 5000;
 
   const utils = api.useUtils();
 
@@ -15,7 +25,7 @@ export default function Add1kRowButton({ tableId }: Props) {
     onMutate: async ({ count }) => {
       setIsLoading(true);
       toast.warning(
-        `Adding ${count.toLocaleString()} rows... This may take a little while.`,
+        `Adding ${count.toLocaleString()} rows of fake data. This may take a moment...`,
       );
 
       // Cancel
@@ -41,13 +51,17 @@ export default function Add1kRowButton({ tableId }: Props) {
         utils.row.getRowCount.setData({ tableId }, context.previousCount);
       }
 
-      void utils.row.getRowsInfinite.invalidate({ tableId });
+      void utils.row.getRowsInfinite.invalidate();
       void utils.row.getRowCount.invalidate({ tableId });
     },
 
-    onSuccess: () => {
-      void utils.row.getRowsInfinite.invalidate({ tableId });
-      void utils.row.getRowCount.invalidate({ tableId });
+    onSuccess: async () => {
+      // Update count first
+      await utils.row.getRowCount.invalidate({ tableId });
+
+      // tried everything to avoid invalidating the whole list but tRPC makes it hard
+      // triggering a fetch next row here bugged the current fetch next call, especially when we add single rows quickly after
+      await utils.row.getRowsInfinite.invalidate(queryParams);
     },
 
     onSettled: () => {
@@ -63,11 +77,25 @@ export default function Add1kRowButton({ tableId }: Props) {
   };
 
   return (
-    <button
-      className="pointer flex w-full items-center justify-center rounded-xs border-1 bg-slate-50 p-2 text-[12px]"
-      onClick={handleAddRow}
-    >
-      {addRow.isPending ? "Adding..." : "Add 1k rows"}
-    </button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          className="pointer flex w-full items-center justify-center rounded-xs border-1 bg-slate-50 p-2 text-[12px]"
+          onClick={handleAddRow}
+          disabled={addRow.isPending || limitReached}
+        >
+          {addRow.isPending
+            ? "Adding..."
+            : limitReached
+              ? "Limit reached"
+              : "Add 1k rows"}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" align="center">
+        {limitReached
+          ? "You have reached the maximum of 10,000 rows for this table."
+          : "Add 1,000 rows to the table."}
+      </TooltipContent>
+    </Tooltip>
   );
 }

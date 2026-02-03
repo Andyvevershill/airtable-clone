@@ -76,7 +76,7 @@ export default function Add100kRowButton({ tableId, user }: Props) {
           {addRow.isPending ? "Adding..." : "Add 100k rows"}
         </button>
       </TooltipTrigger>
-      <TooltipContent side="right">
+      <TooltipContent side="bottom" align="center">
         {`Sorry ${user.name.split(" ")[0]}, only the creator can add 100k rows at a time`}
       </TooltipContent>
     </Tooltip>
