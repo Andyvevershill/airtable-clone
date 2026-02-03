@@ -1,5 +1,6 @@
 "use client";
 
+import { useSidebarStore } from "@/app/stores/use-sidebar-store";
 import { useViewStore } from "@/app/stores/use-view-store";
 import { cn, getLastAccessed } from "@/lib/utils";
 import { api } from "@/trpc/react";
@@ -16,6 +17,7 @@ interface props {
 }
 
 export default function BaseCard({ base }: props) {
+  const { sideBarOpen } = useSidebarStore();
   const [onHover, setOnHover] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [baseName, setBaseName] = useState(base.name);
@@ -41,9 +43,15 @@ export default function BaseCard({ base }: props) {
     setOnHover(true);
   }
 
+  // set the width of a base depending on if the sideBar is open or not
+  const baseWidth = sideBarOpen ? "w-[315px]" : "w-[300px]";
+
   return (
     <div
-      className="pointer relative flex h-[100px] w-[315px] flex-row gap-4 rounded-md border border-gray-200 bg-white p-4 shadow-2xs hover:shadow-md"
+      className={cn(
+        "pointer relative flex h-[100px] flex-row gap-4 rounded-md border border-gray-200 bg-white p-4 shadow-2xs hover:shadow-md",
+        baseWidth,
+      )}
       onClick={handleRedirect}
       onMouseEnter={handleHover}
       onMouseLeave={() => setOnHover(false)}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useSidebarStore } from "@/app/stores/use-sidebar-store";
 import {
   Collapsible,
   CollapsibleContent,
@@ -18,7 +19,7 @@ import {
 import { cn, showNotFunctionalToast } from "@/lib/utils";
 import { api } from "@/trpc/react";
 import { ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CgSpinner } from "react-icons/cg";
 import { CiExport, CiSquarePlus, CiStar } from "react-icons/ci";
 import { FiBookOpen } from "react-icons/fi";
@@ -38,7 +39,12 @@ const footerItems = [
 
 export function DashboardSidebar() {
   const { state, setOpen } = useSidebar();
+  const { setSideBarOpen } = useSidebarStore();
   const [closeAfterHover, setCloseAfterHover] = useState(false);
+
+  useEffect(() => {
+    setSideBarOpen(state === "expanded");
+  }, [state]);
 
   const { data: favouriteBases = [], isLoading } =
     api.base.getAllFavourites.useQuery();
