@@ -89,7 +89,10 @@ export function TableBody({
             key={tanstackRow.original._rowId}
             data-index={virtualRow.index}
             ref={(node) => rowVirtualizer.measureElement(node)}
-            className="w-full hover:bg-gray-50"
+            className={cn(
+              "w-full hover:bg-gray-50 hover:shadow-[inset_0_1px_0_0_rgb(229,231,235)]",
+              virtualRow.index === 0 && "hover:shadow-none",
+            )}
             style={{
               position: "absolute",
               transform: `translateY(${virtualRow.start}px)`,
