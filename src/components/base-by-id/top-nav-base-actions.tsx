@@ -39,6 +39,7 @@ export function TopNavBaseActions({ base }: Props) {
     },
     onError: () => {
       setIsFavourite((prev) => !prev);
+      setIsSaving(false);
     },
     onSettled: () => {
       setIsSaving(false);

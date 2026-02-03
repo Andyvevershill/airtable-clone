@@ -37,6 +37,9 @@ export function AddTableButton({ baseId, tableNumber, setTables }: Props) {
       void utils.base.getById.invalidate({ id: baseId });
       router.refresh();
     },
+    onError: () => {
+      setIsSaving(false);
+    },
 
     onSettled: () => {
       setIsSaving(false);

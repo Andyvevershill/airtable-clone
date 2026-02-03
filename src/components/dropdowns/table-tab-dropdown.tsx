@@ -44,7 +44,6 @@ export function TableTabDropdown({ base, activeTab, setTables }: Props) {
   }, [searchQuery, base.tables]);
 
   function handleSearch() {
-    console.log(searchQuery);
     setSearchQuery("");
   }
 

@@ -71,8 +71,6 @@ export function CreateColumnDropdown({ tableId }: Props) {
 
     setSelectedField(value);
 
-    console.log(selectedField);
-
     setSearchQuery("");
     setIsSubmenuOpen(true);
   }

@@ -50,6 +50,7 @@ export function BaseActionsDropdown({ base, setEditMode }: Props) {
       if (context?.previousBases) {
         utils.base.getAll.setData(undefined, context.previousBases);
       }
+      setIsSaving(false);
     },
     onSuccess: () => {
       // Refetch

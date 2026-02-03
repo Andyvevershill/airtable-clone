@@ -23,6 +23,10 @@ export default function BaseEditMode({ base, nameState, setEditMode }: Props) {
     onSuccess: () => {
       void utils.base.getAllFavourites.invalidate();
     },
+    onError: () => {
+      setBaseName(base.name);
+      setIsSaving(false);
+    },
     onSettled: () => {
       setIsSaving(false);
     },

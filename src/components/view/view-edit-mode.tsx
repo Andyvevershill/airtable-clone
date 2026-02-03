@@ -25,6 +25,7 @@ export default function ViewEditMode({ view, setViews, onDone }: Props) {
     },
     onError: () => {
       setViews((prev) => prev.map((v) => (v.id === view.id ? view : v)));
+      setIsSaving(false);
     },
     onSettled: () => setIsSaving(false),
   });

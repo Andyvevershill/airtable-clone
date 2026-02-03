@@ -85,6 +85,7 @@ export function EditViewDropdown({
         );
         setViews(context.previousData.views);
       }
+      setIsSaving(false);
     },
   });
 

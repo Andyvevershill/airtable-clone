@@ -84,6 +84,7 @@ export default function BaseNavBarButton({ base }: props) {
           context.previousFavourites,
         );
       }
+      setIsSaving(false);
     },
     onSettled: () => {
       // Refetch to ensure consistency
@@ -105,7 +106,7 @@ export default function BaseNavBarButton({ base }: props) {
 
   return (
     <div
-      className="pointer relative flex h-[35px] w-[275px] flex-row items-center justify-between gap-2 px-2 hover:bg-gray-100"
+      className="pointer relative mb-1 flex h-[35px] w-[275px] flex-row items-center justify-between gap-2 px-2 hover:bg-gray-100"
       onClick={handleRedirect}
       onMouseEnter={handleHover}
       onMouseLeave={() => setOnHover(false)}
@@ -123,7 +124,7 @@ export default function BaseNavBarButton({ base }: props) {
         <div className="relative flex flex-col items-start justify-center">
           <h3
             className={cn(
-              "w-full truncate text-[13px] font-medium text-gray-800",
+              "w-full truncate text-[13px] text-gray-700",
               onHover ? "max-w-[130px]" : "max-w-[200px]",
             )}
           >

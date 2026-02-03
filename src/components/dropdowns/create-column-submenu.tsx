@@ -23,8 +23,6 @@ export function CreateColumnSubmenu({
   const setIsSaving = useSavingStore((state) => state.setIsSaving);
   const utils = api.useUtils();
 
-  console.log(selectedField);
-
   const addColumn = api.column.addColumn.useMutation({
     onMutate: async (newColumn) => {
       setIsSaving(true);
