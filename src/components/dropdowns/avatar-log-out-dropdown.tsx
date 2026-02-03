@@ -34,7 +34,7 @@ export function AvatarLogOutDropdown({ user, align = "center" }: Props) {
     <Menubar className="border-0 shadow-none">
       <MenubarMenu>
         <MenubarTrigger>
-          <Avatar className="pointer h-7 w-7">
+          <Avatar className="pointer h-6.5 w-6.5">
             {user.image && (
               <AvatarImage
                 src={user.image}
@@ -43,7 +43,7 @@ export function AvatarLogOutDropdown({ user, align = "center" }: Props) {
               />
             )}
 
-            <AvatarFallback className="font-medium text-white capitalize">
+            <AvatarFallback className="bg-red-700 text-[13px] font-medium text-white capitalize">
               {user.name.charAt(0)}
             </AvatarFallback>
           </Avatar>

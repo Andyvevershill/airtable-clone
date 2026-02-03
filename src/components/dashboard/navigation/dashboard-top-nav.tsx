@@ -83,7 +83,7 @@ export function DashboardTopNav({ user }: props) {
           </button>
         </div>
 
-        <button className="pointer IC mr-2 flex h-7.5 w-7.5 rounded-full border border-gray-200 hover:bg-gray-100">
+        <button className="pointer IC mr-1.5 flex h-7.5 w-7.5 rounded-full border border-gray-200 hover:bg-gray-100">
           <Bell size={14} className="text-gray-600" />
         </button>
 
