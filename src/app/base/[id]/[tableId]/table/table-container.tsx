@@ -124,8 +124,10 @@ export default function TableContainer({
           <div className="shrink-0">
             <TableSidebar
               sidebarOpen={sidebarOpen}
+              queryParams={queryParams}
               tableWithViews={tableWithViews}
               user={user}
+              rowCount={rowCount}
             />
           </div>
         )}

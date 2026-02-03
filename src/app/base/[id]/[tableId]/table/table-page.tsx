@@ -103,7 +103,7 @@ export default function TablePage() {
 
     return {
       tableId,
-      limit: 250,
+      limit: 1000,
       sorting: translatedSorting,
       filters: translatedFilters,
       globalSearch,

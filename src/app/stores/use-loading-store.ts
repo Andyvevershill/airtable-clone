@@ -17,6 +17,7 @@ export const useLoadingStore = create<LoadingStore>((set) => ({
   isSorting: false,
   isFiltering: false,
   isLoadingView: false,
+  isLoadingFavourites: false,
 
   setIsLoading: (isLoading: boolean) => set({ isLoading }),
   setIsLoadingView: (isLoadingView: boolean) => set({ isLoadingView }),

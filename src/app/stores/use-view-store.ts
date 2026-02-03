@@ -12,17 +12,6 @@ interface ViewStore {
 
 export const useViewStore = create<ViewStore>((set) => ({
   activeView: null,
-  // {
-  //   id: "",
-  //   name: "",
-  //   createdAt: new Date(),
-  //   isFavourite: false,
-  //   tableId: "",
-  //   isActive: false,
-  //   filters: null,
-  //   sorting: null,
-  //   hidden: null,
-  // },
 
   setActiveView: (activeView) => set({ activeView }),
   reset: () => set({ activeView: null }),
