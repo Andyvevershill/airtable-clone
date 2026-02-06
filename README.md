@@ -36,7 +36,7 @@ This is a demo, so it's important to understand the functional limitations outli
 - tab/table based routing system
 
 
-As a junior, feedback is priceless. If you have the time to play around with the app and look through the code, I would welcome any and all constructive criticism, Please reach out and message me on LinkedIn: https://www.linkedin.com/in/andrew-hill-90b920234/
+Feedback is priceless. If you have the time to play around with the app and look through the code, I would welcome any and all constructive criticism, Please reach out and message me on LinkedIn: https://www.linkedin.com/in/andrew-hill-90b920234/
 
 
 
