@@ -97,6 +97,7 @@ function AddRowButton({
 
   return (
     <button
+      data-testid="add-row-button"
       disabled={notHydratedVirtualRows}
       title={
         notHydratedVirtualRows
