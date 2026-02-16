@@ -10,9 +10,9 @@ import type { TransformedRow } from "@/types";
 import { DropdownMenuTrigger } from "@radix-ui/react-dropdown-menu";
 import type { Column } from "@tanstack/react-table";
 import { useState } from "react";
-import { BiHide } from "react-icons/bi";
 import { FaA } from "react-icons/fa6";
 import { PiHashStraightLight } from "react-icons/pi";
+import HideFieldButton from "../buttons/hide-fields-buton";
 import Toggle from "../ui/toggle";
 
 interface DataTableViewOptionsProps<TData> {
@@ -24,7 +24,6 @@ export default function HideFieldsDropdown<TData>({
 }: DataTableViewOptionsProps<TData>) {
   const [search, setSearch] = useState("");
   const { updateViewHidden } = useViewUpdater();
-  const [hiddenFields, setHiddenFields] = useState<string[]>([]);
 
   const numberOfHiddenCols = columns.filter(
     (col) => !col.getIsVisible(),
@@ -37,59 +36,26 @@ export default function HideFieldsDropdown<TData>({
 
   const hideAllColumns = () => {
     columns.forEach((column) => column.toggleVisibility(false));
-
     const allFields = columns.map((col) => col.id);
 
-    setHiddenFields(allFields);
     updateViewHidden(allFields);
   };
 
   const showAllColumns = () => {
     columns.forEach((column) => column.toggleVisibility(true));
 
-    setHiddenFields([]);
     updateViewHidden([]);
   };
 
   function toggleColumnVisibility(column: Column<TransformedRow, unknown>) {
-    // Toggle first
     const isCurrentlyVisible = column.getIsVisible();
     column.toggleVisibility(!isCurrentlyVisible);
-
-    // Calculate new hidden state based on what the column WILL BE after toggle
-    const willBeHidden = isCurrentlyVisible; // If currently visible, will be hidden after toggle
-
-    setHiddenFields((prevHidden) => {
-      const newHidden = willBeHidden
-        ? [...prevHidden, column.id]
-        : prevHidden.filter((id) => id !== column.id);
-
-      // Call updateViewHidden with the new value
-      updateViewHidden(newHidden);
-
-      return newHidden;
-    });
   }
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          className={`pointer flex h-6.5 flex-row items-center gap-1 rounded-xs border border-transparent p-2 text-[13px] ${
-            numberOfHiddenCols > 0
-              ? "bg-[#C4ECFF] text-gray-900 hover:border-2 hover:border-[#7FAFC4]"
-              : "text-gray-500 hover:bg-gray-100"
-          }`}
-        >
-          <BiHide />
-          {numberOfHiddenCols === 0 ? (
-            <span className="text-[13px]">Hide fields</span>
-          ) : (
-            <span className="text-[13px]">
-              {numberOfHiddenCols} hidden field{numberOfHiddenCols > 1 && "s"}
-            </span>
-          )}
-        </button>
+      <DropdownMenuTrigger>
+        <HideFieldButton numberOfHiddenCols={numberOfHiddenCols} />
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-[320px] rounded-xs">
