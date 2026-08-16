@@ -8,6 +8,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { user } from "./users";
 
@@ -117,7 +118,7 @@ export const rows = pgTable(
     updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
   },
   (table) => [
-    index("row_table_idx").on(table.tableId),
+    // Serves both table_id lookups (prefix) and keyset pagination / ordering
     index("row_position_idx").on(table.tableId, table.position),
   ],
 );
@@ -141,16 +142,21 @@ export const cells = pgTable(
     updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
   },
   (table) => [
-    index("cell_row_idx").on(table.rowId),
-    index("cell_column_idx").on(table.columnId),
-    index("cell_row_column_unique_idx").on(table.rowId, table.columnId),
-    index("cell_row_column_value_idx").on(
-      table.rowId,
-      table.columnId,
-      table.value,
-    ),
+    // One cell per row+column: backs upsertCell's ON CONFLICT, guarantees
+    // sort joins can't fan out, and serves per-row filter probes and cell
+    // fetches by row (row_id prefix also covers cascade deletes of rows)
+    uniqueIndex("cell_row_column_unique_idx").on(table.rowId, table.columnId),
+    // Sort scans and filter scans over a single column's cells
     index("cell_column_value_idx").on(table.columnId, table.value),
-    index("cell_value_lower_idx").on(sql`LOWER(${table.value})`),
+    // Case-insensitive "equals" filter
+    index("cell_column_value_lower_idx").on(
+      table.columnId,
+      sql`LOWER(${table.value})`,
+    ),
+    // Substring "contains" / "notContains" filters (requires pg_trgm)
+    index("cell_value_trgm_idx")
+      .using("gin", sql`${table.value} gin_trgm_ops`)
+      .where(sql`${table.value} IS NOT NULL`),
   ],
 );
 

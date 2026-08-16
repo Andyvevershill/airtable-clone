@@ -137,16 +137,17 @@ export function generateBulkFakerData(
     } else if (lowerColumnName === "status") {
       data.push(
         faker.helpers.arrayElement([
-          "active",
-          "pending",
-          "completed",
-          "cancelled",
+          "Todo",
+          "In Progress",
+          "In Review",
+          "Done",
         ]),
       );
     } else {
       // Then fall back to type
       switch (type) {
         case "string":
+        case "text":
           data.push(faker.person.firstName());
           break;
         case "number":
