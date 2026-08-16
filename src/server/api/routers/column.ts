@@ -3,6 +3,40 @@ import { cells, columns, rows } from "@/server/db/schemas";
 import { TRPCError } from "@trpc/server";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
+import type { db } from "@/server/db";
+
+type Tx = Parameters<Parameters<(typeof db)["transaction"]>[0]>[0];
+
+// Insert the column and backfill one empty cell per existing row entirely in
+// the database — one INSERT ... SELECT instead of paging every row through
+// the server. IDs are generated in SQL since the JS cuid default is bypassed.
+async function createColumnWithCells(
+  tx: Tx,
+  input: { id?: string; tableId: string; name: string; type: string },
+) {
+  const [newColumn] = await tx
+    .insert(columns)
+    .values({
+      ...(input.id ? { id: input.id } : {}),
+      tableId: input.tableId,
+      name: input.name,
+      type: input.type,
+      position: sql`COALESCE((SELECT MAX(${columns.position}) + 1 FROM ${columns} WHERE ${columns.tableId} = ${input.tableId}), 0)`,
+    })
+    .returning();
+
+  if (!newColumn) throw new Error("Failed to create column");
+
+  await tx.execute(sql`
+    INSERT INTO ${cells} (id, row_id, column_id, value)
+    SELECT gen_random_uuid()::text, r.id, ${newColumn.id}, NULL
+    FROM ${rows} r
+    WHERE r.table_id = ${input.tableId}
+    ON CONFLICT DO NOTHING
+  `);
+
+  return newColumn;
+}
 
 export const columnRouter = createTRPCRouter({
   getColumns: protectedProcedure
@@ -26,45 +60,9 @@ export const columnRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Get max position for new column
-      const maxPositionResult = await ctx.db.query.columns.findFirst({
-        where: eq(columns.tableId, input.tableId),
-        orderBy: (columns, { desc }) => [desc(columns.position)],
-      });
-
-      const newPosition = (maxPositionResult?.position ?? -1) + 1;
-
-      // Create the column
-      const [newColumn] = await ctx.db
-        .insert(columns)
-        .values({
-          id: input.id,
-          tableId: input.tableId,
-          name: input.name,
-          type: input.type,
-          position: newPosition,
-        })
-        .returning();
-
-      if (!newColumn) throw new Error("Failed to create column");
-
-      // Get ALL existing rows
-      const tableRows = await ctx.db.query.rows.findMany({
-        where: eq(rows.tableId, input.tableId),
-      });
-
-      // Create a cell for EACH row in the new column
-      if (tableRows.length > 0) {
-        await ctx.db.insert(cells).values(
-          tableRows.map((row) => ({
-            rowId: row.id,
-            columnId: newColumn.id,
-            value: null,
-          })),
-        );
-      }
-
-      return newColumn;
+      return await ctx.db.transaction(async (tx) =>
+        createColumnWithCells(tx, input),
+      );
     }),
 
   addColumnBatched: protectedProcedure
@@ -76,65 +74,9 @@ export const columnRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Get max position for new column
-      const maxPositionResult = await ctx.db.query.columns.findFirst({
-        where: eq(columns.tableId, input.tableId),
-        orderBy: (columns, { desc }) => [desc(columns.position)],
-      });
-
-      const newPosition = (maxPositionResult?.position ?? -1) + 1;
-
-      // Create the column
-      const [newColumn] = await ctx.db
-        .insert(columns)
-        .values({
-          tableId: input.tableId,
-          name: input.name,
-          type: input.type,
-          position: newPosition,
-        })
-        .returning();
-
-      if (!newColumn) throw new Error("Failed to create column");
-
-      // Get the total row count first
-      const countResult = await ctx.db
-        .select({ count: sql<number>`count(*)` })
-        .from(rows)
-        .where(eq(rows.tableId, input.tableId));
-
-      const totalRows = countResult[0]?.count ?? 0;
-
-      if (totalRows === 0) {
-        return newColumn;
-      }
-
-      const batchSize = 1000;
-      const batches = Math.ceil(totalRows / batchSize);
-
-      for (let batch = 0; batch < batches; batch++) {
-        const offset = batch * batchSize;
-
-        // Fetch rows in batches
-        const tableRows = await ctx.db.query.rows.findMany({
-          where: eq(rows.tableId, input.tableId),
-          orderBy: (rows, { asc }) => [asc(rows.position)],
-          limit: batchSize,
-          offset: offset,
-        });
-
-        // Create cells for this batch
-        const cellsToInsert = tableRows.map((row) => ({
-          rowId: row.id,
-          columnId: newColumn.id,
-          value: null,
-          updatedAt: null,
-        }));
-
-        await ctx.db.insert(cells).values(cellsToInsert);
-      }
-
-      return newColumn;
+      return await ctx.db.transaction(async (tx) =>
+        createColumnWithCells(tx, input),
+      );
     }),
 
   deleteColumn: protectedProcedure

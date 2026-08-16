@@ -4,7 +4,7 @@ import {
   viewHiddenUpdateSchema,
   viewSortingUpdateSchema,
 } from "@/types/view";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import z from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 
@@ -14,10 +14,7 @@ export const viewRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       return await ctx.db
         .update(views)
-        .set({
-          id: input.id,
-          filters: input.filters,
-        })
+        .set({ filters: input.filters })
         .where(eq(views.id, input.id));
     }),
 
@@ -26,10 +23,7 @@ export const viewRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       return await ctx.db
         .update(views)
-        .set({
-          id: input.id,
-          sorting: input.sorting,
-        })
+        .set({ sorting: input.sorting })
         .where(eq(views.id, input.id));
     }),
 
@@ -38,10 +32,7 @@ export const viewRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       return await ctx.db
         .update(views)
-        .set({
-          id: input.id,
-          hidden: input.hidden,
-        })
+        .set({ hidden: input.hidden })
         .where(eq(views.id, input.id));
     }),
 
@@ -57,15 +48,11 @@ export const viewRouter = createTRPCRouter({
   setActive: protectedProcedure
     .input(z.object({ id: z.string(), tableId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      await ctx.db
-        .update(views)
-        .set({ isActive: false })
-        .where(eq(views.tableId, input.tableId));
-
+      // Single atomic statement: activates the target, deactivates the rest
       return await ctx.db
         .update(views)
-        .set({ isActive: true })
-        .where(eq(views.id, input.id));
+        .set({ isActive: sql`(${views.id} = ${input.id})` })
+        .where(eq(views.tableId, input.tableId));
     }),
 
   deleteById: protectedProcedure

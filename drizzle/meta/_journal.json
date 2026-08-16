@@ -50,6 +50,27 @@
       "when": 1769165645141,
       "tag": "0006_gorgeous_scorpion",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1786899091698,
+      "tag": "0007_neat_taskmaster",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1786901300001,
+      "tag": "0008_faithful_storm",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1786901769384,
+      "tag": "0009_supreme_turbo",
+      "breakpoints": true
     }
   ]
 }
