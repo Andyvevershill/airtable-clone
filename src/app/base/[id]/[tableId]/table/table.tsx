@@ -9,44 +9,33 @@ import { useGlobalSearchStore } from "@/stores/use-search-store";
 import type { ColumnType } from "@/types/column";
 import type { TransformedRow } from "@/types/row";
 import type { QueryParams, SearchMatch } from "@/types/view";
-import type { Table } from "@tanstack/react-table";
+import type { Row, Table } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 interface Props {
   table: Table<TransformedRow>;
   tableId: string;
   columns: ColumnType[];
   effectiveRowCount: number;
-  transformedRows: TransformedRow[];
   queryParams: QueryParams;
-  fetchNextPage: () => void;
-  hasNextPage?: boolean;
-  isFetchingNextPage: boolean;
+  loadRows: (startIndex: number, endIndex: number) => void;
   globalSearchMatches: SearchMatch[];
 }
 
 const ROW_HEIGHT = 32;
+// load this many rows above/below the screen so scrolling a bit never shows skeletons
 const PREFETCH_THRESHOLD = 250;
-const SCROLL_THROTTLE_MS = 300;
+// wait for the scroll to settle so dragging the scrollbar doesn't fetch every page on the way
+const SCROLL_SETTLE_MS = 100;
 
 export function Table({
   table,
   tableId,
   columns,
   effectiveRowCount,
-  transformedRows,
   queryParams,
-  fetchNextPage,
-  hasNextPage,
-  isFetchingNextPage,
+  loadRows,
   globalSearchMatches,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -98,8 +87,21 @@ export function Table({
       };
     }, [globalSearchMatches]);
 
+  // rows only hold the pages we've loaded, so look them up by their real index
+  const coreRows = table.getRowModel().rows;
+  const rowsByIndex = useMemo(() => {
+    const map = new Map<number, Row<TransformedRow>>();
+    for (const row of coreRows) {
+      map.set(row.original._index, row);
+    }
+    return map;
+  }, [coreRows]);
+
   // Scroll to active search match
   const activeMatch = globalSearchMatches[activeMatchIndex];
+  // the matched row might be on a page we haven't loaded yet
+  const activeRowLoaded =
+    activeMatch?.type === "cell" && rowsByIndex.has(activeMatch.rowIndex);
 
   useEffect(() => {
     if (!activeMatch || !scrollRef.current || !tableRef.current) return;
@@ -134,72 +136,37 @@ export function Table({
         inline: "center",
       });
     }
-  }, [activeMatch, activeMatchIndex, rowVirtualizer]);
+  }, [activeMatch, activeMatchIndex, activeRowLoaded, rowVirtualizer]);
 
-  // Infinite scroll: fetch next page when user scrolls near bottom
-  const lastFetchedIndexRef = useRef(-1);
-
-  const checkAndFetchNextPage = useCallback(() => {
-    if (!hasNextPage || isFetchingNextPage) return;
-
-    const items = rowVirtualizer.getVirtualItems();
-    if (items.length === 0) return;
-
-    const lastVisibleIndex = items[items.length - 1]?.index ?? 0;
-    const shouldFetch =
-      lastVisibleIndex >= transformedRows.length - PREFETCH_THRESHOLD;
-
-    if (shouldFetch && lastFetchedIndexRef.current !== lastVisibleIndex) {
-      lastFetchedIndexRef.current = lastVisibleIndex;
-      fetchNextPage();
-    }
-  }, [
-    hasNextPage,
-    isFetchingNextPage,
-    rowVirtualizer,
-    transformedRows.length,
-    fetchNextPage,
-  ]);
+  // load whatever part of the table is on screen (any page, not just the next one)
+  const virtualItems = rowVirtualizer.getVirtualItems();
+  const firstVisibleIndex = virtualItems[0]?.index ?? 0;
+  const lastVisibleIndex = virtualItems[virtualItems.length - 1]?.index ?? 0;
 
   useEffect(() => {
-    const scrollElement = scrollRef.current;
-    if (!scrollElement) return;
+    if (effectiveRowCount === 0) return;
 
-    // Throttle scroll checks to avoid performance issues
-    let throttleTimeout: NodeJS.Timeout | null = null;
-    const handleScroll = () => {
-      if (throttleTimeout) return;
+    const timeout = setTimeout(() => {
+      loadRows(
+        Math.max(0, firstVisibleIndex - PREFETCH_THRESHOLD),
+        Math.min(effectiveRowCount - 1, lastVisibleIndex + PREFETCH_THRESHOLD),
+      );
+    }, SCROLL_SETTLE_MS);
 
-      throttleTimeout = setTimeout(() => {
-        checkAndFetchNextPage();
-        throttleTimeout = null;
-      }, SCROLL_THROTTLE_MS);
-    };
-
-    scrollElement.addEventListener("scroll", handleScroll, { passive: true });
-    return () => {
-      scrollElement.removeEventListener("scroll", handleScroll);
-      if (throttleTimeout) clearTimeout(throttleTimeout);
-    };
-  }, [checkAndFetchNextPage]);
-
-  // Reset fetch tracking when data changes
-  useEffect(() => {
-    lastFetchedIndexRef.current = -1;
-  }, [transformedRows.length]);
+    return () => clearTimeout(timeout);
+  }, [firstVisibleIndex, lastVisibleIndex, effectiveRowCount, loadRows]);
 
   // Keyboard navigation
   const { handleTableKeyDown } = useTableKeyboardNavigation({
     tableRef,
-    totalRows: transformedRows.length,
+    totalRows: effectiveRowCount,
     totalCols: columns.length + 1,
   });
 
   // Check if virtualised rows are hydrated (disable add row button if false)
-  const loadedRowCount = table.getRowModel().rows.length;
-  const notHydratedVirtualRows = rowVirtualizer
-    .getVirtualItems()
-    .some((v) => v.index >= loadedRowCount);
+  const notHydratedVirtualRows = virtualItems.some(
+    (v) => !rowsByIndex.has(v.index),
+  );
 
   return (
     <div
@@ -234,6 +201,7 @@ export function Table({
             <TableBody
               rowVirtualizer={rowVirtualizer}
               table={table}
+              rowsByIndex={rowsByIndex}
               activeMatch={activeMatch}
               matchedCellIdSet={matchedCellIdSet}
               matchedRowIndexSet={matchedRowIndexSet}

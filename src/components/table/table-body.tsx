@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import type { TransformedRow } from "@/types/row";
 import type { SearchMatch } from "@/types/view";
-import { flexRender, type Table } from "@tanstack/react-table";
+import { flexRender, type Row, type Table } from "@tanstack/react-table";
 import type { Virtualizer } from "@tanstack/react-virtual";
 import { Skeleton } from "../ui/skeleton";
 
@@ -12,6 +12,7 @@ const GUTTER_WIDTH = 70;
 interface TableBodyProps {
   rowVirtualizer: Virtualizer<HTMLDivElement, Element>;
   table: Table<TransformedRow>;
+  rowsByIndex: Map<number, Row<TransformedRow>>;
   activeMatch: SearchMatch[][number] | undefined;
   matchedCellIdSet: Set<string>;
   matchedRowIndexSet: Set<number>;
@@ -20,6 +21,7 @@ interface TableBodyProps {
 export function TableBody({
   rowVirtualizer,
   table,
+  rowsByIndex,
   activeMatch,
   matchedCellIdSet,
   matchedRowIndexSet,
@@ -34,8 +36,7 @@ export function TableBody({
       }}
     >
       {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-        const rows = table.getRowModel().rows;
-        const tanstackRow = rows[virtualRow.index];
+        const tanstackRow = rowsByIndex.get(virtualRow.index);
 
         if (!tanstackRow) {
           return (
@@ -88,7 +89,6 @@ export function TableBody({
           <tr
             key={tanstackRow.original._rowId}
             data-index={virtualRow.index}
-            ref={(node) => rowVirtualizer.measureElement(node)}
             className={cn(
               "w-full hover:bg-gray-50 hover:shadow-[inset_0_1px_0_0_rgb(229,231,235)]",
               virtualRow.index === 0 && "hover:shadow-none",

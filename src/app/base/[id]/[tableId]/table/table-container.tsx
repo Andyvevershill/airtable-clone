@@ -5,9 +5,8 @@ import { TableSidebar } from "@/components/table/table-sidebar";
 import { TableToolbar } from "@/components/table/table-toolbar";
 import { useCellCommitter } from "@/hooks/use-cell-commiter";
 import { useViewUpdater } from "@/hooks/use-view-updater";
-import { transformRowsToTanStackFormat } from "@/lib/utils";
 import { useLoadingStore } from "@/stores/use-loading-store";
-import type { RowWithCells, TableWithViews } from "@/types";
+import type { TableWithViews, TransformedRow } from "@/types";
 import type { ColumnType } from "@/types/column";
 import type { QueryParams, SearchMatch } from "@/types/view";
 import {
@@ -26,15 +25,14 @@ import { Table } from "./table";
 interface Props {
   tableWithViews: TableWithViews;
   columns: ColumnType[];
-  rowsWithCells: RowWithCells[];
+  transformedRows: TransformedRow[];
   user: User;
   queryParams: QueryParams;
   rowCount: number;
   totalFilteredCount: number;
 
-  fetchNextPage: () => void;
-  hasNextPage?: boolean;
-  isFetchingNextPage: boolean;
+  loadRows: (startIndex: number, endIndex: number) => void;
+  isFetchingMore: boolean;
 
   sorting: SortingState;
   onSortingChange: OnChangeFn<SortingState>;
@@ -51,12 +49,11 @@ export default function TableContainer({
   queryParams,
   columns,
   rowCount,
-  rowsWithCells,
+  transformedRows,
   totalFilteredCount,
 
-  fetchNextPage,
-  hasNextPage,
-  isFetchingNextPage,
+  loadRows,
+  isFetchingMore,
 
   sorting,
   onSortingChange,
@@ -70,12 +67,7 @@ export default function TableContainer({
   const { isLoadingView, isFiltering } = useLoadingStore();
   const { updateViewFilters } = useViewUpdater();
 
-  const { commitCell } = useCellCommitter({ queryParams });
-
-  const transformedRows = useMemo(
-    () => transformRowsToTanStackFormat(rowsWithCells),
-    [rowsWithCells],
-  );
+  const { commitCell } = useCellCommitter({ tableId: tableWithViews.id });
 
   const tanstackColumns = useMemo(() => {
     return generateColumnDefinitions(columns, commitCell);
@@ -124,7 +116,6 @@ export default function TableContainer({
           <div className="shrink-0">
             <TableSidebar
               sidebarOpen={sidebarOpen}
-              queryParams={queryParams}
               tableWithViews={tableWithViews}
               user={user}
               rowCount={rowCount}
@@ -147,7 +138,7 @@ export default function TableContainer({
                   <LuLoaderPinwheel size={22} className="animate-spin" />
                 </div>
               </div>
-            ) : rowsWithCells.length === 0 && columnFilters.length > 0 ? (
+            ) : transformedRows.length === 0 && columnFilters.length > 0 ? (
               <div className="flex h-full items-center justify-center p-8 text-center">
                 <div className="max-w-md">
                   <h3 className="text-md font-medium text-gray-800">
@@ -168,11 +159,8 @@ export default function TableContainer({
                 effectiveRowCount={effectiveRowCount}
                 queryParams={queryParams}
                 tableId={tableWithViews.id}
-                transformedRows={transformedRows}
                 columns={columns}
-                fetchNextPage={fetchNextPage}
-                hasNextPage={hasNextPage}
-                isFetchingNextPage={isFetchingNextPage}
+                loadRows={loadRows}
                 globalSearchMatches={globalSearchMatches}
               />
             )}
@@ -182,7 +170,7 @@ export default function TableContainer({
             <div className="text-xs text-gray-600">
               {effectiveRowCount}{" "}
               {effectiveRowCount === 1 ? "record" : "records"}
-              {isFetchingNextPage && " – Loading more…"}
+              {isFetchingMore && " – Loading more…"}
             </div>
           </div>
         </div>

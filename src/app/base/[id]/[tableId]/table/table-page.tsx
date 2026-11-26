@@ -1,5 +1,7 @@
 "use client";
 
+import { useRowPages } from "@/hooks/use-row-pages";
+import { PAGE_SIZE } from "@/lib/constants";
 import {
   applyViewToTableState,
   translateFiltersState,
@@ -29,6 +31,8 @@ export default function TablePage() {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [filters, setFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  // which view the sorting/filters above came from
+  const [appliedViewId, setAppliedViewId] = useState<string | null>(null);
 
   const { data: user } = api.user.getUser.useQuery(undefined, {
     staleTime: Infinity,
@@ -66,9 +70,12 @@ export default function TablePage() {
 
   const stableColumns = useMemo(() => columns, [columns]);
 
+  // the view store is global, so it can still be holding a view from the last table we were on
+  const viewIsForThisTable = activeView?.tableId === tableId;
+
   useEffect(() => {
     if (!tableWithViews?.views) return;
-    if (activeView !== null) return;
+    if (viewIsForThisTable) return;
 
     // a bug when we delete the last view so none is active - fallback to assign a view
     const serverActiveView =
@@ -76,10 +83,10 @@ export default function TablePage() {
     if (serverActiveView) {
       setActiveView(serverActiveView);
     }
-  }, [tableWithViews?.views]);
+  }, [tableWithViews?.views, viewIsForThisTable]);
 
   useEffect(() => {
-    if (!activeView) return;
+    if (!activeView || !viewIsForThisTable) return;
 
     applyViewToTableState(
       activeView,
@@ -87,9 +94,13 @@ export default function TablePage() {
       setFilters,
       setColumnVisibility,
     );
+    setAppliedViewId(activeView.id);
 
     setIsLoadingView(false);
-  }, [activeView?.id, setIsLoadingView]);
+  }, [activeView?.id, viewIsForThisTable, setIsLoadingView]);
+
+  // don't fetch rows until the view's sorts/filters are in state, otherwise we fetch unsorted rows first for nothing
+  const viewReady = viewIsForThisTable && appliedViewId === activeView?.id;
 
   const queryParams: QueryParams = useMemo(() => {
     const translatedSorting = translateSortingState(
@@ -103,65 +114,67 @@ export default function TablePage() {
 
     return {
       tableId,
-      limit: 500,
+      limit: PAGE_SIZE,
       sorting: translatedSorting,
       filters: translatedFilters,
-      globalSearch,
     };
-  }, [tableId, sorting, filters, stableColumns, globalSearch]);
+  }, [tableId, sorting, filters, stableColumns]);
 
   const {
-    data: rowsData,
-    fetchNextPage,
-    hasNextPage,
-    isFetching,
-    isFetchingNextPage,
+    rows: transformedRows,
+    totalFilteredCount,
+    loadRows,
     isLoading: rowsLoading,
-  } = api.row.getRowsInfinite.useInfiniteQuery(queryParams, {
-    getNextPageParam: (lastPage) => lastPage.nextCursor,
-    placeholderData: (prev) => prev,
-    enabled: !!activeView && !!stableColumns,
-    refetchOnWindowFocus: false,
-  });
+    isFetching,
+    isFetchingFirstPage,
+    isFetchingMore,
+  } = useRowPages(queryParams, viewReady && !!stableColumns);
 
   const isLoading =
-    tableWithViewsLoading || columnsLoading || countLoading || rowsLoading;
+    tableWithViewsLoading ||
+    columnsLoading ||
+    countLoading ||
+    (viewReady && rowsLoading);
 
   useEffect(() => {
     setIsLoading(isFetching || isLoading);
   }, [isFetching, isLoading, setIsLoading]);
 
-  const rowsWithCells = useMemo(() => {
-    return rowsData?.pages.flatMap((p) => p.items) ?? [];
-  }, [rowsData]);
-
   useEffect(() => {
     const isActivelyFiltering =
-      (filters.length > 0 || sorting.length > 0) &&
-      isFetching &&
-      !isFetchingNextPage;
+      (filters.length > 0 || sorting.length > 0) && isFetchingFirstPage;
 
     setIsFiltering(isActivelyFiltering);
-  }, [
-    filters.length,
-    sorting.length,
-    isFetching,
-    isFetchingNextPage,
-    setIsFiltering,
-  ]);
+  }, [filters.length, sorting.length, isFetchingFirstPage, setIsFiltering]);
 
-  const globalSearchMatches = useMemo(() => {
-    return rowsData?.pages.flatMap((p) => p.searchMatches) ?? [];
-  }, [rowsData]);
+  // search runs on its own so typing a search doesn't throw away the loaded rows
+  const { data: searchMatches, isFetching: isSearchFetching } =
+    api.row.searchMatches.useQuery(
+      {
+        tableId,
+        sorting: queryParams.sorting,
+        filters: queryParams.filters,
+        search: globalSearch,
+      },
+      {
+        enabled: !!globalSearch.trim() && viewReady && !!stableColumns,
+        refetchOnWindowFocus: false,
+      },
+    );
+
+  const globalSearchMatches = useMemo(
+    () => searchMatches ?? [],
+    [searchMatches],
+  );
 
   useEffect(() => {
-    if (globalSearch && !isFetching) {
+    if (globalSearch && !isSearchFetching) {
       setGlobalSearchLength(globalSearchMatches.length);
       setIsSearching(false);
     }
   }, [
     globalSearch,
-    isFetching,
+    isSearchFetching,
     globalSearchMatches.length,
     setGlobalSearchLength,
     setIsSearching,
@@ -180,12 +193,11 @@ export default function TablePage() {
       queryParams={queryParams}
       user={user}
       columns={stableColumns}
-      totalFilteredCount={rowsData?.pages[0]?.totalFilteredCount ?? 0}
+      totalFilteredCount={totalFilteredCount ?? 0}
       rowCount={rowCount ?? 0}
-      rowsWithCells={rowsWithCells}
-      fetchNextPage={fetchNextPage}
-      hasNextPage={hasNextPage}
-      isFetchingNextPage={isFetchingNextPage}
+      transformedRows={transformedRows}
+      loadRows={loadRows}
+      isFetchingMore={isFetchingMore}
       sorting={sorting}
       onSortingChange={setSorting}
       columnFilters={filters}

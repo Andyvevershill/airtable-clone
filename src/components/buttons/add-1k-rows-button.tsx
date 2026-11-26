@@ -1,20 +1,14 @@
 import { useLoadingStore } from "@/stores/use-loading-store";
 import { api } from "@/trpc/react";
-import type { QueryParams } from "@/types/view";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 interface Props {
   tableId: string;
   rowCount: number;
-  queryParams: QueryParams;
 }
 
-export default function Add1kRowButton({
-  queryParams,
-  tableId,
-  rowCount,
-}: Props) {
+export default function Add1kRowButton({ tableId, rowCount }: Props) {
   const setIsLoading = useLoadingStore((state) => state.setIsLoading);
 
   const limitReached = rowCount >= 5000;
@@ -51,7 +45,7 @@ export default function Add1kRowButton({
         utils.row.getRowCount.setData({ tableId }, context.previousCount);
       }
 
-      void utils.row.getRowsInfinite.invalidate();
+      void utils.row.getRows.invalidate({ tableId });
       void utils.row.getRowCount.invalidate({ tableId });
     },
 
@@ -61,7 +55,7 @@ export default function Add1kRowButton({
 
       // tried everything to avoid invalidating the whole list but tRPC makes it hard
       // triggering a fetch next row here bugged the current fetch next call, especially when we add single rows quickly after
-      await utils.row.getRowsInfinite.invalidate(queryParams);
+      await utils.row.getRows.invalidate({ tableId });
     },
 
     onSettled: () => {

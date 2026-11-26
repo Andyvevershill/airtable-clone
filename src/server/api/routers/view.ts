@@ -1,10 +1,11 @@
+import { checkTableOwner, checkViewOwner } from "@/server/api/ownership";
 import { views } from "@/server/db/schemas";
 import {
   viewFilteringUpdateSchema,
   viewHiddenUpdateSchema,
   viewSortingUpdateSchema,
 } from "@/types/view";
-import { eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import z from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 
@@ -12,6 +13,8 @@ export const viewRouter = createTRPCRouter({
   updateViewFilters: protectedProcedure
     .input(viewFilteringUpdateSchema)
     .mutation(async ({ ctx, input }) => {
+      await checkViewOwner(ctx, input.id);
+
       return await ctx.db
         .update(views)
         .set({ filters: input.filters })
@@ -21,6 +24,8 @@ export const viewRouter = createTRPCRouter({
   updateViewSorting: protectedProcedure
     .input(viewSortingUpdateSchema)
     .mutation(async ({ ctx, input }) => {
+      await checkViewOwner(ctx, input.id);
+
       return await ctx.db
         .update(views)
         .set({ sorting: input.sorting })
@@ -30,6 +35,8 @@ export const viewRouter = createTRPCRouter({
   updateViewHidden: protectedProcedure
     .input(viewHiddenUpdateSchema)
     .mutation(async ({ ctx, input }) => {
+      await checkViewOwner(ctx, input.id);
+
       return await ctx.db
         .update(views)
         .set({ hidden: input.hidden })
@@ -39,6 +46,8 @@ export const viewRouter = createTRPCRouter({
   toggleFavourite: protectedProcedure
     .input(z.object({ id: z.string(), isFavourite: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
+      await checkViewOwner(ctx, input.id);
+
       return await ctx.db
         .update(views)
         .set({ isFavourite: !input.isFavourite })
@@ -48,16 +57,27 @@ export const viewRouter = createTRPCRouter({
   setActive: protectedProcedure
     .input(z.object({ id: z.string(), tableId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      // Single atomic statement: activates the target, deactivates the rest
-      return await ctx.db
-        .update(views)
-        .set({ isActive: sql`(${views.id} = ${input.id})` })
-        .where(eq(views.tableId, input.tableId));
+      await checkTableOwner(ctx, input.tableId);
+
+      // turn the rest off first - only one active view allowed per table (unique index)
+      await ctx.db.transaction(async (tx) => {
+        await tx
+          .update(views)
+          .set({ isActive: false })
+          .where(eq(views.tableId, input.tableId));
+
+        await tx
+          .update(views)
+          .set({ isActive: true })
+          .where(and(eq(views.id, input.id), eq(views.tableId, input.tableId)));
+      });
     }),
 
   deleteById: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      await checkViewOwner(ctx, input.id);
+
       // 1. Get the view being deleted
       const currentView = await ctx.db.query.views.findFirst({
         where: eq(views.id, input.id),
@@ -77,33 +97,31 @@ export const viewRouter = createTRPCRouter({
         throw new Error("Cannot delete last view for this table");
       }
 
-      let nextViewId: string | null = null;
+      const nextView = currentView.isActive
+        ? allViews.find((v) => v.id !== currentView.id)
+        : undefined;
 
-      // 3. If deleting the active view, activate another one
-      if (currentView.isActive) {
-        const nextView = allViews.find((v) => v.id !== currentView.id);
+      // 3. Delete the view, then activate another one if it was the active view
+      // (in that order - two active views at once breaks the unique index)
+      await ctx.db.transaction(async (tx) => {
+        await tx.delete(views).where(eq(views.id, input.id));
 
-        if (!nextView) {
-          throw new Error("No remaining view to activate");
+        if (nextView) {
+          await tx
+            .update(views)
+            .set({ isActive: true })
+            .where(eq(views.id, nextView.id));
         }
+      });
 
-        await ctx.db
-          .update(views)
-          .set({ isActive: true })
-          .where(eq(views.id, nextView.id));
-
-        nextViewId = nextView.id;
-      }
-
-      // 4. Delete the view
-      await ctx.db.delete(views).where(eq(views.id, input.id));
-
-      return { success: true, nextViewId };
+      return { success: true, nextViewId: nextView?.id ?? null };
     }),
 
   updateName: protectedProcedure
     .input(z.object({ id: z.string(), name: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      await checkViewOwner(ctx, input.id);
+
       return await ctx.db
         .update(views)
         .set({ name: input.name })
@@ -113,6 +131,8 @@ export const viewRouter = createTRPCRouter({
   duplicateView: protectedProcedure
     .input(z.object({ id: z.string(), newId: z.string(), name: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      await checkViewOwner(ctx, input.id);
+
       const view = await ctx.db.query.views.findFirst({
         where: eq(views.id, input.id),
       });
@@ -141,22 +161,23 @@ export const viewRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // remove active state for the rest
-      await ctx.db
-        .update(views)
-        .set({ isActive: false })
-        .where(eq(views.tableId, input.tableId));
+      await checkTableOwner(ctx, input.tableId);
 
-      // create and set this one as active
+      return await ctx.db.transaction(async (tx) => {
+        // remove active state for the rest
+        await tx
+          .update(views)
+          .set({ isActive: false })
+          .where(eq(views.tableId, input.tableId));
 
-      const newView = await ctx.db.insert(views).values({
-        id: input.viewId,
-        name: input.name,
-        tableId: input.tableId,
-        isFavourite: false,
-        isActive: true,
+        // create and set this one as active
+        return await tx.insert(views).values({
+          id: input.viewId,
+          name: input.name,
+          tableId: input.tableId,
+          isFavourite: false,
+          isActive: true,
+        });
       });
-
-      return newView;
     }),
 });

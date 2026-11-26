@@ -71,6 +71,13 @@
       "when": 1786901769384,
       "tag": "0009_supreme_turbo",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1795712530749,
+      "tag": "0010_loose_hellion",
+      "breakpoints": true
     }
   ]
 }

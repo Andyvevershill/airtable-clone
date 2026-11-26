@@ -1,9 +1,6 @@
-import {
-  DEFAULT_BASE_CONFIG,
-  getRandomColour,
-  returnFakerData,
-} from "@/lib/utils";
+import { DEFAULT_BASE_CONFIG, getRandomColour } from "@/lib/utils";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+import { returnFakerData } from "@/server/faker";
 import {
   bases,
   cells,
@@ -182,7 +179,12 @@ export const baseRouter = createTRPCRouter({
       await ctx.db
         .update(bases)
         .set({ name: input.name })
-        .where(eq(bases.id, input.baseId));
+        .where(
+          and(
+            eq(bases.id, input.baseId),
+            eq(bases.userId, ctx.session.user.id),
+          ),
+        );
     }),
 
   // toggle favourite
@@ -192,7 +194,12 @@ export const baseRouter = createTRPCRouter({
       await ctx.db
         .update(bases)
         .set({ isFavourite: input.favourite })
-        .where(eq(bases.id, input.baseId));
+        .where(
+          and(
+            eq(bases.id, input.baseId),
+            eq(bases.userId, ctx.session.user.id),
+          ),
+        );
     }),
 
   // Update last accessed timestamp
@@ -202,13 +209,19 @@ export const baseRouter = createTRPCRouter({
       await ctx.db
         .update(bases)
         .set({ lastAccessedAt: new Date() })
-        .where(eq(bases.id, input.id));
+        .where(
+          and(eq(bases.id, input.id), eq(bases.userId, ctx.session.user.id)),
+        );
     }),
 
   // delete base
   deleteById: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      await ctx.db.delete(bases).where(eq(bases.id, input.id)).returning();
+      await ctx.db
+        .delete(bases)
+        .where(
+          and(eq(bases.id, input.id), eq(bases.userId, ctx.session.user.id)),
+        );
     }),
 });
