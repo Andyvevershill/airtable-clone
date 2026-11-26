@@ -1,5 +1,6 @@
 "use client";
 
+import { PAGE_SIZE } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { api } from "@/trpc/react";
 import type { ColumnType, RowWithCells } from "@/types";
@@ -26,66 +27,50 @@ function AddRowButton({
 
   const addRow = api.row.addRow.useMutation({
     onMutate: async (newRow) => {
-      // Cancel ALL queries to prevent stale data from overwriting our optimistic update
-      await utils.row.getRowsInfinite.cancel(queryParams);
-      await utils.row.getRowCount.cancel({ tableId });
-
-      const previousData =
-        utils.row.getRowsInfinite.getInfiniteData(queryParams);
       const previousCount = Number(rowCount);
 
-      if (!previousData?.pages?.[0]) {
-        return { previousData, rowId: newRow.id, previousCount };
-      }
+      // the new row goes at the very end, so it lives on the last page
+      const pageParams = {
+        ...queryParams,
+        page: Math.floor(previousCount / PAGE_SIZE),
+      };
 
-      utils.row.getRowsInfinite.setInfiniteData(queryParams, (old) => {
-        if (!old) return old;
+      // Cancel so stale data can't overwrite our optimistic update
+      await utils.row.getRows.cancel(pageParams);
+      await utils.row.getRowCount.cancel({ tableId });
 
-        const optimisticRow: RowWithCells = {
-          id: newRow.id,
-          tableId,
-          cells: columns.map((col) => ({
-            id: `${col.id}_${newRow.id}`,
-            rowId: newRow.id,
-            columnId: col.id,
-            value: null,
-          })),
-        };
+      const previousData = utils.row.getRows.getData(pageParams);
 
-        const updatedPages = [...old.pages];
-        const lastPage = old.pages[old.pages.length - 1];
+      const optimisticRow: RowWithCells = {
+        id: newRow.id,
+        tableId,
+        cells: columns.map((col) => ({
+          columnId: col.id,
+          value: null,
+        })),
+      };
 
-        if (!lastPage) return old;
-
-        updatedPages[old.pages.length - 1] = {
-          ...lastPage,
-          items: [...lastPage.items, optimisticRow],
-          searchMatches: lastPage.searchMatches ?? { matches: [] },
-          totalFilteredCount: lastPage.totalFilteredCount
-            ? lastPage.items.length + 1
-            : 0,
-        };
-
-        return { ...old, pages: updatedPages };
-      });
+      utils.row.getRows.setData(pageParams, (old) => ({
+        items: [...(old?.items ?? []), optimisticRow],
+        totalFilteredCount: old?.totalFilteredCount,
+      }));
 
       //  important!! if we do not increase the row count by 1, we never see this row. Thevirtual rows only show x length - we need to increase x by 1 for this row
       const newCount = previousCount + 1;
       utils.row.getRowCount.setData({ tableId }, newCount);
 
-      return { previousData, rowId: newRow.id, previousCount };
+      return { pageParams, previousData, previousCount };
     },
 
     onError: (_err, _vars, ctx) => {
-      if (ctx?.previousData) {
-        utils.row.getRowsInfinite.setInfiniteData(
-          queryParams,
-          ctx.previousData,
-        );
+      if (!ctx) return;
+
+      if (ctx.previousData) {
+        utils.row.getRows.setData(ctx.pageParams, ctx.previousData);
+      } else {
+        void utils.row.getRows.invalidate(ctx.pageParams);
       }
-      if (ctx?.previousCount !== undefined) {
-        utils.row.getRowCount.setData({ tableId }, ctx.previousCount);
-      }
+      utils.row.getRowCount.setData({ tableId }, ctx.previousCount);
     },
   });
 

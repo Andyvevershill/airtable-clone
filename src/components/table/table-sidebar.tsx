@@ -1,7 +1,6 @@
 "use client";
 
 import type { TableWithViews } from "@/types";
-import type { QueryParams } from "@/types/view";
 import type { User } from "better-auth";
 import { useState } from "react";
 import { CiSearch } from "react-icons/ci";
@@ -15,11 +14,9 @@ interface Props {
   sidebarOpen: boolean;
   tableWithViews: TableWithViews;
   rowCount: number;
-  queryParams: QueryParams;
 }
 export function TableSidebar({
   user,
-  queryParams,
   tableWithViews,
   sidebarOpen,
   rowCount,
@@ -90,7 +87,6 @@ export function TableSidebar({
             <Add1kRowButton
               tableId={tableWithViews.id}
               rowCount={rowCount}
-              queryParams={queryParams}
             />
             <Add100kRowButton tableId={tableWithViews.id} user={user} />
           </div>

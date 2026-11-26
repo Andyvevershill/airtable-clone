@@ -20,7 +20,7 @@ export default function DeleteColumnButton({ columnId }: Props) {
     },
     onSuccess: (data) => {
       void utils.column.getColumns.invalidate({ tableId: data.tableId });
-      void utils.row.getRowsInfinite.invalidate({ tableId: data.tableId });
+      void utils.row.getRows.invalidate({ tableId: data.tableId });
       setIsSaving(false);
     },
   });

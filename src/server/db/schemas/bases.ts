@@ -6,6 +6,7 @@ import {
   integer,
   json,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -128,10 +129,6 @@ export type Row = InferSelectModel<typeof rows>;
 export const cells = pgTable(
   "cell",
   {
-    id: text("id")
-      .notNull()
-      .primaryKey()
-      .$defaultFn(() => createId()),
     rowId: text("row_id")
       .notNull()
       .references(() => rows.id, { onDelete: "cascade" }),
@@ -142,10 +139,8 @@ export const cells = pgTable(
     updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
   },
   (table) => [
-    // One cell per row+column: backs upsertCell's ON CONFLICT, guarantees
-    // sort joins can't fan out, and serves per-row filter probes and cell
-    // fetches by row (row_id prefix also covers cascade deletes of rows)
-    uniqueIndex("cell_row_column_unique_idx").on(table.rowId, table.columnId),
+    // one cell per row + column - no need for a separate id, saves an index on every insert
+    primaryKey({ columns: [table.rowId, table.columnId] }),
     // Sort scans and filter scans over a single column's cells
     index("cell_column_value_idx").on(table.columnId, table.value),
     // Case-insensitive "equals" filter
@@ -211,7 +206,7 @@ export const views = pgTable(
   },
   (table) => [
     index("view_table_idx").on(table.tableId),
-    index("view_active_unique_idx")
+    uniqueIndex("view_active_unique_idx")
       .on(table.tableId)
       .where(sql`is_active = true`),
   ],

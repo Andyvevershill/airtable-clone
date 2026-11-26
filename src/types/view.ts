@@ -16,7 +16,7 @@ const filterOperator = z.enum([
 const filterRuleSchema = z.object({
   columnId: z.string(),
   operator: filterOperator,
-  value: z.any().optional(),
+  value: z.union([z.string().max(500), z.number()]).nullish(),
   type: z.enum(["string", "number"]),
 });
 
@@ -30,19 +30,25 @@ const sortRuleSchema = z.object({
 
 export type SortRule = z.infer<typeof sortRuleSchema>;
 
-export const getRowsInfiniteInput = z.object({
+// what the grid is showing right now - shared by the rows pages and search
+export const rowQueryInput = z.object({
   tableId: z.string(),
-  limit: z.number().min(1).max(5000).default(2500),
-  cursor: z.number().nullish(),
+  limit: z.number().int().min(1).max(5000).default(500),
 
   // Sorting - allow multiple for future-proofing
-  sorting: z.array(sortRuleSchema).optional().default([]),
+  sorting: z.array(sortRuleSchema).max(25).optional().default([]),
 
   // Filters - array = multiple conditions (AND between them)
-  filters: z.array(filterRuleSchema).optional().default([]),
+  filters: z.array(filterRuleSchema).max(25).optional().default([]),
+});
 
-  // Optional global search across all text columns
-  globalSearch: z.string().optional(),
+// page number instead of a cursor so we can jump straight to any part of the table
+export const getRowsInput = rowQueryInput.extend({
+  page: z.number().int().min(0),
+});
+
+export const searchMatchesInput = rowQueryInput.omit({ limit: true }).extend({
+  search: z.string().max(200),
 });
 
 export const viewInputSchema = z.object({
@@ -89,4 +95,4 @@ export type SearchMatch =
       rowIndex: number;
     };
 
-export type QueryParams = z.infer<typeof getRowsInfiniteInput>;
+export type QueryParams = z.infer<typeof rowQueryInput>;

@@ -1,3 +1,4 @@
+import { BULK_ROWS_OWNER_EMAIL } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { useLoadingStore } from "@/stores/use-loading-store";
 import { api } from "@/trpc/react";
@@ -45,12 +46,12 @@ export default function Add100kRowButton({ tableId, user }: Props) {
       }
 
       // incase we have created x rows before the error happened, we need to invalidate the cache to see the new ones!
-      void utils.row.getRowsInfinite.invalidate({ tableId });
+      void utils.row.getRows.invalidate({ tableId });
       void utils.row.getRowCount.invalidate({ tableId });
     },
 
     onSuccess: () => {
-      void utils.row.getRowsInfinite.invalidate({ tableId });
+      void utils.row.getRows.invalidate({ tableId });
       void utils.row.getRowCount.invalidate({ tableId });
     },
 
@@ -66,9 +67,7 @@ export default function Add100kRowButton({ tableId, user }: Props) {
     });
   };
 
-  console.log(user.email);
-
-  const shouldDisable = user.email !== "andrew.hill@lcsltd.co.uk";
+  const shouldDisable = user.email !== BULK_ROWS_OWNER_EMAIL;
 
   return (
     <Tooltip>

@@ -15,6 +15,6 @@ declare module "@tanstack/react-table" {
 }
 
 type RouterOutput = inferRouterOutputs<AppRouter>;
-type GetRowsInfiniteOutput = RouterOutput["row"]["getRowsInfinite"];
+type GetRowsOutput = RouterOutput["row"]["getRows"];
 
-type RowFromServer = GetRowsInfiniteOutput["items"][number];
+type RowFromServer = GetRowsOutput["items"][number];

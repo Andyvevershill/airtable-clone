@@ -57,15 +57,35 @@ export function translateFiltersState(
     .filter(Boolean) as FilterState[];
 }
 
+type ViewState = {
+  sorting?: SortRule[] | null;
+  filters?: FilterState[] | null;
+  hidden?: string[] | null;
+};
+
+export function viewToSortingState(view: ViewState): SortingState {
+  return (
+    view.sorting?.map((sort) => ({
+      id: sort.columnId,
+      desc: sort.direction === "desc",
+    })) ?? []
+  );
+}
+
+export function viewToFiltersState(view: ViewState): ColumnFiltersState {
+  return (
+    view.filters?.map((filter) => ({
+      id: filter.columnId,
+      value: {
+        operator: filter.operator,
+        value: filter.value as unknown,
+      },
+    })) ?? []
+  );
+}
+
 export function applyViewToTableState(
-  activeView:
-    | {
-        sorting?: SortRule[] | null;
-        filters?: FilterState[] | null;
-        hidden?: string[] | null;
-      }
-    | null
-    | undefined,
+  activeView: ViewState | null | undefined,
   onSortingChange: OnChangeFn<SortingState>,
   onColumnFiltersChange: OnChangeFn<ColumnFiltersState>,
   onColumnVisibilityChange: OnChangeFn<VisibilityState>,
@@ -79,26 +99,8 @@ export function applyViewToTableState(
     return;
   }
 
-  // Apply sorting
-  const sortingState: SortingState =
-    activeView.sorting?.map((sort) => ({
-      id: sort.columnId,
-      desc: sort.direction === "desc",
-    })) ?? [];
-
-  onSortingChange(sortingState);
-
-  // Apply filters
-  const filtersState: ColumnFiltersState =
-    activeView.filters?.map((filter) => ({
-      id: filter.columnId,
-      value: {
-        operator: filter.operator,
-        value: filter.value as unknown,
-      },
-    })) ?? [];
-
-  onColumnFiltersChange(filtersState);
+  onSortingChange(viewToSortingState(activeView));
+  onColumnFiltersChange(viewToFiltersState(activeView));
 
   // Apply visibility
   const visibilityState: VisibilityState = {};

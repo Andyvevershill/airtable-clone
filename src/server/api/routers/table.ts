@@ -1,5 +1,7 @@
-import { DEFAULT_BASE_CONFIG, returnFakerData } from "@/lib/utils";
+import { DEFAULT_BASE_CONFIG } from "@/lib/utils";
+import { checkBaseOwner, checkTableOwner } from "@/server/api/ownership";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+import { returnFakerData } from "@/server/faker";
 import { cells, columns, rows, tables, views } from "@/server/db/schemas/bases";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
@@ -16,6 +18,8 @@ export const tableRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      await checkBaseOwner(ctx, input.baseId);
+
       const result = await ctx.db.transaction(async (tx) => {
         const [table] = await tx
           .insert(tables)
@@ -82,6 +86,8 @@ export const tableRouter = createTRPCRouter({
   updateNameById: protectedProcedure
     .input(z.object({ tableId: z.string(), name: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      await checkTableOwner(ctx, input.tableId);
+
       const [table] = await ctx.db
         .update(tables)
         .set({ name: input.name })
@@ -101,6 +107,8 @@ export const tableRouter = createTRPCRouter({
   getTableWithViews: protectedProcedure
     .input(z.object({ tableId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await checkTableOwner(ctx, input.tableId);
+
       const table = await ctx.db.query.tables.findFirst({
         where: eq(tables.id, input.tableId),
         columns: {
@@ -127,6 +135,8 @@ export const tableRouter = createTRPCRouter({
   deleteTableById: protectedProcedure
     .input(z.object({ tableId: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      await checkTableOwner(ctx, input.tableId);
+
       await ctx.db
         .delete(tables)
         .where(eq(tables.id, input.tableId))

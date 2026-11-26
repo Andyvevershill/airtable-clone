@@ -1,5 +1,4 @@
 import type { RowWithCells, TransformedRow } from "@/types";
-import { faker } from "@faker-js/faker";
 import { clsx, type ClassValue } from "clsx";
 import { toast } from "sonner";
 import { twMerge } from "tailwind-merge";
@@ -91,110 +90,24 @@ export function darkenColour(hexColor: string, opacity = 0.12) {
   return `rgba(${r}, ${g}, ${b}, ${opacity * 0.25})`;
 }
 
+// startIndex = where this page sits in the whole table, so the row knows its real index
 export function transformRowsToTanStackFormat(
   rows: RowWithCells[],
+  startIndex = 0,
 ): TransformedRow[] {
-  return rows.map((row) => {
+  return rows.map((row, i) => {
     const transformedRow: TransformedRow = {
       _rowId: row.id,
+      _index: startIndex + i,
       _cells: {},
-      _cellMap: {},
     };
 
-    if (!row.cells) return transformedRow;
-
-    // Handle BOTH array and object shapes with proper typing
-    const cellsArray: { id: string; columnId: string; value: string | null }[] =
-      Array.isArray(row.cells) ? row.cells : Object.values(row.cells);
-
-    for (const cell of cellsArray) {
+    for (const cell of row.cells) {
       transformedRow._cells[cell.columnId] = cell.value;
-      transformedRow._cellMap[cell.columnId] = cell.id;
     }
 
     return transformedRow;
   });
-}
-
-// {
-//   notes: faker.lorem.sentence(),
-//   status: faker.helpers.arrayElement(['active', 'pending', 'completed', 'cancelled'])
-// }
-
-// generates faker data depending on what the column type is (bulk action)
-export function generateBulkFakerData(
-  type: string,
-  columnName: string,
-  count: number,
-) {
-  const data: string[] = [];
-  const lowerColumnName = columnName.toLowerCase();
-
-  for (let i = 0; i < count; i++) {
-    // Check column name first for special cases
-    if (lowerColumnName === "notes") {
-      data.push(faker.lorem.words({ min: 2, max: 3 }));
-    } else if (lowerColumnName === "status") {
-      data.push(
-        faker.helpers.arrayElement([
-          "Todo",
-          "In Progress",
-          "In Review",
-          "Done",
-        ]),
-      );
-    } else {
-      // Then fall back to type
-      switch (type) {
-        case "string":
-        case "text":
-          data.push(faker.person.firstName());
-          break;
-        case "number":
-          data.push(faker.number.int({ max: 1000 }).toString());
-          break;
-        case "boolean":
-          data.push(faker.datatype.boolean().toString());
-          break;
-        default:
-          data.push("");
-      }
-    }
-  }
-  return data;
-}
-
-// generates faker data depending on what the column type is (single return)
-export function returnFakerData(type: string, colName: string): string {
-  if (colName === "Status") {
-    return faker.helpers.arrayElement([
-      "Todo",
-      "In Progress",
-      "In Review",
-      "Done",
-    ]);
-  }
-
-  if (colName === "Notes") {
-    return faker.helpers.arrayElement([
-      faker.word.adjective(),
-      `${faker.word.adjective()} ${faker.word.adjective()}`,
-    ]);
-  }
-
-  if (colName === "Assignee" || colName === "Name") {
-    return faker.person.fullName();
-  }
-
-  // Fall back to type-based generation for future added columns
-  switch (type) {
-    case "string":
-      return faker.person.firstName();
-    case "number":
-      return String(faker.number.int({ min: 1, max: 1000 }));
-    default:
-      return "";
-  }
 }
 
 export function showNotFunctionalToast() {
